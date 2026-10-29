@@ -15,7 +15,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { queueOfflineUpsert, dequeueOfflineUpsert, getPendingRows, useOfflineStatus, OFFLINE_FLUSHED_EVENT } from "@/hooks/useOfflineSync";
 import { readOfflineWorkoutCache, writeOfflineWorkoutCache, patchOfflineWorkoutCache } from "@/lib/offlineWorkoutCache";
 import { countCheckmarks, detectDestructiveWrite, getKnownCheckmarkCount, rememberCheckmarkCount, seedCheckmarkCounts, logDestructiveWrite } from "@/lib/completionGuard";
-import { Check, MessageSquare, ChevronDown, ChevronUp, Dumbbell, Footprints, Moon, Bike, Waves, ChevronLeft, ChevronRight, LogOut, Plus, Trash2, Search, CalendarIcon, X, TrendingUp, Equal, Weight, MessageCircle, XCircle, Timer, Route, Info, Pencil, Share2, Swords, ArrowLeftRight, Send, Settings, ArrowLeft, Flame, Download, Play, Save, Lock, RefreshCw, MapPin, Square, Maximize2, Minimize2, Pause, Heart, HeartOff, Sparkles, GripVertical } from "lucide-react";
+import { Check, MessageSquare, ChevronDown, ChevronUp, Dumbbell, Footprints, Moon, Bike, Waves, ChevronLeft, ChevronRight, LogOut, Plus, Trash2, Search, CalendarIcon, X, TrendingUp, Equal, Weight, MessageCircle, XCircle, Timer, Route, Info, Pencil, Share2, Swords, ArrowLeftRight, Send, Settings, ArrowLeft, Flame, Download, Play, Save, Lock, RefreshCw, MapPin, Square, Maximize2, Minimize2, Pause, Heart, HeartOff, Sparkles, GripVertical, MoreHorizontal } from "lucide-react";
 import { DndContext, closestCenter, PointerSensor, TouchSensor, useSensor, useSensors, type DragEndEvent } from "@dnd-kit/core";
 import { SortableContext, useSortable, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
@@ -4586,7 +4586,7 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
                                 </div>
                               </div>
                               {/* Copied-from-previous progression reminder */}
-                              {isCopiedExercise(key, name) && (
+                              {!STRENGTH_UI_V2 && isCopiedExercise(key, name) && (
                                 <div className="pl-1 mb-1 border-l-2 border-primary/40 bg-primary/5 px-2 py-1.5 rounded-r">
                                   <p className="text-[10px] text-foreground flex items-start gap-1">
                                     <span className="text-primary">💡</span>
@@ -4603,6 +4603,7 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
                                 if (hasCurrentData) return null;
                                 const kgVal = parseNum(lastKg.kg);
                                 const isNegative = kgVal < 0;
+                                if (STRENGTH_UI_V2 && (!isNegative || profileWeight)) return null;
                                 const effectiveKg = isNegative && profileWeight ? profileWeight + kgVal : null;
                                 return (
                                   <div className="pl-1 mb-1">
@@ -4616,7 +4617,7 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
                                     {isNegative && !profileWeight && (
                                        <button onClick={() => setShowWeightPrompt(true)} className="text-[10px] text-primary pl-4 underline text-left">⚠ Ange din kroppsvikt</button>
                                     )}
-                                    <p className="text-[10px] text-muted-foreground pl-4">— öka vikten själv för progression</p>
+                                    {!STRENGTH_UI_V2 && <p className="text-[10px] text-muted-foreground pl-4">— öka vikten själv för progression</p>}
                                   </div>
                                 );
                               })()}
@@ -4639,7 +4640,7 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
                                            <SwipeableSetRow done={isSetDone} isPR={isPrWeight(prIndex, name, saved?.kg)} celebrationKey={`${name}-${si}-${saved?.kg ?? ""}`} onToggle={() => toggleSetDone(0, plan.day, name, si, setsCountSingle, inheritedKg, inheritedReps)}>
                                            <div className={`flex items-center gap-1.5 py-0.5 rounded px-1 ${isSetDone ? "opacity-60" : ""}`}>
                                            <Checkbox checked={isSetDone} onCheckedChange={() => toggleSetDone(0, plan.day, name, si, setsCountSingle, inheritedKg, inheritedReps)} className="h-5 w-5" />
-                                           <span className="text-[10px] text-muted-foreground w-7 flex-shrink-0">S{si + 1}</span>
+                                           {STRENGTH_UI_V2 ? <span className="text-xs text-muted-foreground w-7 flex-shrink-0 text-center font-mono">{si + 1}</span> : <span className="text-[10px] text-muted-foreground w-7 flex-shrink-0">S{si + 1}</span>}
                                            <AutoSaveInput rule={unitRuleOv(name) ?? (/farmers?\s*walk|yoke\s*walk|sled|bear\s*crawl/i.test(name) || plan.is_circuit || /^(sido)?planka$|^vila$/i.test(name.trim()) || customExercises.find(ce => ce.name.toLowerCase() === name.trim().toLowerCase())?.is_time_based ? "setTimeDist" : "setReps")} type="number" inputMode="numeric" initialValue={circuitDefaultSec ? ((!saved?.reps || saved.reps === reps) ? "" : saved.reps) : (saved?.reps || "")} placeholder={circuitDefaultSec ? (findLastReps(name, si) || inheritedReps || circuitDefaultSec) : (findLastReps(name, si) || inheritedReps || defaultReps)} onSave={(v) => saveSetFieldData(0, plan.day, name, si, 'reps', v, setsCountSingle, inheritedKg, inheritedReps)} className="w-11 bg-primary/10 text-foreground text-xs px-1 py-0.5 rounded border border-primary/30 text-center font-mono focus:ring-1 focus:ring-primary outline-none placeholder:text-muted-foreground placeholder:opacity-60" />
                                            <span className="text-[10px] text-muted-foreground">{unitLabelOv(name) ?? (/farmers?\s*walk|yoke\s*walk|sled|bear\s*crawl/i.test(name) ? "m" : (plan.is_circuit || /^(sido)?planka$|^vila$/i.test(name.trim()) || customExercises.find(ce => ce.name.toLowerCase() === name.trim().toLowerCase())?.is_time_based) ? "sek" : "reps")}</span>
                                            <AutoSaveInput rule="setKg" confirmValue={(kg) => prDoubleWarning(prIndex, name, kg)} type="number" inputMode="decimal" initialValue={saved?.kg || ""} onSave={(v) => saveSetFieldData(0, plan.day, name, si, 'kg', v, setsCountSingle, inheritedKg, inheritedReps)} placeholder={inheritedKg || "—"} className="w-14 bg-primary/10 text-foreground text-xs px-1 py-0.5 rounded border border-primary/30 text-center font-mono focus:ring-1 focus:ring-primary outline-none placeholder:text-muted-foreground placeholder:opacity-60" />
@@ -8323,7 +8324,7 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
 
                         return (
                           <SortableLine id={String(i)}>{({ setNodeRef, style, handle }) => (
-                          <div key={i} ref={setNodeRef} style={style} className="bg-secondary/40 rounded-lg p-2.5 border border-border/30 space-y-1">
+                          <div key={i} ref={setNodeRef} style={style} className={STRENGTH_UI_V2 ? "bg-card rounded-lg p-2 border border-border/40 space-y-1" : "bg-secondary/40 rounded-lg p-2.5 border border-border/30 space-y-1"}>
                               <div className="flex items-center justify-between">
                                 <div className="flex items-center gap-1.5">
                                   <button
@@ -8338,6 +8339,11 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
                                     {toTitleCase(partName)}
                                     {partRpe && <span className="text-xs font-normal text-muted-foreground ml-1.5">{partRpe}</span>}
                                   </span>
+                                  {STRENGTH_UI_V2 && (
+                                    <span className="text-[10px] font-mono text-muted-foreground ml-1">
+                                      {setsStrPlan.slice(0, setsCountPlan).split("").filter(c => c === "1").length}/{setsCountPlan}
+                                    </span>
+                                  )}
                                 </div>
                                 <div className="flex items-center gap-0.5">
                                   {handle}
@@ -8365,7 +8371,7 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
                                           data-tour="exercise-menu"
                                           className="min-w-[44px] min-h-[44px] flex items-center justify-center text-muted-foreground hover:text-primary transition-colors touch-manipulation"
                                           title="Övningsalternativ">
-                                          <Settings className="w-4 h-4" />
+                                          {STRENGTH_UI_V2 ? <MoreHorizontal className="w-4 h-4" /> : <Settings className="w-4 h-4" />}
                                         </button>
                                       </DropdownMenuTrigger>
                                        <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
@@ -8383,6 +8389,10 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
                                             Redigera beskrivning
                                           </DropdownMenuItem>
                                         )}
+                                        <DropdownMenuItem onClick={() => setStrengthUiV2(!STRENGTH_UI_V2)}>
+                                          <ArrowLeftRight className="w-4 h-4 mr-2" />
+                                          {STRENGTH_UI_V2 ? "Klassisk vy" : "Ny kompakt vy"}
+                                        </DropdownMenuItem>
                                         <DropdownMenuItem className="text-destructive focus:text-destructive" onClick={() => setDeleteExerciseConfirm({ planId: plan.id, lineIndex: i, name: toTitleCase(partName) })}>
                                           <X className="w-4 h-4 mr-2" />
                                           Ta bort övning
@@ -8392,7 +8402,7 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
                                 </div>
                               </div>
                               {/* Copied-from-previous progression reminder */}
-                              {isCopiedExercise(key, partName) && (
+                              {!STRENGTH_UI_V2 && isCopiedExercise(key, partName) && (
                                 <div className="pl-1 border-l-2 border-primary/40 bg-primary/5 px-2 py-1.5 rounded-r">
                                   <p className="text-[10px] text-foreground flex items-start gap-1">
                                     <span className="text-primary">💡</span>
@@ -8408,6 +8418,7 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
                                 const hasCurrentData = getSetData(key, partName).some(s => s.kg && parseNum(s.kg) !== 0);
                                 if (hasCurrentData) return null;
                                 const isNegative = lastKg.kg < 0;
+                                if (STRENGTH_UI_V2 && (!isNegative || profileWeight)) return null;
                                 const effectiveKg = isNegative && profileWeight ? profileWeight + lastKg.kg : null;
                                 return (
                                   <div className="pl-1">
@@ -8421,7 +8432,7 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
                                     {isNegative && !profileWeight && (
                                       <button onClick={() => setShowWeightPrompt(true)} className="text-[10px] text-primary pl-4 underline text-left">⚠ Ange din kroppsvikt</button>
                                     )}
-                                    <p className="text-[10px] text-muted-foreground pl-4">— öka vikten själv för progression</p>
+                                    {!STRENGTH_UI_V2 && <p className="text-[10px] text-muted-foreground pl-4">— öka vikten själv för progression</p>}
                                   </div>
                                 );
                               })()}
@@ -8458,7 +8469,16 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
                                     const weightedBwExercises = ["dips"];
                                     const matchedExForBw = allExercises.find(e => e.name.toLowerCase() === partName.toLowerCase());
                                     const isWeightedBw = weightedBwExercises.some(bw => partName.toLowerCase().includes(bw)) || (matchedExForBw?.isBodyweightExercise === true);
-                                     return Array.from({ length: setsCountPlan }, (_, si) => {
+                                    const repsHeader = (unitLabelOv(partName) ?? (/farmers?\s*walk|yoke\s*walk|sled|bear\s*crawl/i.test(partName) ? "m" : (plan.is_circuit || partIsTimeBased || /^(sido)?planka$|^vila$/i.test(partName.trim()) || customExercises.find(ce => ce.name.toLowerCase() === partName.trim().toLowerCase())?.is_time_based) ? "sek" : "reps")).toUpperCase();
+                                    const v2Header = STRENGTH_UI_V2 ? (
+                                      <div key="hdr" className="flex items-center gap-1.5 px-1 text-[9px] font-semibold tracking-wider text-muted-foreground">
+                                        <span className="w-7 text-center">SET</span>
+                                        <span className="w-11 text-center">{repsHeader}</span>
+                                        {!isBodyweight && <>{isWeightedBw && <span className="w-6" />}<span className="w-14 text-center">KG</span></>}
+                                        <span className="ml-auto w-5 text-center">✓</span>
+                                      </div>
+                                    ) : null;
+                                     return [v2Header, ...Array.from({ length: setsCountPlan }, (_, si) => {
                                        // Read bw mode per set, fall back to exercise-level for backward compat
                                        const bwModeKeySet = `__bw_mode__${partName}__${si}`;
                                        const bwModeKeyExercise = `__bw_mode__${partName}`;
@@ -8476,11 +8496,11 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
                                        return (
                                          <div key={si}>
                                            <SwipeableSetRow done={isSetDone} isPR={!isBodyweight && isPrWeight(prIndex, partName, saved?.kg)} celebrationKey={`${partName}-${si}-${saved?.kg ?? ""}`} onToggle={() => toggleSetDone(plan.week, plan.day, partName, si, setsCountPlan, inheritedKg, inheritedReps)}>
-                                           <div className={`flex items-center gap-1.5 py-0.5 rounded px-1 ${isSetDone ? "opacity-60" : ""}`}>
-                                           <Checkbox checked={isSetDone} onCheckedChange={() => toggleSetDone(plan.week, plan.day, partName, si, setsCountPlan, inheritedKg, inheritedReps)} className="h-5 w-5" />
-                                           <span className="text-[10px] text-muted-foreground w-7 flex-shrink-0">S{si + 1}</span>
+                                           <div className={`flex items-center gap-1.5 py-0.5 rounded px-1 ${isSetDone ? (STRENGTH_UI_V2 ? "opacity-50 bg-success/5" : "opacity-60") : ""}`}>
+                                           {!STRENGTH_UI_V2 && <Checkbox checked={isSetDone} onCheckedChange={() => toggleSetDone(plan.week, plan.day, partName, si, setsCountPlan, inheritedKg, inheritedReps)} className="h-5 w-5" />}
+                                           {STRENGTH_UI_V2 ? <span className="text-xs text-muted-foreground w-7 flex-shrink-0 text-center font-mono">{si + 1}</span> : <span className="text-[10px] text-muted-foreground w-7 flex-shrink-0">S{si + 1}</span>}
                                            <AutoSaveInput rule={unitRuleOv(partName) ?? (/farmers?\s*walk|yoke\s*walk|sled|bear\s*crawl/i.test(partName) || plan.is_circuit || partIsTimeBased || /^(sido)?planka$|^vila$/i.test(partName.trim()) || customExercises.find(ce => ce.name.toLowerCase() === partName.trim().toLowerCase())?.is_time_based ? "setTimeDist" : "setReps")} type="number" inputMode="numeric" initialValue={circuitDefaultSec ? ((!saved?.reps || saved.reps === partReps || saved.reps === repsStr) ? "" : saved.reps) : (saved?.reps || "")} placeholder={circuitDefaultSec ? (findLastReps(partName, si) || inheritedReps || circuitDefaultSec) : (findLastReps(partName, si) || inheritedReps || defReps)} onSave={(v) => saveSetFieldData(plan.week, plan.day, partName, si, 'reps', v, setsCountPlan, inheritedKg, inheritedReps)} className="w-11 bg-primary/10 text-foreground text-xs px-1 py-0.5 rounded border border-primary/30 text-center font-mono focus:ring-1 focus:ring-primary outline-none placeholder:text-muted-foreground placeholder:opacity-60" />
-                                           <span className="text-[10px] text-muted-foreground">{unitLabelOv(partName) ?? (/farmers?\s*walk|yoke\s*walk|sled|bear\s*crawl/i.test(partName) ? "m" : (plan.is_circuit || partIsTimeBased || /^(sido)?planka$|^vila$/i.test(partName.trim()) || customExercises.find(ce => ce.name.toLowerCase() === partName.trim().toLowerCase())?.is_time_based) ? "sek" : "reps")}</span>
+                                           {!STRENGTH_UI_V2 && <span className="text-[10px] text-muted-foreground">{unitLabelOv(partName) ?? (/farmers?\s*walk|yoke\s*walk|sled|bear\s*crawl/i.test(partName) ? "m" : (plan.is_circuit || partIsTimeBased || /^(sido)?planka$|^vila$/i.test(partName.trim()) || customExercises.find(ce => ce.name.toLowerCase() === partName.trim().toLowerCase())?.is_time_based) ? "sek" : "reps")}</span>}
                                           {!isBodyweight && (
                                             <>
                                               {isWeightedBw && (
@@ -8503,10 +8523,11 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
                                                   {currentBwMode === "add" ? "+" : "−"}
                                                 </button>
                                               )}
-                                              <AutoSaveInput rule="setKg" confirmValue={(kg) => prDoubleWarning(prIndex, partName, kg)} type="number" inputMode="decimal" initialValue={saved?.kg || inheritedKg || ""} onSave={(v) => saveSetFieldData(plan.week, plan.day, partName, si, 'kg', v, setsCountPlan, inheritedKg, inheritedReps)} placeholder={inheritedKg || "—"} className="w-14 bg-primary/10 text-foreground text-xs px-1 py-0.5 rounded border border-primary/30 text-center font-mono focus:ring-1 focus:ring-primary outline-none placeholder:text-muted-foreground placeholder:opacity-60" />
-                                              <span className="text-[10px] text-muted-foreground">kg</span>
+                                              <AutoSaveInput rule="setKg" confirmValue={(kg) => prDoubleWarning(prIndex, partName, kg)} type="number" inputMode="decimal" initialValue={STRENGTH_UI_V2 ? (saved?.kg || "") : (saved?.kg || inheritedKg || "")} onSave={(v) => saveSetFieldData(plan.week, plan.day, partName, si, 'kg', v, setsCountPlan, inheritedKg, inheritedReps)} placeholder={inheritedKg || "—"} className="w-14 bg-primary/10 text-foreground text-xs px-1 py-0.5 rounded border border-primary/30 text-center font-mono focus:ring-1 focus:ring-primary outline-none placeholder:text-muted-foreground placeholder:opacity-60" />
+                                              {!STRENGTH_UI_V2 && <span className="text-[10px] text-muted-foreground">kg</span>}
                                             </>
                                           )}
+                                          {STRENGTH_UI_V2 && <span className="ml-auto flex items-center"><Checkbox checked={isSetDone} onCheckedChange={() => toggleSetDone(plan.week, plan.day, partName, si, setsCountPlan, inheritedKg, inheritedReps)} className="h-5 w-5" /></span>}
                                           </div>
                                           </SwipeableSetRow>
                                           {!isBodyweight && (() => {
@@ -8530,7 +8551,7 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
                                           })()}
                                         </div>
                                       );
-                                    });
+                                    })];
                                   })()}
                                 </div>
                                 <div className="flex items-center gap-2 pl-1 pt-1">
@@ -8803,6 +8824,7 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
                        <Plus className="w-3 h-3" /> Lägg till vila
                      </button>
                    )}
+                   {!STRENGTH_UI_V2 && (<>
                    <button
                        onClick={() => setImportWorkoutTarget({ planId: plan.id, week: plan.week, day: plan.day })}
                        data-tour="import-workout"
@@ -8823,6 +8845,33 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
                      >
                        <Trash2 className="w-3 h-3" /> Rensa pass
                      </button>
+                   </>)}
+                   {STRENGTH_UI_V2 && (
+                     <DropdownMenu modal={false}>
+                       <DropdownMenuTrigger asChild>
+                         <button data-tour="import-workout" className="w-full py-1.5 rounded-md text-[11px] text-muted-foreground hover:text-foreground transition-colors flex items-center justify-center gap-1">
+                           <MoreHorizontal className="w-3.5 h-3.5" /> Mer
+                         </button>
+                       </DropdownMenuTrigger>
+                       <DropdownMenuContent align="center" onClick={(e) => e.stopPropagation()}>
+                         <DropdownMenuItem onClick={() => setImportWorkoutTarget({ planId: plan.id, week: plan.week, day: plan.day })}>
+                           <Download className="w-4 h-4 mr-2" /> Importera färdigt pass
+                         </DropdownMenuItem>
+                         <DropdownMenuItem data-tour="clear-workout" className="text-destructive focus:text-destructive" onClick={async () => {
+                         if (!confirm(`Rensa alla övningar i "${plan.session_name}"?`)) return;
+                         await supabase.from("workout_plans").update({ details: "", session_name: "" }).eq("id", plan.id);
+                         setPlans((prev) => prev.map((p) => p.id === plan.id ? { ...p, details: "", session_name: "" } : p));
+                         triggerSave();
+                         toast.success("Passet rensat");
+                       }}>
+                           <Trash2 className="w-4 h-4 mr-2" /> Rensa pass
+                         </DropdownMenuItem>
+                         <DropdownMenuItem onClick={() => setStrengthUiV2(false)}>
+                           <ArrowLeftRight className="w-4 h-4 mr-2" /> Klassisk vy
+                         </DropdownMenuItem>
+                       </DropdownMenuContent>
+                     </DropdownMenu>
+                   )}
                 </div>
                   }
                   <ExercisePickerDialog
@@ -10452,6 +10501,22 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
     )}
     </>);
 
+};
+
+// ── Styrke-UI v2 (Strong/Hevy-stil) ─────────────────────────────────────────
+// Återställ gamla vyn utan deploy: localStorage.setItem("grim_strength_ui_v2","0")
+// (eller "Klassisk vy" i ⋯-menyn under passet). Sätt STRENGTH_UI_V2_DEFAULT=false
+// för att byta tillbaka för alla. Gamla layouten ligger kvar bakom flaggan.
+const STRENGTH_UI_V2_DEFAULT = true;
+const STRENGTH_UI_V2: boolean = (() => {
+  try {
+    const v = typeof window !== "undefined" ? window.localStorage.getItem("grim_strength_ui_v2") : null;
+    return v === null ? STRENGTH_UI_V2_DEFAULT : v !== "0";
+  } catch { return STRENGTH_UI_V2_DEFAULT; }
+})();
+const setStrengthUiV2 = (on: boolean) => {
+  try { window.localStorage.setItem("grim_strength_ui_v2", on ? "1" : "0"); } catch { /* ignore */ }
+  window.location.reload();
 };
 
 export default WorkoutView;
