@@ -2,8 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { ComposedChart, Line, ReferenceLine, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 import { Scale, LineChart, List } from "lucide-react";
-import { toLocalDateKey } from "@/lib/dateUtils";
-import { useStatsSettings, WEIGHT_RANGES } from "@/lib/statsSettings";
+import { useStatsSettings, WEIGHT_RANGES, weightRangeFrom } from "@/lib/statsSettings";
 import { WEIGHT_CHANGED_EVENT } from "@/lib/bodyWeight";
 
 const parseKey = (k: string) => { const [y, m, d] = k.split("-").map(Number); return new Date(y, m - 1, d); };
@@ -17,9 +16,10 @@ export default function BodyWeightChart({ userId }: { userId: string }) {
 
   useEffect(() => {
     const load = () => {
-      const from = toLocalDateKey(addDays(new Date(), -(weightDays - 1)));
-      supabase.from("body_weight_logs").select("log_date,weight_kg").eq("user_id", userId)
-        .gte("log_date", from).order("log_date")
+      const from = weightRangeFrom(weightDays);
+      let q = supabase.from("body_weight_logs").select("log_date,weight_kg").eq("user_id", userId);
+      if (from) q = q.gte("log_date", from);
+      q.order("log_date")
         .then(({ data }) => setWeights((data || []).map((w) => ({ log_date: w.log_date, weight_kg: Number(w.weight_kg) }))));
       supabase.from("nutrition_goals").select("target_weight_kg").eq("user_id", userId).maybeSingle()
         .then(({ data }) => setGoalWeight(data?.target_weight_kg != null ? Number(data.target_weight_kg) : null));
@@ -80,15 +80,15 @@ export default function BodyWeightChart({ userId }: { userId: string }) {
         <span className="ml-auto text-sm font-bold tabular-nums">{String(last.weight_kg).replace(".", ",")} kg</span>
       </div>
       <p className="text-[11px] text-muted-foreground">
-        {change != null && <>{change > 0 ? "+" : ""}{change.toFixed(1).replace(".", ",")} kg på {WEIGHT_RANGES.find((x) => x.days === weightDays)?.label} · </>}
+        {change != null && <>{change > 0 ? "+" : ""}{change.toFixed(1).replace(".", ",")} kg ({WEIGHT_RANGES.find((x) => x.days === weightDays)?.label.toLowerCase()}) · </>}
         {weightTrend != null && <>{weightTrend > 0 ? "+" : ""}{weightTrend.toFixed(2).replace(".", ",")} kg/vecka · </>}
         {goalWeight != null && <>Målvikt {String(goalWeight).replace(".", ",")} kg{chart.eta ? ` – ungefär ${chart.eta.toLocaleDateString("sv-SE", { day: "numeric", month: "long", year: "numeric" })}` : ""}</>}
         {goalWeight != null && weightTrend == null && weights.length > 1 && <> · Logga vikten några dagar till för en säkrare prognos</>}
       </p>
-      <div className="flex gap-1 rounded-full bg-muted/60 p-1">
+      <div className="grid grid-cols-4 gap-1 rounded-full bg-muted/60 p-1">
         {WEIGHT_RANGES.map((x) => (
           <button key={x.days} onClick={() => setWeightDays(x.days)}
-            className={`flex-1 py-1 text-[11px] font-semibold rounded-full ${weightDays === x.days ? "bg-primary text-primary-foreground" : "text-muted-foreground"}`}>
+            className={`py-1 px-1 text-[10px] leading-tight font-semibold rounded-full ${weightDays === x.days ? "bg-primary text-primary-foreground" : "text-muted-foreground"}`}>
             {x.label}
           </button>
         ))}

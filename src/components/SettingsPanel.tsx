@@ -392,10 +392,10 @@ const SettingsPanel = ({ userId, isAdmin, isHonorary = false, onStartPlan, onVie
           );
         })}
         <p className="text-xs text-muted-foreground pt-1">Viktkurvans tidsperiod</p>
-        <div className="flex gap-1 rounded-full bg-muted/60 p-1">
+        <div className="grid grid-cols-4 gap-1 rounded-full bg-muted/60 p-1">
           {WEIGHT_RANGES.map((x) => (
             <button key={x.days} onClick={() => statsSettings.setWeightDays(x.days)}
-              className={`flex-1 py-1 text-[11px] font-semibold rounded-full ${statsSettings.weightDays === x.days ? "bg-primary text-primary-foreground" : "text-muted-foreground"}`}>
+              className={`py-1 px-1 text-[10px] leading-tight font-semibold rounded-full ${statsSettings.weightDays === x.days ? "bg-primary text-primary-foreground" : "text-muted-foreground"}`}>
               {x.label}
             </button>
           ))}

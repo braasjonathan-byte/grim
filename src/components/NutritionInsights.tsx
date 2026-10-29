@@ -6,6 +6,7 @@ import { toLocalDateKey } from "@/lib/dateUtils";
 import { WEIGHT_CHANGED_EVENT } from "@/lib/bodyWeight";
 import { isPlausibleMealLog, validateNumber, parseDecimal } from "@/lib/inputValidation";
 import { useToast } from "@/hooks/use-toast";
+import { useStatsSettings, WEIGHT_RANGES, weightRangeFrom, autoShowBodyWeight } from "@/lib/statsSettings";
 
 type Tab = "week" | "forecast" | "weight" | "foods";
 type Log = { log_date: string; item_name: string; amount: number; unit: string; kcal: number; protein_g: number; fat_g: number; carbs_g: number };
@@ -32,29 +33,34 @@ export default function NutritionInsights({ userId, dateKey, targets, refreshKey
   const [weights, setWeights] = useState<{ log_date: string; weight_kg: number }[]>([]);
   const [weightInput, setWeightInput] = useState("");
   const [saving, setSaving] = useState(false);
-  const [goalWeight, setGoalWeight] = useState<number | null>(null);
   const [weightView, setWeightView] = useState<"graph" | "table">("graph");
+  const { weightDays, setWeightDays } = useStatsSettings();
 
   const selected = parseKey(dateKey);
   const monday = mondayOf(selected);
   const from = toLocalDateKey(addDays(selected, -29) < monday ? addDays(selected, -29) : monday);
   const to = toLocalDateKey(addDays(monday, 6) > selected ? addDays(monday, 6) : selected);
 
-  const loadWeights = () => supabase.from("body_weight_logs").select("log_date,weight_kg").eq("user_id", userId)
-    .gte("log_date", toLocalDateKey(addDays(selected, -89))).lte("log_date", dateKey).order("log_date")
-    .then(({ data }) => setWeights((data || []).map((w) => ({ log_date: w.log_date, weight_kg: Number(w.weight_kg) }))));
+  const loadWeights = () => {
+    const wFrom = weightRangeFrom(weightDays, selected);
+    let q = supabase.from("body_weight_logs").select("log_date,weight_kg").eq("user_id", userId).lte("log_date", dateKey);
+    if (wFrom) q = q.gte("log_date", wFrom);
+    return q.order("log_date").then(({ data }) => {
+      const list = (data || []).map((w) => ({ log_date: w.log_date, weight_kg: Number(w.weight_kg) }));
+      setWeights(list);
+      autoShowBodyWeight(list.length);
+    });
+  };
 
   useEffect(() => {
     supabase.from("meal_logs").select("log_date,item_name,amount,unit,kcal,protein_g,fat_g,carbs_g")
       .eq("user_id", userId).gte("log_date", from).lte("log_date", to).limit(5000)
       .then(({ data }) => setLogs(((data || []) as Log[]).filter((l) => isPlausibleMealLog(l))));
     loadWeights();
-    supabase.from("nutrition_goals").select("target_weight_kg").eq("user_id", userId).maybeSingle()
-      .then(({ data }) => setGoalWeight(data?.target_weight_kg != null ? Number(data.target_weight_kg) : null));
     window.addEventListener(WEIGHT_CHANGED_EVENT, loadWeights);
     return () => window.removeEventListener(WEIGHT_CHANGED_EVENT, loadWeights);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [userId, from, to, refreshKey]);
+  }, [userId, from, to, refreshKey, weightDays]);
 
   const byDay = useMemo(() => {
     const m = new Map<string, { kcal: number; protein: number; fat: number; carbs: number }>();
@@ -94,13 +100,9 @@ export default function NutritionInsights({ userId, dateKey, targets, refreshKey
   }, [week, targets]);
 
   // ---- Vikt ----
-  const weightChart = useMemo(() => {
-    const wMap = new Map(weights.map((w) => [w.log_date, w.weight_kg]));
-    return Array.from({ length: 30 }, (_, i) => {
-      const d = addDays(selected, i - 29); const k = toLocalDateKey(d);
-      return { key: k, label: d.toLocaleDateString("sv-SE", { day: "numeric", month: "numeric" }), kcal: byDay.get(k) ? Math.round(byDay.get(k)!.kcal) : null, weight: wMap.get(k) ?? null };
-    });
-  }, [weights, byDay, dateKey]);
+  const weightPts = useMemo(() => weights.map((w) => ({
+    label: parseKey(w.log_date).toLocaleDateString("sv-SE", { day: "numeric", month: "numeric" }), weight: w.weight_kg,
+  })), [weights]);
   const weightTrend = useMemo(() => {
     // Kräver minst 5 vägningar över minst 7 dagar – färre ger en missvisande prognos.
     if (weights.length < 5) return null;
@@ -112,36 +114,10 @@ export default function NutritionInsights({ userId, dateKey, targets, refreshKey
     const den = xs.reduce((s, x) => s + (x - mx) ** 2, 0); if (!den) return null;
     return (xs.reduce((s, x, i) => s + (x - mx) * (ys[i] - my), 0) / den) * 7;
   }, [weights]);
-  const goalPlan = useMemo(() => {
-    if (goalWeight == null || weights.length === 0) return null;
-    const last = weights[weights.length - 1];
-    const lastDate = parseKey(last.log_date);
-    const diff = goalWeight - last.weight_kg;
-    const reached = Math.abs(diff) < 0.2;
-    const onTrack = weightTrend != null && Math.abs(weightTrend) > 0.01 && Math.sign(weightTrend) === Math.sign(diff);
-    const weeks = onTrack ? diff / weightTrend! : null;
-    const eta = weeks != null && weeks <= 104 ? addDays(lastDate, Math.ceil(weeks * 7)) : null;
-    const pts: { label: string; weight: number | null; projected: number | null }[] = weights.map((w) => ({
-      label: parseKey(w.log_date).toLocaleDateString("sv-SE", { day: "numeric", month: "numeric" }), weight: w.weight_kg, projected: null,
-    }));
-    pts[pts.length - 1].projected = last.weight_kg;
-    if (eta && weeks) {
-      const steps = Math.min(12, Math.max(1, Math.ceil(weeks)));
-      for (let i = 1; i <= steps; i++) {
-        const d = addDays(lastDate, Math.round((weeks * 7 * i) / steps));
-        pts.push({ label: d.toLocaleDateString("sv-SE", { day: "numeric", month: "numeric" }), weight: null, projected: +(last.weight_kg + (diff * i) / steps).toFixed(1) });
-      }
-    }
-    return { last: last.weight_kg, diff, reached, onTrack, eta, pts };
-  }, [goalWeight, weights, weightTrend]);
   const todayWeight = weights.find((w) => w.log_date === dateKey)?.weight_kg;
-  const ws = weightChart.map((d) => d.weight).filter((v): v is number => v != null);
-  // Faktiskt antal dagar mellan första och sista vägningen i perioden
-  const weightSpanDays = useMemo(() => {
-    const withW = weightChart.filter((d) => d.weight != null);
-    if (withW.length < 2) return 0;
-    return Math.max(1, Math.round((parseKey(withW[withW.length - 1].key).getTime() - parseKey(withW[0].key).getTime()) / 864e5));
-  }, [weightChart]);
+  const ws = weights.map((w) => w.weight_kg);
+  const weightSpanDays = weights.length < 2 ? 0
+    : Math.max(1, Math.round((parseKey(weights[weights.length - 1].log_date).getTime() - parseKey(weights[0].log_date).getTime()) / 864e5));
 
   const saveWeight = async () => {
     const v = validateNumber(weightInput, "bodyWeightKg");
@@ -257,13 +233,21 @@ export default function NutritionInsights({ userId, dateKey, targets, refreshKey
             <button onClick={saveWeight} disabled={saving || !weightInput} className="pill-btn bg-primary text-primary-foreground px-4 text-xs disabled:opacity-40">Spara</button>
           </div>
           {ws.length === 0 ? (
-            <p className="text-xs text-muted-foreground">Väg dig och spara vikten här, så visas den bredvid ditt kaloriintag.</p>
+            <p className="text-xs text-muted-foreground">Väg dig och spara vikten här, så visas den i grafen.</p>
           ) : (
             <p className="text-xs text-muted-foreground">
               Senast <span className="font-bold text-foreground">{String(ws[ws.length - 1]).replace(".", ",")} kg</span>
               {ws.length > 1 && <> · {ws[ws.length - 1] - ws[0] > 0 ? "+" : ""}{(ws[ws.length - 1] - ws[0]).toFixed(1).replace(".", ",")} kg på {weightSpanDays} {weightSpanDays === 1 ? "dag" : "dagar"}</>}
             </p>
           )}
+          <div className="grid grid-cols-4 gap-1 rounded-full bg-muted/60 p-1">
+            {WEIGHT_RANGES.map((x) => (
+              <button key={x.days} type="button" onClick={() => setWeightDays(x.days)}
+                className={`py-1 px-1 text-[10px] leading-tight font-semibold rounded-full ${weightDays === x.days ? "bg-primary text-primary-foreground" : "text-muted-foreground"}`}>
+                {x.label}
+              </button>
+            ))}
+          </div>
           <div className="flex gap-1 rounded-full bg-muted/60 p-1 w-fit ml-auto">
             <button type="button" onClick={() => setWeightView("graph")} aria-pressed={weightView === "graph"}
               className={`inline-flex items-center gap-1 px-3 py-1 text-[11px] font-semibold rounded-full ${weightView === "graph" ? "bg-primary text-primary-foreground" : "text-muted-foreground"}`}>
@@ -276,55 +260,21 @@ export default function NutritionInsights({ userId, dateKey, targets, refreshKey
           </div>
           {weightView === "graph" ? (
             <>
-          <div className="rounded-xl bg-muted/50 p-3 space-y-2">
-            <p className="text-xs font-semibold">Mot målvikten</p>
-            {goalWeight == null ? (
-              <p className="text-xs text-muted-foreground">Lägg in en målvikt under knappen Mål så visas din väg dit här.</p>
-            ) : !goalPlan ? (
-              <p className="text-xs text-muted-foreground">Målvikt {String(goalWeight).replace(".", ",")} kg. Spara din vikt så räknas vägen dit ut.</p>
-            ) : (
-              <>
-                <p className="text-xs">
-                  {goalPlan.reached ? <>Du har nått din målvikt {String(goalWeight).replace(".", ",")} kg!</> : <>
-                    {Math.abs(goalPlan.diff).toFixed(1).replace(".", ",")} kg kvar till {String(goalWeight).replace(".", ",")} kg.{" "}
-                    {goalPlan.eta
-                      ? <>Med nuvarande takt når du målet ungefär <span className="font-bold">{goalPlan.eta.toLocaleDateString("sv-SE", { day: "numeric", month: "long", year: "numeric" })}</span>.</>
-                      : weightTrend == null
-                        ? "Väg dig minst fem gånger över en vecka så räknas ett datum ut."
-                        : goalPlan.onTrack ? "Med nuvarande takt dröjer det mer än två år." : "Vikten rör sig just nu åt fel håll eller står still."}
-                  </>}
-                </p>
-                <div className="h-40">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <ComposedChart data={goalPlan.pts} margin={{ top: 5, right: 5, left: -20, bottom: 0 }}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />
-                      <XAxis dataKey="label" tick={{ fontSize: 9 }} stroke="hsl(var(--muted-foreground))" minTickGap={20} />
-                      <YAxis tick={{ fontSize: 9 }} stroke="hsl(var(--muted-foreground))" domain={[(min: number) => Math.floor(Math.min(min, goalWeight) - 1), (max: number) => Math.ceil(Math.max(max, goalWeight) + 1)]} />
-                      <Tooltip contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: 12, fontSize: 12 }}
-                        formatter={(v: number, n: string) => [`${String(v).replace(".", ",")} kg`, n === "weight" ? "Vikt" : "Prognos"]} />
-                      <ReferenceLine y={goalWeight} stroke="hsl(var(--success))" strokeDasharray="4 4" label={{ value: "Mål", fontSize: 10, fill: "hsl(var(--success))", position: "insideTopRight" }} />
-                      <Line dataKey="weight" stroke="hsl(var(--destructive))" strokeWidth={2} dot={{ r: 2 }} connectNulls />
-                      <Line dataKey="projected" stroke="hsl(var(--primary))" strokeWidth={2} strokeDasharray="5 4" dot={false} connectNulls />
-                    </ComposedChart>
-                  </ResponsiveContainer>
-                </div>
-              </>
-            )}
-          </div>
+          {ws.length > 0 && (
           <div className="h-44">
             <ResponsiveContainer width="100%" height="100%">
-              <ComposedChart data={weightChart} margin={{ top: 5, right: 0, left: -20, bottom: 0 }}>
+              <ComposedChart data={weightPts} margin={{ top: 5, right: 5, left: -20, bottom: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />
-                <XAxis dataKey="label" tick={{ fontSize: 9 }} interval={6} stroke="hsl(var(--muted-foreground))" />
-                <YAxis yAxisId="k" tick={{ fontSize: 9 }} stroke="hsl(var(--muted-foreground))" />
-                {ws.length > 0 && <YAxis yAxisId="w" orientation="right" domain={["dataMin - 1", "dataMax + 1"]} tick={{ fontSize: 9 }} stroke="hsl(var(--muted-foreground))" width={30} />}
+                <XAxis dataKey="label" tick={{ fontSize: 9 }} minTickGap={20} stroke="hsl(var(--muted-foreground))" />
+                <YAxis domain={["dataMin - 1", "dataMax + 1"]} tick={{ fontSize: 9 }} stroke="hsl(var(--muted-foreground))" />
                 <Tooltip contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: 12, fontSize: 12 }}
-                  formatter={(v: number, n: string) => n === "weight" ? [`${String(v).replace(".", ",")} kg`, "Vikt"] : [`${fmt(v)} kcal`, "Intag"]} />
-                <Bar yAxisId="k" dataKey="kcal" fill="hsl(var(--primary) / 0.35)" radius={[3, 3, 0, 0]} />
-                {ws.length > 0 && <Line yAxisId="w" dataKey="weight" stroke="hsl(var(--destructive))" strokeWidth={2} dot={{ r: 2 }} connectNulls />}
+                  formatter={(v: number) => [`${String(v).replace(".", ",")} kg`, "Vikt"]} />
+                <Line dataKey="weight" stroke="hsl(var(--destructive))" strokeWidth={2} dot={{ r: 2 }} connectNulls />
               </ComposedChart>
             </ResponsiveContainer>
           </div>
+          )}
+          <p className="text-[10px] text-muted-foreground">Målvikt och intagna kalorier finns nu under Statistik.</p>
             </>
           ) : (
             <div className="rounded-xl border border-border/40 overflow-hidden">

@@ -2,12 +2,14 @@ import StrengthSection from "@/components/StrengthSection";
 import { sessionVolumeKg } from "@/lib/checkedSets";
 import { WORKOUTS_CHANGED_EVENT } from "@/lib/workoutHistory";
 import NutritionTrendCard from "./NutritionTrendCard";
-import { useStatsSettings } from "@/lib/statsSettings";
+import { useStatsSettings, STATS_SECTIONS, autoShowBodyWeight } from "@/lib/statsSettings";
+import GoalWeightChart from "@/components/GoalWeightChart";
+import CalorieIntakeChart from "@/components/CalorieIntakeChart";
 import { parseNum, isPlausibleSet } from "@/lib/inputValidation";
 import { StatsSkeleton } from "@/components/LoadingSkeletons";
 import { useState, useEffect, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { BarChart3, CheckCircle, Flame, Footprints, Weight, Star, Swords, ChevronLeft, ChevronRight, Sparkles } from "lucide-react";
+import { BarChart3, CheckCircle, Flame, Footprints, Weight, Star, Swords, ChevronLeft, ChevronRight, Sparkles, SlidersHorizontal } from "lucide-react";
 import PeriodRecapView from "@/components/PeriodRecapView";
 import BodyWeightChart from "@/components/BodyWeightChart";
 import WeightProgressionChart from "@/components/WeightProgressionChart";
@@ -267,7 +269,12 @@ const getCompletionStatsDate = (
 
 const WorkoutStats = ({ userId }: WorkoutStatsProps) => {
   const { state: cardioVis } = useCardioVisibility();
-  const { isVisible: show } = useStatsSettings();
+  const { isVisible: show, toggle: toggleSection } = useStatsSettings();
+  const [showSectionPicker, setShowSectionPicker] = useState(false);
+  useEffect(() => {
+    supabase.from("body_weight_logs").select("log_date", { count: "exact", head: true }).eq("user_id", userId)
+      .then(({ count }) => autoShowBodyWeight(count ?? 0));
+  }, [userId]);
   const [userWeightKg, setUserWeightKg] = useState<number | null>(null);
   const [showRecap, setShowRecap] = useState(false);
 
@@ -686,15 +693,40 @@ const WorkoutStats = ({ userId }: WorkoutStatsProps) => {
         <BarChart3 className="w-5 h-5 text-primary" />
         <h2 className="text-xl font-black tracking-tight">Statistik</h2>
         <button
+          onClick={() => setShowSectionPicker((v) => !v)}
+          aria-expanded={showSectionPicker}
+          className={`ml-auto flex items-center gap-1 rounded-full px-3 py-1.5 text-xs font-semibold ${showSectionPicker ? "bg-primary text-primary-foreground" : "bg-secondary"}`}
+        >
+          <SlidersHorizontal className="w-3.5 h-3.5" /> Visa/dölj
+        </button>
+        <button
           onClick={() => setShowRecap(true)}
-          className="ml-auto flex items-center gap-1 rounded-full bg-secondary px-3 py-1.5 text-xs font-semibold"
+          className="flex items-center gap-1 rounded-full bg-secondary px-3 py-1.5 text-xs font-semibold"
         >
           <Sparkles className="w-3.5 h-3.5 text-primary" /> Krönika
         </button>
       </div>
 
 
+      {showSectionPicker && (
+        <div className="rounded-2xl bg-card shadow-soft p-3 space-y-2">
+          <p className="text-sm font-semibold">Visa i Statistik</p>
+          <div className="flex flex-wrap gap-1.5">
+            {STATS_SECTIONS.map((sec) => {
+              const on = show(sec.key);
+              return (
+                <button key={sec.key} type="button" onClick={() => toggleSection(sec.key)} aria-pressed={on}
+                  className={`px-3 py-1.5 rounded-full text-xs font-semibold border ${on ? "bg-primary text-primary-foreground border-primary" : "bg-muted/60 text-muted-foreground border-border/40"}`}>
+                  {sec.label}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
       {show("nutrition") && <NutritionTrendCard userId={userId} />}
+      {show("calorieIntake") && <CalorieIntakeChart userId={userId} />}
 
       {statsLoading && completions.length === 0 ? <StatsSkeleton /> : <>
 
@@ -866,6 +898,7 @@ const WorkoutStats = ({ userId }: WorkoutStatsProps) => {
 
       {/* Body weight chart */}
       {show("bodyWeight") && <BodyWeightChart userId={userId} />}
+      {show("goalWeight") && <GoalWeightChart userId={userId} />}
 
       {/* Weight progression chart */}
       {show("weightProgression") && <WeightProgressionChart userId={userId} />}
