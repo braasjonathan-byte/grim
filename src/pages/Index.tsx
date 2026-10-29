@@ -144,10 +144,16 @@ const Index = () => {
     // Check URL params first (from push notification deep links)
     const params = new URLSearchParams(window.location.search);
     const urlTab = params.get("tab");
-    if (urlTab === "home" || urlTab === "workout" || urlTab === "nutrition" || urlTab === "social" || urlTab === "friends" || urlTab === "chat" || urlTab === "calc" || urlTab === "stats" || urlTab === "settings") {
+    if (urlTab === "home" || urlTab === "workout" || urlTab === "nutrition" || urlTab === "social" || urlTab === "friends" || urlTab === "chat" || urlTab === "calc" || urlTab === "stats") {
       const resolvedTab = (urlTab === "friends" || urlTab === "chat") ? "social" : urlTab;
       localStorage.setItem("grim_active_tab", resolvedTab);
       return resolvedTab as Tab;
+    }
+    if (urlTab === "settings" || params.get("tools") === "settings") {
+      // Deep link (t.ex. retur från Stripe-portalen) → Verktyg › Inställningar › Medlemskap
+      sessionStorage.setItem("grim_tools_open", "settings:supporter");
+      localStorage.setItem("grim_active_tab", "calc");
+      return "calc";
     }
     if (urlTab === "profile") {
       localStorage.setItem("grim_active_tab", "calc");

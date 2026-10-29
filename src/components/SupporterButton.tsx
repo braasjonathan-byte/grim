@@ -113,7 +113,10 @@ const SupporterButton = ({ userId }: SupporterButtonProps) => {
         return;
       }
       if (data?.url) {
-        window.open(data.url, "_blank");
+        // Samma mekanism som checkout – window.open fungerar inte i Capacitor-WebView
+        window.location.href = data.url;
+      } else {
+        toast.error("Kunde inte öppna kundportalen – ingen länk returnerades");
       }
     } catch {
       toast.error("Kunde inte öppna kundportalen");

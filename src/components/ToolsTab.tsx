@@ -131,9 +131,16 @@ const topicItem = (
 const ToolsTab = ({ userId, isAdmin, isHonorary, userRole, onViewUserPlan, onLogout, onStartPlan }: ToolsTabProps) => {
   const help = useHelpCategories();
   const [confirmLogout, setConfirmLogout] = useState(false);
-  const [subView, setSubView] = useState<"home" | "helpers" | "settings">("home");
+  const [subView, setSubView] = useState<"home" | "helpers" | "settings">(() => {
+    const f = sessionStorage.getItem("grim_tools_open");
+    return f?.startsWith("settings") ? "settings" : "home";
+  });
   const [query, setQuery] = useState("");
-  const [openItem, setOpenItem] = useState<string | null>(null);
+  const [openItem, setOpenItem] = useState<string | null>(() => {
+    const f = sessionStorage.getItem("grim_tools_open");
+    sessionStorage.removeItem("grim_tools_open");
+    return f === "settings:supporter" ? "supporter" : null;
+  });
   const [editLayout, setEditLayout] = useState(false);
   const { order, save: saveLayout } = useToolLayout();
   const [collapsed, setCollapsed] = useState<Set<string>>(() => {

@@ -61,7 +61,7 @@ serve(async (req) => {
     const origin = req.headers.get("origin") || "https://grim.lovable.app";
     const portalSession = await stripe.billingPortal.sessions.create({
       customer: stripeCustomerId,
-      return_url: `${origin}/?tab=settings`,
+      return_url: `${origin}/?tab=calc&tools=settings`,
     });
 
     return new Response(JSON.stringify({ url: portalSession.url }), {
