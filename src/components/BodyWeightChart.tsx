@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { ComposedChart, Line, ReferenceLine, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
-import { Scale } from "lucide-react";
+import { Scale, LineChart, List } from "lucide-react";
 import { toLocalDateKey } from "@/lib/dateUtils";
 import { useStatsSettings, WEIGHT_RANGES } from "@/lib/statsSettings";
 import { WEIGHT_CHANGED_EVENT } from "@/lib/bodyWeight";
@@ -12,6 +12,7 @@ const addDays = (d: Date, n: number) => { const x = new Date(d); x.setDate(x.get
 export default function BodyWeightChart({ userId }: { userId: string }) {
   const [weights, setWeights] = useState<{ log_date: string; weight_kg: number }[]>([]);
   const [goalWeight, setGoalWeight] = useState<number | null>(null);
+  const [view, setView] = useState<"graph" | "table">("graph");
   const { weightDays, setWeightDays } = useStatsSettings();
 
   useEffect(() => {
@@ -92,24 +93,53 @@ export default function BodyWeightChart({ userId }: { userId: string }) {
           </button>
         ))}
       </div>
-      <div className="h-44">
-        <ResponsiveContainer width="100%" height="100%">
-          <ComposedChart data={chart.pts} margin={{ top: 5, right: 5, left: -20, bottom: 0 }}>
-            <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />
-            <XAxis dataKey="label" tick={{ fontSize: 9 }} minTickGap={24} stroke="hsl(var(--muted-foreground))" />
-            <YAxis tick={{ fontSize: 9 }} stroke="hsl(var(--muted-foreground))"
-              domain={[(min: number) => Math.floor(Math.min(min, goalWeight ?? min) - 1), (max: number) => Math.ceil(Math.max(max, goalWeight ?? max) + 1)]} />
-            <Tooltip contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: 12, fontSize: 12 }}
-              formatter={(v: number, n: string) => [`${String(v).replace(".", ",")} kg`, n === "weight" ? "Vikt" : "Prognos"]} />
-            {goalWeight != null &&
-              <ReferenceLine y={goalWeight} stroke="hsl(var(--success))" strokeDasharray="4 4"
-                label={{ value: "Mål", fontSize: 10, fill: "hsl(var(--success))", position: "insideTopRight" }} />}
-            <Line dataKey="weight" stroke="hsl(var(--destructive))" strokeWidth={2} dot={{ r: 2 }} connectNulls />
-            <Line dataKey="projected" stroke="hsl(var(--primary))" strokeWidth={2} strokeDasharray="5 4" dot={false} connectNulls />
-          </ComposedChart>
-        </ResponsiveContainer>
+      <div className="flex gap-1 rounded-full bg-muted/60 p-1 w-fit ml-auto">
+        <button type="button" onClick={() => setView("graph")} aria-pressed={view === "graph"}
+          className={`inline-flex items-center gap-1 px-3 py-1 text-[11px] font-semibold rounded-full ${view === "graph" ? "bg-primary text-primary-foreground" : "text-muted-foreground"}`}>
+          <LineChart className="w-3 h-3" /> Graf
+        </button>
+        <button type="button" onClick={() => setView("table")} aria-pressed={view === "table"}
+          className={`inline-flex items-center gap-1 px-3 py-1 text-[11px] font-semibold rounded-full ${view === "table" ? "bg-primary text-primary-foreground" : "text-muted-foreground"}`}>
+          <List className="w-3 h-3" /> Tabell
+        </button>
       </div>
-      <p className="text-[10px] text-muted-foreground">Röd linje: dina vägningar · Blå streckad: vägen till målvikten · Lägg in ny vikt under Vikt-fliken i kost.</p>
+      {view === "graph" ? (
+        <>
+          <div className="h-44">
+            <ResponsiveContainer width="100%" height="100%">
+              <ComposedChart data={chart.pts} margin={{ top: 5, right: 5, left: -20, bottom: 0 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />
+                <XAxis dataKey="label" tick={{ fontSize: 9 }} minTickGap={24} stroke="hsl(var(--muted-foreground))" />
+                <YAxis tick={{ fontSize: 9 }} stroke="hsl(var(--muted-foreground))"
+                  domain={[(min: number) => Math.floor(Math.min(min, goalWeight ?? min) - 1), (max: number) => Math.ceil(Math.max(max, goalWeight ?? max) + 1)]} />
+                <Tooltip contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: 12, fontSize: 12 }}
+                  formatter={(v: number, n: string) => [`${String(v).replace(".", ",")} kg`, n === "weight" ? "Vikt" : "Prognos"]} />
+                {goalWeight != null &&
+                  <ReferenceLine y={goalWeight} stroke="hsl(var(--success))" strokeDasharray="4 4"
+                    label={{ value: "Mål", fontSize: 10, fill: "hsl(var(--success))", position: "insideTopRight" }} />}
+                <Line dataKey="weight" stroke="hsl(var(--destructive))" strokeWidth={2} dot={{ r: 2 }} connectNulls />
+                <Line dataKey="projected" stroke="hsl(var(--primary))" strokeWidth={2} strokeDasharray="5 4" dot={false} connectNulls />
+              </ComposedChart>
+            </ResponsiveContainer>
+          </div>
+          <p className="text-[10px] text-muted-foreground">Röd linje: dina vägningar · Blå streckad: vägen till målvikten · Lägg in ny vikt under Vikt-fliken i kost.</p>
+        </>
+      ) : (
+        <div className="rounded-xl border border-border/40 overflow-hidden">
+          <div className="grid grid-cols-2 gap-2 px-3 py-2 bg-muted/40 text-[11px] font-semibold text-muted-foreground">
+            <span>Datum</span>
+            <span className="text-right">Vikt</span>
+          </div>
+          <ul className="max-h-56 overflow-y-auto divide-y divide-border/40">
+            {[...weights].reverse().map((w) => (
+              <li key={w.log_date} className="grid grid-cols-2 gap-2 px-3 py-2 text-sm">
+                <span>{parseKey(w.log_date).toLocaleDateString("sv-SE", { weekday: "short", day: "numeric", month: "short" })}</span>
+                <span className="text-right font-semibold tabular-nums">{String(w.weight_kg).replace(".", ",")} kg</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
     </div>
   );
 }

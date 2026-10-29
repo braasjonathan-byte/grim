@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, ReferenceLine, ComposedChart, Line, CartesianGrid } from "recharts";
-import { BarChart3, TrendingUp, Scale, ListOrdered } from "lucide-react";
+import { BarChart3, TrendingUp, Scale, ListOrdered, LineChart, List } from "lucide-react";
 import { toLocalDateKey } from "@/lib/dateUtils";
 import { WEIGHT_CHANGED_EVENT } from "@/lib/bodyWeight";
 import { isPlausibleMealLog, validateNumber, parseDecimal } from "@/lib/inputValidation";
@@ -33,6 +33,7 @@ export default function NutritionInsights({ userId, dateKey, targets, refreshKey
   const [weightInput, setWeightInput] = useState("");
   const [saving, setSaving] = useState(false);
   const [goalWeight, setGoalWeight] = useState<number | null>(null);
+  const [weightView, setWeightView] = useState<"graph" | "table">("graph");
 
   const selected = parseKey(dateKey);
   const monday = mondayOf(selected);
@@ -263,6 +264,18 @@ export default function NutritionInsights({ userId, dateKey, targets, refreshKey
               {ws.length > 1 && <> · {ws[ws.length - 1] - ws[0] > 0 ? "+" : ""}{(ws[ws.length - 1] - ws[0]).toFixed(1).replace(".", ",")} kg på {weightSpanDays} {weightSpanDays === 1 ? "dag" : "dagar"}</>}
             </p>
           )}
+          <div className="flex gap-1 rounded-full bg-muted/60 p-1 w-fit ml-auto">
+            <button type="button" onClick={() => setWeightView("graph")} aria-pressed={weightView === "graph"}
+              className={`inline-flex items-center gap-1 px-3 py-1 text-[11px] font-semibold rounded-full ${weightView === "graph" ? "bg-primary text-primary-foreground" : "text-muted-foreground"}`}>
+              <LineChart className="w-3 h-3" /> Graf
+            </button>
+            <button type="button" onClick={() => setWeightView("table")} aria-pressed={weightView === "table"}
+              className={`inline-flex items-center gap-1 px-3 py-1 text-[11px] font-semibold rounded-full ${weightView === "table" ? "bg-primary text-primary-foreground" : "text-muted-foreground"}`}>
+              <List className="w-3 h-3" /> Tabell
+            </button>
+          </div>
+          {weightView === "graph" ? (
+            <>
           <div className="rounded-xl bg-muted/50 p-3 space-y-2">
             <p className="text-xs font-semibold">Mot målvikten</p>
             {goalWeight == null ? (
@@ -312,6 +325,23 @@ export default function NutritionInsights({ userId, dateKey, targets, refreshKey
               </ComposedChart>
             </ResponsiveContainer>
           </div>
+            </>
+          ) : (
+            <div className="rounded-xl border border-border/40 overflow-hidden">
+              <div className="grid grid-cols-2 gap-2 px-3 py-2 bg-muted/40 text-[11px] font-semibold text-muted-foreground">
+                <span>Datum</span>
+                <span className="text-right">Vikt</span>
+              </div>
+              <ul className="max-h-56 overflow-y-auto divide-y divide-border/40">
+                {[...weights].reverse().map((w) => (
+                  <li key={w.log_date} className="grid grid-cols-2 gap-2 px-3 py-2 text-sm">
+                    <span>{parseKey(w.log_date).toLocaleDateString("sv-SE", { weekday: "short", day: "numeric", month: "short" })}</span>
+                    <span className="text-right font-semibold tabular-nums">{String(w.weight_kg).replace(".", ",")} kg</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
         </div>
       )}
 
