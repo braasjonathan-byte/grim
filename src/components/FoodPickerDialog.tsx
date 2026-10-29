@@ -5,7 +5,8 @@ import ConfirmValueDialog, { FieldError } from "@/components/ConfirmValueDialog"
 import { supabase } from "@/integrations/supabase/client";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { Search, Plus, Loader2, ScanBarcode, Utensils, PencilLine, Sparkles, Pencil, Mic, Trash2, Camera, BookOpen } from "lucide-react";
+import { Search, Plus, Loader2, ScanBarcode, Utensils, PencilLine, Sparkles, Pencil, Mic, Trash2, Camera, BookOpen, MoreHorizontal } from "lucide-react";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { toast as sonnerToast } from "sonner";
 import VoiceFoodDialog from "./VoiceFoodDialog";
 import DescribeMealDialog from "./DescribeMealDialog";
@@ -461,19 +462,6 @@ export default function FoodPickerDialog({ open, onOpenChange, onPick, userId, h
         )}
         {!selected && (
           <>
-            <div className={`grid ${isHonorary ? "grid-cols-3" : "grid-cols-2"} gap-2`}>
-              <button onClick={() => setManualOpen(true)} className="flex flex-col items-center justify-center gap-1 py-2.5 rounded-2xl bg-secondary shadow-soft text-[11px] font-semibold transition-colors hover:bg-muted">
-                <PencilLine className="w-4 h-4" /> Eget
-              </button>
-              <button onClick={() => setBarcodeOpen(true)} className="flex flex-col items-center justify-center gap-1 py-2.5 rounded-2xl bg-secondary shadow-soft text-[11px] font-semibold transition-colors hover:bg-muted">
-                <ScanBarcode className="w-4 h-4" /> Streckkod
-              </button>
-              {isHonorary && (
-                <button onClick={() => setManualOpen(true)} className="flex flex-col items-center justify-center gap-1 py-2.5 rounded-2xl bg-primary/10 text-primary shadow-soft text-[11px] font-semibold transition-colors hover:bg-primary/20">
-                  <Sparkles className="w-4 h-4" /> AI-skanna
-                </button>
-              )}
-            </div>
             <div className="relative">
               <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
               <Input value={query} onChange={(e) => setQuery(e.target.value)} placeholder={isHonorary ? "Sök, eller beskriv vad du åt…" : "Sök livsmedel eller recept…"} className={`pl-9 ${isHonorary ? "pr-20" : "pr-11"} rounded-xl bg-muted/50 border-transparent`} autoFocus />
@@ -486,14 +474,22 @@ export default function FoodPickerDialog({ open, onOpenChange, onPick, userId, h
             </div>
             {!query.trim() && (
               <div className="space-y-2">
-                {isHonorary && <div className="grid grid-cols-2 gap-2">
-                  <button onClick={() => setDescribe({ text: "", menu: false })} className="flex items-center justify-center gap-1.5 py-2 rounded-2xl bg-primary/10 text-primary text-xs font-semibold hover:bg-primary/20">
-                    <Sparkles className="w-3.5 h-3.5" /> Beskriv måltiden
-                  </button>
-                  <button onClick={() => setDescribe({ text: "", menu: true })} className="flex items-center justify-center gap-1.5 py-2 rounded-2xl bg-primary/10 text-primary text-xs font-semibold hover:bg-primary/20">
-                    <BookOpen className="w-3.5 h-3.5" /> Fota menyn
-                  </button>
-                </div>}
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <button className="w-full flex items-center justify-center gap-1.5 py-2 rounded-2xl text-muted-foreground text-xs font-semibold hover:bg-muted/60">
+                      <MoreHorizontal className="w-3.5 h-3.5" /> Andra sätt
+                    </button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="center" className="rounded-xl">
+                    <DropdownMenuItem onClick={() => setManualOpen(true)}><PencilLine className="w-3.5 h-3.5 mr-2" /> Eget</DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => setBarcodeOpen(true)}><ScanBarcode className="w-3.5 h-3.5 mr-2" /> Streckkod</DropdownMenuItem>
+                    {isHonorary && <>
+                      <DropdownMenuItem onClick={() => setManualOpen(true)}><Sparkles className="w-3.5 h-3.5 mr-2" /> AI-skanna</DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => setDescribe({ text: "", menu: false })}><Sparkles className="w-3.5 h-3.5 mr-2" /> Beskriv måltiden</DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => setDescribe({ text: "", menu: true })}><BookOpen className="w-3.5 h-3.5 mr-2" /> Fota menyn</DropdownMenuItem>
+                    </>}
+                  </DropdownMenuContent>
+                </DropdownMenu>
                 <MealSuggestions userId={userId} meal={meal}
                   onPick={(it) => { onPick(it, { keepOpen: true }); setAddedCount((c) => c + 1); setLastAdded(it.name); }}
                   onPickMany={(items) => { items.forEach((it) => onPick(it, { keepOpen: true })); setAddedCount((c) => c + items.length); setLastAdded(`${items.length} livsmedel`); }} />

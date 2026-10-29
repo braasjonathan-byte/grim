@@ -8,7 +8,7 @@ import { firstClick, exclusive } from "@/lib/clickGuard";
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { ChevronLeft, ChevronRight, Plus, Target, Trash2, Pencil, GripVertical, ChefHat, Bookmark, MoreHorizontal, CopyPlus, Zap, BookmarkPlus, ArrowRightLeft, Copy, Sparkles } from "lucide-react";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 
 import NutritionHero from "./NutritionHero";
 import FoodPickerDialog, { PickedItem } from "./FoodPickerDialog";
@@ -122,8 +122,8 @@ function SortableMeal({ meal, isCustom, logs, mealKcal, onAdd, onRename, onDelet
           </p>
         </div>
         <div className="flex items-center gap-1.5">
-          <button onClick={onAdd} className="pill-btn-soft text-xs px-3 py-1.5" aria-label={`Lägg till i ${meal}`}>
-            <Plus className="w-3.5 h-3.5" /> Lägg till
+          <button onClick={onAdd} className="w-8 h-8 icon-round pill-btn-soft flex items-center justify-center" aria-label={`Lägg till i ${meal}`}>
+            <Plus className="w-4 h-4" />
           </button>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -145,8 +145,16 @@ function SortableMeal({ meal, isCustom, logs, mealKcal, onAdd, onRename, onDelet
                   <BookmarkPlus className="w-3.5 h-3.5 mr-2" /> Spara som måltidsmall
                 </DropdownMenuItem>
               )}
+              <DropdownMenuSeparator />
+              <DropdownMenuLabel className="text-[11px] text-muted-foreground font-normal">Hur kändes måltiden?</DropdownMenuLabel>
+              {FEELINGS.map((f) => (
+                <DropdownMenuItem key={f.key} onClick={() => onFeeling(feeling === f.key ? null : f.key)} aria-label={`Måltiden kändes: ${f.label}`}>
+                  <span className="mr-2">{f.emoji}</span> {f.label}{feeling === f.key ? " ✓" : ""}
+                </DropdownMenuItem>
+              ))}
               {isCustom && (
                 <>
+                  <DropdownMenuSeparator />
                   <DropdownMenuItem onClick={onRename}>
                     <Pencil className="w-3.5 h-3.5 mr-2" /> Byt namn
                   </DropdownMenuItem>
@@ -166,14 +174,6 @@ function SortableMeal({ meal, isCustom, logs, mealKcal, onAdd, onRename, onDelet
               <span key={logs[i].id} className="w-7 h-7 rounded-full bg-muted border-2 border-card flex items-center justify-center text-sm" title={logs[i].item_name}>{emoji}</span>
             ))}
             {logs.length > 5 && <span className="w-7 h-7 rounded-full bg-muted border-2 border-card flex items-center justify-center text-[10px] font-bold">+{logs.length - 5}</span>}
-          </div>
-          <div className="flex gap-1" role="group" aria-label="Hur kändes måltiden?">
-            {FEELINGS.map((f) => (
-              <button key={f.key} onClick={() => onFeeling(feeling === f.key ? null : f.key)} title={`Måltiden kändes: ${f.label}`} aria-label={`Måltiden kändes: ${f.label}`} aria-pressed={feeling === f.key}
-                className="flex flex-col items-center gap-0.5">
-                <span className={`w-7 h-7 rounded-full text-sm flex items-center justify-center transition-all ${feeling === f.key ? "bg-primary/20 ring-2 ring-primary scale-110" : feeling ? "opacity-40" : "bg-muted/40"}`}>{f.emoji}</span>
-              </button>
-            ))}
           </div>
         </div>
       )}
@@ -568,20 +568,18 @@ export default function NutritionView({ userId, isHonorary: isHonoraryProp = fal
       </div>
 
       {/* Snabbvalen ligger precis under veckodagen, före energikortet. */}
-      <div className="grid grid-cols-3 gap-2">
-        <button data-tour="nutrition-goals" onClick={() => setGoalsOpen(true)} className="pill-btn-ghost shadow-soft py-2 text-xs">
-          <Target className="w-3 h-3" /> Mål
-        </button>
-        <button data-tour="nutrition-recipes" onClick={() => { setCuratedTargetMeal(null); setCuratedOpen(true); }} className="pill-btn-ghost shadow-soft py-2 text-xs">
-          <ChefHat className="w-3 h-3" /> Recept
-        </button>
+      <div>
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <button data-tour="nutrition-add-meal" className="pill-btn-ghost shadow-soft py-2 text-xs">
+            <button data-tour="nutrition-add-meal" className="w-full pill-btn-ghost shadow-soft py-2 text-xs">
               <MoreHorizontal className="w-3 h-3" /> Mer
             </button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="rounded-xl">
+          <DropdownMenuContent align="center" className="rounded-xl">
+            <DropdownMenuItem data-tour="nutrition-goals" onClick={() => setGoalsOpen(true)}><Target className="w-3.5 h-3.5 mr-2" /> Mål</DropdownMenuItem>
+            <DropdownMenuItem data-tour="nutrition-recipes" onClick={() => { setCuratedTargetMeal(null); setCuratedOpen(true); }}><ChefHat className="w-3.5 h-3.5 mr-2" /> Recept</DropdownMenuItem>
+            {isHonorary && <DropdownMenuItem onClick={() => setDayAiOpen(true)}><Sparkles className="w-3.5 h-3.5 mr-2" /> Beskriv dagen med AI</DropdownMenuItem>}
+            <DropdownMenuSeparator />
             <DropdownMenuItem onClick={() => setTemplatesOpen(true)}><Bookmark className="w-3.5 h-3.5 mr-2" /> Mallar</DropdownMenuItem>
             <DropdownMenuItem onClick={() => { hapticLight(); setPastOpen(true); }}><CopyPlus className="w-3.5 h-3.5 mr-2" /> Kopiera från senaste veckan</DropdownMenuItem>
             <DropdownMenuItem onClick={() => setAddNameOpen(true)}><Plus className="w-3.5 h-3.5 mr-2" /> Lägg till måltid</DropdownMenuItem>
@@ -594,7 +592,7 @@ export default function NutritionView({ userId, isHonorary: isHonoraryProp = fal
       <div className="rounded-2xl bg-card shadow-soft border border-border/40 p-4 space-y-4">
         <div data-tour="nutrition-rings">
           {!loaded ? <div className="h-64 rounded-2xl bg-muted/40 animate-pulse" aria-label="Laddar kostdata" /> : <NutritionHero kcal={totals.kcal} burned={burned} protein={totals.protein} fat={totals.fat} carbs={totals.carbs} fiber={totals.fiber} targets={targets} micros={microTotals} quality={foodQualityScore(logs)} microTargets={microTargets} />}
-          {loaded && !hasGoals && <p className="text-[11px] text-muted-foreground text-center mt-2">Standardmål 2000 kcal – tryck på <b>Mål</b> och fyll i ålder, vikt och längd så räknar vi ut ditt eget behov.</p>}
+          {loaded && !hasGoals && <p className="text-[11px] text-muted-foreground text-center mt-2">Standardmål 2000 kcal – öppna <b>Mer → Mål</b> och fyll i ålder, vikt och längd så räknar vi ut ditt eget behov.</p>}
         </div>
 
         <FastingWidget userId={userId} />
@@ -649,11 +647,6 @@ export default function NutritionView({ userId, isHonorary: isHonoraryProp = fal
           </SortableContext>
         </DndContext>
 
-        {isHonorary && (
-          <button onClick={() => setDayAiOpen(true)} className="w-full pill-btn bg-primary text-primary-foreground py-2.5 text-xs">
-            <Sparkles className="w-3 h-3" /> Beskriv dagens kost med AI
-          </button>
-        )}
 
       </div>
 
