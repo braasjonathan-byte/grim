@@ -12,6 +12,7 @@ export type CuratedRecipe = {
   carbs_g_per_serving: number;
   ingredients: Ing[];
   image_url?: string | null;
+  image_credit?: string;
 };
 
 // helper: compute per-serving from ingredients

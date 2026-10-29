@@ -1,6 +1,11 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { CURATED_RECIPES, type CuratedRecipe } from "@/data/curatedRecipes";
+import { CURATED_RECIPES as RAW_CURATED, type CuratedRecipe } from "@/data/curatedRecipes";
+import { CURATED_RECIPE_IMAGES } from "@/data/curatedRecipeImages";
+
+const CURATED_RECIPES: CuratedRecipe[] = RAW_CURATED.map((r) => CURATED_RECIPE_IMAGES[r.id]
+  ? { ...r, image_url: r.image_url ?? CURATED_RECIPE_IMAGES[r.id].src, image_credit: CURATED_RECIPE_IMAGES[r.id].credit }
+  : r);
 
 /**
  * Bundled curated recipes merged with admin overrides from the database

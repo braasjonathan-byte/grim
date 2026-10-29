@@ -215,6 +215,7 @@ export default function CuratedRecipesDialog({ open, onOpenChange, isHonorary, u
               </div>
             </div>
             {(selected as any).image_url && <img src={(selected as any).image_url} alt={selected.name} className="w-full h-44 object-cover rounded-2xl" />}
+            {selected.image_credit && <p className="text-[9px] text-muted-foreground -mt-1 break-all">Foto: {selected.image_credit}</p>}
             <div className="bg-muted/40 rounded-2xl p-2 grid grid-cols-4 gap-1 text-center">
               <div><p className="text-[9px] text-muted-foreground">Kcal/p</p><p className="text-sm font-bold tabular-nums">{selected.kcal_per_serving}</p></div>
               <div><p className="text-[9px] text-muted-foreground">Protein</p><p className="text-sm font-bold tabular-nums">{selected.protein_g_per_serving}g</p></div>
