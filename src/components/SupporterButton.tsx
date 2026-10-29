@@ -104,6 +104,10 @@ const SupporterButton = ({ userId }: SupporterButtonProps) => {
     try {
       const { data, error } = await supabase.functions.invoke("customer-portal");
       if (error) throw error;
+      if (data?.error === "no_customer") {
+        toast.error("Hittade ingen betalning kopplad till din e-post. Har du betalat med en annan e-postadress?");
+        return;
+      }
       if (data?.error) {
         toast.error("Kunde inte öppna kundportalen. Kontrollera att din e-post matchar den du betalade med.");
         return;

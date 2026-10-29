@@ -46,7 +46,10 @@ serve(async (req) => {
     if (!stripeCustomerId) {
       const customers = await stripe.customers.list({ email: emailRow.email, limit: 1 });
       if (customers.data.length === 0) {
-        throw new Error("No Stripe customer found for this user");
+        return new Response(JSON.stringify({ error: "no_customer" }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+          status: 200,
+        });
       }
       stripeCustomerId = customers.data[0].id;
       await supabaseClient
