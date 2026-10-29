@@ -73,6 +73,21 @@ const getMonday = (date: Date) => {
   return addUtcDays(normalized, -day + 1);
 };
 
+// Ny social-vy bakom flagga. Återställ klassisk: localStorage.setItem("grim_social_ui_v2","0")
+export const SOCIAL_UI_V2_DEFAULT = true;
+const readSocialUiV2 = (): boolean => {
+  try {
+    const v = typeof window !== "undefined" ? window.localStorage.getItem("grim_social_ui_v2") : null;
+    if (v === "0") return false;
+    if (v === "1") return true;
+  } catch { /* ignore */ }
+  return SOCIAL_UI_V2_DEFAULT;
+};
+const setSocialUiV2 = (on: boolean) => {
+  try { window.localStorage.setItem("grim_social_ui_v2", on ? "1" : "0"); } catch { /* ignore */ }
+  window.location.reload();
+};
+
 const resolveWorkoutPostDate = (post: SocialPost, planStartDate?: string | null) => {
   const dateMatch = post.workout_day?.match(/^(\d{4}-\d{2}-\d{2})/);
   if (dateMatch) return parseDateKeyNoonUtc(dateMatch[1]);
@@ -125,6 +140,7 @@ const SocialView = ({ userId, isAdmin, isHonorary = false, friendActivities, unr
   const [postGroupId, setPostGroupId] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
   const [feedFilter, setFeedFilter] = useState<"all" | "friends">("all");
+  const [uiV2] = useState<boolean>(() => readSocialUiV2());
   const [friendIds, setFriendIds] = useState<Set<string>>(new Set());
   const [openGroupId, setOpenGroupId] = useState<string | null>(null);
   const [pendingFriendId, setPendingFriendId] = useState<string | null>(null);
@@ -713,7 +729,7 @@ const SocialView = ({ userId, isAdmin, isHonorary = false, friendActivities, unr
                 >
                   <st.icon className="w-3.5 h-3.5" />
                   {st.label}
-                  {st.key === "friends" && friendActivities.length > 0 && (
+                  {!uiV2 && st.key === "friends" && friendActivities.length > 0 && (
                     <span className="w-4 h-4 bg-destructive text-destructive-foreground text-[10px] font-bold rounded-full flex items-center justify-center">
                       {friendActivities.length > 9 ? "9+" : friendActivities.length}
                     </span>
@@ -737,9 +753,20 @@ const SocialView = ({ userId, isAdmin, isHonorary = false, friendActivities, unr
 
       {/* FEED TAB */}
       {subTab === "feed" && (
-        <div className="space-y-4">
+        <div className={uiV2 ? "space-y-3" : "space-y-4"}>
           {/* Feed filter – compact segment */}
           <div className="flex items-center justify-between gap-2">
+            {uiV2 ? (
+              <button
+                type="button"
+                onClick={() => setFeedFilter(feedFilter === "all" ? "friends" : "all")}
+                className="inline-flex items-center gap-1 rounded-full border border-border/60 px-2.5 py-0.5 text-[11px] font-semibold text-muted-foreground transition-colors hover:text-foreground"
+                aria-label="Byt filter"
+              >
+                {feedFilter === "all" ? <Globe className="h-3 w-3" /> : <Users className="h-3 w-3" />}
+                {feedFilter === "all" ? "Alla" : "Vänner"}
+              </button>
+            ) : (
             <div className="relative inline-flex rounded-full bg-muted/40 p-1">
               <span
                 aria-hidden
@@ -758,12 +785,25 @@ const SocialView = ({ userId, isAdmin, isHonorary = false, friendActivities, unr
                 </button>
               ))}
             </div>
+            )}
             {feedLoading && posts.length > 0 && (
               <span className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
                 <span className="h-3 w-3 animate-spin rounded-full border-2 border-primary/30 border-t-primary" />
                 Uppdaterar
               </span>
             )}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button type="button" aria-label="Fler alternativ" className="ml-auto rounded-full p-1 text-muted-foreground hover:bg-muted/60">
+                  <MoreHorizontal className="h-4 w-4" />
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={() => setSocialUiV2(!uiV2)}>
+                  {uiV2 ? "Klassisk vy" : "Ny vy"}
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
 
           {/* Compose – compact pill row */}
@@ -794,7 +834,7 @@ const SocialView = ({ userId, isAdmin, isHonorary = false, friendActivities, unr
 
           {/* Compose form */}
           {showCompose && (
-            <div className="border border-border rounded-xl p-4 bg-card space-y-3">
+            <div className={uiV2 ? "rounded-2xl bg-card p-3 space-y-2.5 shadow-soft" : "border border-border rounded-xl p-4 bg-card space-y-3"}>
               <div className="flex items-center justify-between">
                 <h4 className="text-sm font-bold">Nytt inlägg</h4>
                 <button onClick={() => { setShowCompose(false); setImageFile(null); setImagePreview(null); setImageFiles([]); }}>
@@ -935,9 +975,9 @@ const SocialView = ({ userId, isAdmin, isHonorary = false, friendActivities, unr
             const totalLikes = likes[post.id] || 0;
             const canManage = isAdmin || post.user_id === userId;
             return (
-            <div key={post.id} data-post-id={post.id} className={`relative overflow-hidden rounded-2xl border bg-card shadow-soft transition-all ${post.pinned ? "border-primary/40" : "border-border/50"} ${highlightedPostId === post.id ? "ring-2 ring-primary" : ""}`}>
+            <div key={post.id} data-post-id={post.id} className={`relative overflow-hidden transition-all ${uiV2 ? `rounded-xl bg-card ${post.pinned ? "ring-1 ring-primary/40" : ""}` : `rounded-2xl border bg-card shadow-soft ${post.pinned ? "border-primary/40" : "border-border/50"}`} ${highlightedPostId === post.id ? "ring-2 ring-primary" : ""}`}>
               {/* Type accent line */}
-              {isWorkoutPost && <span aria-hidden className={`absolute inset-x-0 top-0 h-1 ${kindMeta.accent}`} />}
+              {isWorkoutPost && !uiV2 && <span aria-hidden className={`absolute inset-x-0 top-0 h-1 ${kindMeta.accent}`} />}
               {/* Pinned indicator */}
               {post.pinned && (
                 <div className="px-4 pt-3 flex items-center gap-1.5 text-[10px] font-semibold text-primary">
@@ -963,15 +1003,15 @@ const SocialView = ({ userId, isAdmin, isHonorary = false, friendActivities, unr
                       (nicknames[post.user_id] || "?")[0]?.toUpperCase()
                     )}
                   </div>
-                  <div className="min-w-0 leading-tight">
-                    <span className="block truncate text-sm font-bold">{nicknames[post.user_id] || "Anonym"}</span>
-                    <span className="text-[11px] text-muted-foreground">
+                  <div className={uiV2 ? "flex min-w-0 items-baseline gap-1.5 leading-tight" : "min-w-0 leading-tight"}>
+                    <span className={uiV2 ? "truncate text-sm font-bold" : "block truncate text-sm font-bold"}>{nicknames[post.user_id] || "Anonym"}</span>
+                    <span className="shrink-0 text-[11px] text-muted-foreground">
                       {(() => {
                         const workoutDate = resolveWorkoutPostDate(post, planStartDates[post.user_id]);
                         if (workoutDate) return format(workoutDate, "d MMM", { locale: sv });
                         return format(new Date(post.created_at), "d MMM HH:mm", { locale: sv });
                       })()}
-                      {post.visibility === "group" ? " · 👥 Grupp" : post.visibility === "public" ? " · 🌍 Alla" : " · 👫 Vänner"}
+                      {uiV2 ? "" : post.visibility === "group" ? " · 👥 Grupp" : post.visibility === "public" ? " · 🌍 Alla" : " · 👫 Vänner"}
                     </span>
                   </div>
                 </button>
@@ -1122,9 +1162,9 @@ const SocialView = ({ userId, isAdmin, isHonorary = false, friendActivities, unr
               )}
 
               {/* Reactions */}
-              <div className="flex items-center gap-2 border-t border-border/40 px-3 py-2.5">
+              <div className={uiV2 ? "flex items-center gap-1 px-2 pb-2 pt-0.5" : "flex items-center gap-2 border-t border-border/40 px-3 py-2.5"}>
                 <FlameReaction
-                  fullWidth
+                  fullWidth={!uiV2}
                   active={myLikes.has(post.id)}
                   count={likes[post.id] || 0}
                   onToggle={() => toggleLike(post.id)}
@@ -1132,7 +1172,7 @@ const SocialView = ({ userId, isAdmin, isHonorary = false, friendActivities, unr
                 <button
                   onClick={() => toggleComments(post.id)}
                   aria-pressed={openComments.has(post.id)}
-                  className={`inline-flex flex-1 items-center justify-center gap-1.5 rounded-full border px-3 py-2 text-xs font-semibold transition-all active:scale-95 ${
+                  className={uiV2 ? `inline-flex items-center gap-1.5 rounded-full px-2.5 py-1.5 text-xs font-semibold transition-all active:scale-95 ${openComments.has(post.id) ? "text-primary" : "text-muted-foreground hover:text-foreground"}` : `inline-flex flex-1 items-center justify-center gap-1.5 rounded-full border px-3 py-2 text-xs font-semibold transition-all active:scale-95 ${
                     openComments.has(post.id)
                       ? "border-primary/40 bg-primary/15 text-primary"
                       : "border-border/60 bg-secondary/50 text-muted-foreground hover:bg-accent"
@@ -1143,7 +1183,7 @@ const SocialView = ({ userId, isAdmin, isHonorary = false, friendActivities, unr
                 </button>
                 {post.user_id !== userId && (
                   <WorkoutCheerButton
-                    fullWidth
+                    fullWidth={!uiV2}
                     toUserId={post.user_id}
                     fromUserId={userId}
                     week={post.workout_week}

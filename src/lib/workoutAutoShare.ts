@@ -199,8 +199,6 @@ export function buildWorkoutSummaryCaption(
     }
   }
 
-  lines.push("");
-  lines.push("Elda passet 🔥 eller heja på i kommentarerna!");
   return lines.join("\n");
 }
 
