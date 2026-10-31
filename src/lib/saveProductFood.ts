@@ -13,6 +13,7 @@ type ProductFood = {
 export async function saveProductFood(userId: string, food: ProductFood, extra: Record<string, unknown> = {}): Promise<string> {
   const { data, error } = await supabase.from("custom_foods").insert({
     ...extra,
+    nutrition_source: "Open Food Facts · förpackningsuppgifter, ej verifierade",
     user_id: userId,
     name: food.name,
     kcal: food.kcal,

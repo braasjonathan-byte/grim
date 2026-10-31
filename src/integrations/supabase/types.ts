@@ -14,12 +14,6 @@ export type Database = {
   }
   public: {
     Tables: {
-      progress_photos: {
-        Row: { created_at: string; id: string; note: string | null; pose: string | null; storage_path: string; taken_on: string; user_id: string }
-        Insert: { created_at?: string; id?: string; note?: string | null; pose?: string | null; storage_path: string; taken_on?: string; user_id: string }
-        Update: { created_at?: string; id?: string; note?: string | null; pose?: string | null; storage_path?: string; taken_on?: string; user_id?: string }
-        Relationships: []
-      }
       announcements: {
         Row: {
           author_id: string
@@ -482,6 +476,7 @@ export type Database = {
           magnesium_mg: number | null
           name: string
           nova_group: number | null
+          nutrition_source: string | null
           potassium_mg: number | null
           protein_g: number
           sodium_mg: number | null
@@ -503,6 +498,7 @@ export type Database = {
           magnesium_mg?: number | null
           name: string
           nova_group?: number | null
+          nutrition_source?: string | null
           potassium_mg?: number | null
           protein_g?: number
           sodium_mg?: number | null
@@ -524,6 +520,7 @@ export type Database = {
           magnesium_mg?: number | null
           name?: string
           nova_group?: number | null
+          nutrition_source?: string | null
           potassium_mg?: number | null
           protein_g?: number
           sodium_mg?: number | null
@@ -925,6 +922,7 @@ export type Database = {
           magnesium_mg: number | null
           name: string
           nova_group: number | null
+          nutrition_source: string | null
           potassium_mg: number | null
           protein_g: number
           sodium_mg: number | null
@@ -950,6 +948,7 @@ export type Database = {
           magnesium_mg?: number | null
           name: string
           nova_group?: number | null
+          nutrition_source?: string | null
           potassium_mg?: number | null
           protein_g?: number
           sodium_mg?: number | null
@@ -975,6 +974,7 @@ export type Database = {
           magnesium_mg?: number | null
           name?: string
           nova_group?: number | null
+          nutrition_source?: string | null
           potassium_mg?: number | null
           protein_g?: number
           sodium_mg?: number | null
@@ -1204,6 +1204,7 @@ export type Database = {
           magnesium_mg: number | null
           meal_type: string
           nova_group: number | null
+          nutrition_source: string | null
           potassium_mg: number | null
           protein_g: number
           recipe_id: string | null
@@ -1232,6 +1233,7 @@ export type Database = {
           magnesium_mg?: number | null
           meal_type?: string
           nova_group?: number | null
+          nutrition_source?: string | null
           potassium_mg?: number | null
           protein_g?: number
           recipe_id?: string | null
@@ -1260,6 +1262,7 @@ export type Database = {
           magnesium_mg?: number | null
           meal_type?: string
           nova_group?: number | null
+          nutrition_source?: string | null
           potassium_mg?: number | null
           protein_g?: number
           recipe_id?: string | null
@@ -1348,6 +1351,21 @@ export type Database = {
         }
         Relationships: []
       }
+      nutrition_complete_days: {
+        Row: {
+          log_date: string
+          user_id: string
+        }
+        Insert: {
+          log_date: string
+          user_id: string
+        }
+        Update: {
+          log_date?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       nutrition_goals: {
         Row: {
           activity_level: string
@@ -1423,6 +1441,24 @@ export type Database = {
           vitamin_d_ug?: number | null
           water_goal_ml?: number
           weekly_loss_kg?: number | null
+        }
+        Relationships: []
+      }
+      nutrition_preferences: {
+        Row: {
+          meal_allocation: Json
+          simple_view: boolean
+          user_id: string
+        }
+        Insert: {
+          meal_allocation?: Json
+          simple_view?: boolean
+          user_id: string
+        }
+        Update: {
+          meal_allocation?: Json
+          simple_view?: boolean
+          user_id?: string
         }
         Relationships: []
       }
@@ -1719,6 +1755,36 @@ export type Database = {
           training_days_per_week?: number | null
           user_id?: string
           weight_kg?: number | null
+        }
+        Relationships: []
+      }
+      progress_photos: {
+        Row: {
+          created_at: string
+          id: string
+          note: string | null
+          pose: string | null
+          storage_path: string
+          taken_on: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          note?: string | null
+          pose?: string | null
+          storage_path: string
+          taken_on?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          note?: string | null
+          pose?: string | null
+          storage_path?: string
+          taken_on?: string
+          user_id?: string
         }
         Relationships: []
       }

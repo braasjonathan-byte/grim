@@ -36,6 +36,7 @@ import { MICRO_SELECT, microsFromOFF, pickMicros, scaleMicros, type Micros } fro
 import { usageKey, type UsageMap } from "@/lib/foodRanking";
 import { searchFoods } from "@/lib/foodSearch";
 import { saveProductFood } from "@/lib/saveProductFood";
+import { nutritionSource } from "@/lib/nutritionExperience";
 
 // Livsmedelsbanken (~2,5k rader) laddas en gång och söks lokalt med ordbaserad matchning.
 let foodsCache: Promise<any[]> | null = null;
@@ -45,7 +46,7 @@ function loadAllFoods(): Promise<any[]> {
       const all: any[] = [];
       for (let from = 0; ; from += 1000) {
         const { data, error } = await supabase.from("foods")
-          .select(`id,name,kcal,protein_g,fat_g,carbs_g,fiber_g,default_piece_weight_g,group_name,suitable_units,density_g_per_dl,${MICRO_SELECT}`)
+          .select(`id,name,nutrition_source,kcal,protein_g,fat_g,carbs_g,fiber_g,default_piece_weight_g,group_name,suitable_units,density_g_per_dl,${MICRO_SELECT}`)
 
           .order("name").range(from, from + 999);
         if (error) { foodsCache = null; throw error; }
@@ -74,6 +75,7 @@ export interface PickedItem {
   micros?: Micros;
   nova_group?: number | null;
   sugar_g?: number | null;
+  nutrition_source?: string;
 }
 
 interface FoodPickerDialogProps {
@@ -180,7 +182,7 @@ export default function FoodPickerDialog({ open, onOpenChange, onPick, userId, h
         const all: any[] = [];
         for (let from = 0; ; from += 1000) {
           const { data, error } = await supabase.from("custom_foods")
-            .select(`id,name,user_id,kcal,protein_g,fat_g,carbs_g,fiber_g,${MICRO_SELECT}`)
+            .select(`id,name,user_id,nutrition_source,kcal,protein_g,fat_g,carbs_g,fiber_g,${MICRO_SELECT}`)
             .order("id").range(from, from + 999);
           if (error) throw error;
           all.push(...(data || []));
@@ -389,6 +391,7 @@ export default function FoodPickerDialog({ open, onOpenChange, onPick, userId, h
       micros: computed.micros,
       nova_group: selected.nova_group ?? null,
       sugar_g: computed.sugar_g,
+      nutrition_source: nutritionSource(selected),
     }, { keepOpen });
     if (keepOpen) { setAddedCount((c) => c + 1); setLastAdded(selected.name); }
     // Track personal usage so ranking improves over time (fire-and-forget)
@@ -561,6 +564,7 @@ export default function FoodPickerDialog({ open, onOpenChange, onPick, userId, h
 
         {selected && (
           <div className="space-y-3">
+            <p className="text-xs text-muted-foreground">Källa: {nutritionSource(selected)}</p>
             <div>
               <label className="text-xs font-medium text-muted-foreground">
                 {selected.source === "recipe" ? "Antal portioner" : "Mängd"}

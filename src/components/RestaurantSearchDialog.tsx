@@ -6,6 +6,10 @@ import type { PickedItem } from "./FoodPickerDialog";
 import { UNITS, gramsForFood } from "@/lib/nutritionCalc";
 import type { MenuItem } from "@/data/restaurantMenu";
 import { searchMenu, tokens, chainRank } from "@/lib/restaurantSearch";
+import { Button } from "@/components/ui/button";
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
+import { validateNumber, parseDecimal } from "@/lib/inputValidation";
+import { customizedMenu, menuChoices } from "@/lib/restaurantCustomization";
 
 interface Props {
   open: boolean;
@@ -54,13 +58,20 @@ export default function RestaurantSearchDialog({ open, onOpenChange, onPick, ini
   const [selected, setSelected] = useState<OFFItem | null>(null);
   const [amount, setAmount] = useState("100");
   const [unit, setUnit] = useState("g");
+  const [combo, setCombo] = useState<MenuItem | null>(null);
+  const [sideIndex, setSideIndex] = useState("2");
+  const [drinkIndex, setDrinkIndex] = useState("1");
+  const [extraIndex, setExtraIndex] = useState("none");
+  const choices = combo ? menuChoices(combo) : null;
+  const effective = combo && choices ? fromMenu(customizedMenu(combo, choices.sides[Number(sideIndex)] ?? null, choices.drinks[Number(drinkIndex)] ?? null, extraIndex === "none" ? null : choices.extras[Number(extraIndex)] ?? null)) : selected;
+  const amountError = validateNumber(amount, unit === "g" ? "foodGrams" : { min: 0.1, max: 50, unit }).error;
   // Always read the latest field values — never a value captured in an older render.
   const reqRef = useRef(0);
 
 
   useEffect(() => {
     if (!open) { setItem(""); setResults([]); setSelected(null); setLoading(false); }
-    else if (initial) pick(fromMenu(initial));
+    else if (initial) { pick(fromMenu(initial)); setCombo(initial.parts ? initial : null); }
   }, [open, initial]);
 
 
@@ -108,14 +119,16 @@ export default function RestaurantSearchDialog({ open, onOpenChange, onPick, ini
   }, [item]);
 
   function pick(r: OFFItem) {
+    setCombo(null); setSideIndex("2"); setDrinkIndex("1"); setExtraIndex("none");
     setSelected(r);
     setAmount(r.serving_g ? "1" : "100");
     setUnit(r.serving_g ? "portion" : "g");
   }
 
   function confirm() {
-    if (!selected) return;
-    const a = parseFloat(amount.replace(",", ".")) || 0;
+    if (!effective || amountError) return;
+    const selected = effective;
+    const a = parseDecimal(amount);
     const grams = selected.serving_g && unit === "portion" ? a * selected.serving_g : gramsForFood(a, unit, selected.product_name);
     const factor = grams / 100;
     onPick({
@@ -127,6 +140,7 @@ export default function RestaurantSearchDialog({ open, onOpenChange, onPick, ini
       protein_g: selected.protein_g * factor,
       fat_g: selected.fat_g * factor,
       carbs_g: selected.carbs_g * factor,
+      nutrition_source: selected.code.startsWith("menu-") ? "Restaurang · ungefärliga menyvärden" : "Open Food Facts · förpackningsuppgifter, ej verifierade",
     });
     onOpenChange(false);
   }
@@ -168,7 +182,7 @@ export default function RestaurantSearchDialog({ open, onOpenChange, onPick, ini
                 <ul className="divide-y divide-border border-b border-border">
                   {local.map((r) => (
                     <li key={r.code}>
-                      <button onClick={() => pick(r)} className="w-full text-left py-2.5 px-1 hover:bg-accent flex items-start justify-between gap-2">
+                      <button onClick={() => { pick(r); const m = searchMenu(item).find((h) => fromMenu(h.item).code === r.code)?.item; setCombo(m?.parts ? m : null); }} className="w-full text-left py-2.5 px-1 hover:bg-accent flex items-start justify-between gap-2">
                         <div className="min-w-0 flex-1">
                           <p className="text-sm font-medium truncate">{r.product_name} <span className="text-muted-foreground font-normal">— {r.brands}</span></p>
                           <p className="text-[11px] text-muted-foreground truncate">{Math.round((r.kcal * (r.serving_g ?? 100)) / 100)} kcal / portion</p>
@@ -202,12 +216,21 @@ export default function RestaurantSearchDialog({ open, onOpenChange, onPick, ini
           </>
         )}
 
-        {selected && (
-          <div className="space-y-3">
+        {effective && (
+          <div className="space-y-3 overflow-y-auto">
+            {combo && choices && <div className="space-y-3">
+              {([{ label: "Pommes", value: sideIndex, set: setSideIndex, items: choices.sides }, { label: "Dryck", value: drinkIndex, set: setDrinkIndex, items: choices.drinks }]).map(({ label, value, set, items }) => <div key={label}>
+                <label className="text-xs font-semibold">{label}</label>
+                <Select value={value} onValueChange={set}><SelectTrigger aria-label={label}><SelectValue /></SelectTrigger><SelectContent>{items.map((m, i) => <SelectItem key={i} value={String(i)}>{m?.n ?? `Utan ${label.toLowerCase()}`}</SelectItem>)}</SelectContent></Select>
+              </div>)}
+              {choices.extras.length > 0 && <div><label className="text-xs font-semibold">Tillbehör</label><Select value={extraIndex} onValueChange={setExtraIndex}><SelectTrigger aria-label="Tillbehör"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="none">Inget extra</SelectItem>{choices.extras.map((m, i) => <SelectItem key={i} value={String(i)}>{m.n}</SelectItem>)}</SelectContent></Select></div>}
+            </div>}
             <div className="border border-border p-3 bg-muted/40">
-              <p className="font-bold text-sm">{selected.product_name}</p>
-              <p className="text-[10px] uppercase tracking-wide text-muted-foreground mt-1">{selected.brands.split(",")[0].trim()}</p>
+              <p className="font-bold text-sm break-words">{effective.product_name}</p>
+              <p className="text-[10px] uppercase tracking-wide text-muted-foreground mt-1">{effective.brands.split(",")[0].trim()}</p>
+              <p className="text-xs text-muted-foreground">Källa: {effective.code.startsWith("menu-") ? "Restaurang · ungefärliga menyvärden" : "Open Food Facts · ej verifierade förpackningsuppgifter"}</p>
               {(() => {
+                const selected = effective;
                 const a = parseFloat(amount.replace(",", ".")) || 0;
                 const g = selected.serving_g && unit === "portion" ? a * selected.serving_g : gramsForFood(a, unit, selected.product_name);
                 const f = g / 100;
@@ -226,15 +249,16 @@ export default function RestaurantSearchDialog({ open, onOpenChange, onPick, ini
             <div>
               <label className="text-xs font-medium">Mängd</label>
               <div className="flex gap-2 mt-1">
-                <Input value={amount} onChange={(e) => setAmount(e.target.value)} inputMode="decimal" pattern="[0-9.,]*" className="rounded-none flex-1" />
+                <Input aria-label="Mängd" value={amount} onChange={(e) => setAmount(e.target.value)} inputMode="decimal" pattern="[0-9.,]*" className="rounded-none flex-1" />
                 <select value={unit} onChange={(e) => setUnit(e.target.value)} className="border border-input bg-background px-2 text-sm">
-                  {UNITS.map((u) => <option key={u} value={u}>{u}</option>)}
+                  {(effective.serving_g ? ["portion", "g"] : UNITS).map((u) => <option key={u} value={u}>{u}</option>)}
                 </select>
               </div>
             </div>
+            {amountError && <p role="alert" className="text-xs text-destructive">{amountError}</p>}
             <div className="flex gap-2">
-              <button onClick={() => (initial ? onOpenChange(false) : setSelected(null))} className="flex-1 py-2.5 border border-input text-sm font-medium">Tillbaka</button>
-              <button onClick={confirm} className="flex-1 py-2.5 bg-primary text-primary-foreground text-sm font-bold">Lägg till</button>
+              <Button variant="outline" onClick={() => { setCombo(null); if (initial) onOpenChange(false); else setSelected(null); }} className="flex-1">Tillbaka</Button>
+              <Button disabled={!!amountError} onClick={confirm} className="flex-1">Lägg till</Button>
             </div>
           </div>
         )}

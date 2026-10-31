@@ -239,6 +239,13 @@
       "when": 1792401370543,
       "tag": "0033_merge_exercises_hide_sources",
       "breakpoints": true
+    },
+    {
+      "idx": 34,
+      "version": "7",
+      "when": 1793432121583,
+      "tag": "0034_nutrition_experience_preferences",
+      "breakpoints": true
     }
   ]
 }
