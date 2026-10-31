@@ -1,6 +1,6 @@
 // Kurerad meny för vanliga kedjor i Sverige. Värden per portion (ungefärliga, från kedjornas
 // publicerade näringsinfo). g = portionsvikt. aliases = andra namn/stavningar.
-export interface MenuItem { r: string; n: string; g: number; kcal: number; p: number; f: number; c: number; a?: string[] }
+export interface MenuItem { r: string; n: string; g: number; kcal: number; p: number; f: number; c: number; a?: string[]; parts?: MenuItem[] }
 
 const M = (r: string, rows: [string, number, number, number, number, number, string[]?][]): MenuItem[] =>
   rows.map(([n, g, kcal, p, f, c, a]) => ({ r, n, g, kcal, p, f, c, a }));
@@ -130,7 +130,7 @@ export function buildMenuCombos(menu: MenuItem[]): MenuItem[] {
       if (!main) continue;
       const parts = [main, fries, drink];
       const sum = (k: "g" | "kcal" | "p" | "f" | "c") => parts.reduce((s, x) => s + x[k], 0);
-      out.push({ r, n: `${n} meny`, g: sum("g"), kcal: sum("kcal"), p: sum("p"), f: sum("f"), c: sum("c"),
+      out.push({ r, n: `${n} meny`, g: sum("g"), kcal: sum("kcal"), p: sum("p"), f: sum("f"), c: sum("c"), parts,
         a: [...(main.a || []).map((x) => `${x} meny`), `${n} mål`, `${n} meal`] });
     }
   }
