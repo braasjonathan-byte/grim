@@ -81,6 +81,7 @@ public class GrimKcalWidget extends AppWidgetProvider {
         v.setTextColor(R.id.widget_left_label, mutedFg);
 
         v.setViewVisibility(R.id.widget_side, wide ? View.VISIBLE : View.GONE);
+        v.setViewVisibility(R.id.widget_side_r, wide ? View.VISIBLE : View.GONE);
         v.setViewVisibility(R.id.widget_macros, wide ? View.VISIBLE : View.GONE);
         if (wide) {
             v.setTextViewText(R.id.widget_eaten, String.valueOf(Math.round(kcal)));
