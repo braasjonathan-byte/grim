@@ -1,5 +1,13 @@
 # Roadmap
 
+## Kostförbättringar 31 oktober 2026
+- [ ] 7. Anpassa dryck, pommesstorlek och tillbehör i restaurangmenyer.
+- [ ] 8. Visa källan till livsmedlets näringsvärden.
+- [ ] 11. Skilj saknade mikronäringsvärden från noll och markera ofullständigt underlag.
+- [ ] 12. Markera dagar färdigregistrerade; använd dessa i snitt och prognoser.
+- [ ] 15. Personlig kalorifördelning och proteinfördelning mellan måltider, med korrekta totaler.
+- [ ] 1. Enkel/detaljerad kostvy utan att ta bort funktioner.
+
 ## Testrapport 17 okt 2026 (punkt 1–4)
 - [x] 1. Offlinesynk: omspelning körs nu var 15:e sekund, vid "online" och när appen blir synlig; vyn laddar om när kön spelats upp (grim:offline-queue-flushed) och cachen sparar server+köade rader så inget försvinner vid omladdning.
 - [x] 2. Livsmedels-RLS verifierad: alla inloggade läser, bara skaparen ändrar/raderar (avsiktligt).
