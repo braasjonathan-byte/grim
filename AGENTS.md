@@ -1,5 +1,9 @@
 # Architecture rules
 
+- Store nutrition view preferences and validated meal percentage allocations per user in nutrition_preferences, and explicit day completion in nutrition_complete_days; shared nutritionExperience helpers keep targets exact and incomplete days out of averages.
+- Restaurant combos retain their component portions and are recalculated from selected components; provenance travels separately from food IDs so approximate menu and AI values cannot masquerade as verified data.
+- Preserve micronutrient absence as null/undefined and retain known zero values; nutrientCoverage reports partial totals without implying a complete daily intake.
+
 - Recipe ingredient unit switching in the recipe view is display-only: convert from the original amount using shared nutrition helpers and linked food measure overrides, never mutate saved quantities or macros. In the recipe editor the unit choice is an explicit edit: convert with `convertedIngredient` so total grams and macros stay constant while amount+unit are saved.
 
 - Use the shared OFF product parser for barcode and server-side text searches, and persist products through `saveProductFood` only on explicit addition; identical acceptance rules and real food IDs keep scanned products searchable.
