@@ -80,6 +80,7 @@ export default function ManualFoodDialog({ open, onOpenChange, onPick, userId, i
       const payload = {
         user_id: userId,
         name: name.trim(),
+        nutrition_source: "Användarinmatat · manuella näringsvärden",
         kcal: parseDecimal(kcal),
         protein_g: p.value ?? 0,
         fat_g: f.value ?? 0,
@@ -88,11 +89,12 @@ export default function ManualFoodDialog({ open, onOpenChange, onPick, userId, i
       };
       const { data, error } = await supabase.from("custom_foods").insert(payload).select("id").single();
       if (error) throw error;
+      if (!data) throw new Error("Livsmedlet kunde inte sparas.");
       const grams = parseDecimal(amount);
       const factor = grams / 100;
       onPick({
         source: "custom_food",
-        id: data!.id,
+        id: data.id,
         name: payload.name,
         amount: grams,
         unit: "g",
@@ -101,6 +103,7 @@ export default function ManualFoodDialog({ open, onOpenChange, onPick, userId, i
         fat_g: payload.fat_g * factor,
         carbs_g: payload.carbs_g * factor,
         fiber_g: payload.fiber_g * factor,
+        nutrition_source: payload.nutrition_source,
       });
       toast.success("Sparat i din livsmedelsbank");
       onOpenChange(false);

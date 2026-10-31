@@ -10,6 +10,7 @@ export function aiItemToPicked(it: AiFoodItem, idx: number): PickedItem {
   const f = g / 100;
   return {
     source: "custom_food", id: `ai-${idx}-${Date.now()}`, name: it.name, amount: Math.round(g), unit: "g",
+    nutrition_source: "AI-uppskattat",
     kcal: (Number(it.kcal_100g) || 0) * f, protein_g: (Number(it.protein_100g) || 0) * f,
     fat_g: (Number(it.fat_100g) || 0) * f, carbs_g: (Number(it.carbs_100g) || 0) * f, fiber_g: (Number(it.fiber_100g) || 0) * f,
   };

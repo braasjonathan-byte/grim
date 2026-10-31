@@ -105,6 +105,7 @@ interface SortableMealProps {
 }
 
 function SortableMeal({ meal, isCustom, logs, mealKcal, onAdd, onRename, onDelete, onRemoveLog, onEditLog, onCopyYesterday, onQuickLog, onSaveTemplate, budget, feeling, onFeeling, proteinBudget, simple }: SortableMealProps) {
+  const [expanded, setExpanded] = useState(false);
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: meal, disabled: !isCustom });
   const style = {
     transform: CSS.Transform.toString(transform),
@@ -121,7 +122,7 @@ function SortableMeal({ meal, isCustom, logs, mealKcal, onAdd, onRename, onDelet
           </button>
         )}
         <div className="min-w-0 flex-1">
-          <p className="text-sm font-bold first-letter:uppercase font-serif truncate">{meal}</p>
+          <Button variant="ghost" className="h-auto p-0 text-sm font-bold first-letter:uppercase font-serif max-w-full justify-start" aria-label={`Visa ${meal}`} aria-expanded={!simple || expanded} onClick={() => setExpanded((v) => !v)}><span className="truncate">{meal}</span></Button>
           <p className={`text-[10px] tabular-nums ${budget && mealKcal > budget * 1.1 ? "text-destructive font-semibold" : "text-muted-foreground"}`}>
             {Math.round(mealKcal)}{budget ? ` / ${Math.round(budget)}` : ""} kcal
             {logs.length > 0 && <span className="text-muted-foreground font-normal"> · {Math.round(logs.filter((l) => isPlausibleMealLog(l)).reduce((s, l) => s + Number(l.protein_g || 0), 0))}P {Math.round(logs.filter((l) => isPlausibleMealLog(l)).reduce((s, l) => s + Number(l.carbs_g || 0), 0))}K {Math.round(logs.filter((l) => isPlausibleMealLog(l)).reduce((s, l) => s + Number(l.fat_g || 0), 0))}F</span>}
@@ -184,7 +185,7 @@ function SortableMeal({ meal, isCustom, logs, mealKcal, onAdd, onRename, onDelet
           </div>
         </div>
       )}
-      {logs.length > 0 && (
+      {(!simple || expanded) && logs.length > 0 && (
         <ul className="divide-y divide-border/40">
           {logs.map((l) => (
             <li key={l.id} className="flex items-center justify-between px-3 py-2">
@@ -265,6 +266,7 @@ export default function NutritionView({ userId, isHonorary: isHonoraryProp = fal
     const { error } = await supabase.from("meal_logs").insert({
       user_id: userId, log_date: dateKey, meal_type: quickMeal,
       item_name: quick.name.trim() || "Snabbpost", amount: 1, unit: "portion",
+      nutrition_source: "Användarinmatat · snabbpost",
       kcal, protein_g: num(quick.protein), fat_g: num(quick.fat), carbs_g: num(quick.carbs), fiber_g: 0,
     });
     if (error) { toast({ title: "Fel", description: error.message, variant: "destructive" }); return; }

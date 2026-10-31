@@ -55,7 +55,7 @@ export default function NutritionInsights({ userId, dateKey, targets, refreshKey
   };
 
   useEffect(() => {
-    const loadComplete = () => supabase.from("nutrition_complete_days").select("log_date").eq("user_id", userId).gte("log_date", from).lte("log_date", to).then(({ data }) => setCompleteDays(new Set((data || []).map((d) => d.log_date)));
+    const loadComplete = () => supabase.from("nutrition_complete_days").select("log_date").eq("user_id", userId).gte("log_date", from).lte("log_date", to).then(({ data }) => setCompleteDays(new Set((data || []).map((d) => d.log_date))));
     void loadComplete();
     window.addEventListener("grim:nutrition-completion-changed", loadComplete);
     supabase.from("meal_logs").select("log_date,item_name,amount,unit,kcal,protein_g,fat_g,carbs_g")
