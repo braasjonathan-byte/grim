@@ -30,6 +30,9 @@ import { showUndoToast } from "@/lib/undoToast";
 import { DndContext, closestCenter, KeyboardSensor, PointerSensor, TouchSensor, useSensor, useSensors, DragEndEvent } from "@dnd-kit/core";
 import { SortableContext, arrayMove, sortableKeyboardCoordinates, useSortable, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
+import { Button } from "@/components/ui/button";
+import MealAllocationDialog from "./MealAllocationDialog";
+import { allocationForSlots, mealTargets, nutritionSource, nutrientCoverage, type MealAllocation } from "@/lib/nutritionExperience";
 
 interface Props { userId: string; isHonorary?: boolean }
 
@@ -97,9 +100,11 @@ interface SortableMealProps {
   budget?: number;
   feeling?: string;
   onFeeling: (k: string | null) => void;
+  proteinBudget?: number;
+  simple?: boolean;
 }
 
-function SortableMeal({ meal, isCustom, logs, mealKcal, onAdd, onRename, onDelete, onRemoveLog, onEditLog, onCopyYesterday, onQuickLog, onSaveTemplate, budget, feeling, onFeeling }: SortableMealProps) {
+function SortableMeal({ meal, isCustom, logs, mealKcal, onAdd, onRename, onDelete, onRemoveLog, onEditLog, onCopyYesterday, onQuickLog, onSaveTemplate, budget, feeling, onFeeling, proteinBudget, simple }: SortableMealProps) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: meal, disabled: !isCustom });
   const style = {
     transform: CSS.Transform.toString(transform),
@@ -121,6 +126,7 @@ function SortableMeal({ meal, isCustom, logs, mealKcal, onAdd, onRename, onDelet
             {Math.round(mealKcal)}{budget ? ` / ${Math.round(budget)}` : ""} kcal
             {logs.length > 0 && <span className="text-muted-foreground font-normal"> · {Math.round(logs.filter((l) => isPlausibleMealLog(l)).reduce((s, l) => s + Number(l.protein_g || 0), 0))}P {Math.round(logs.filter((l) => isPlausibleMealLog(l)).reduce((s, l) => s + Number(l.carbs_g || 0), 0))}K {Math.round(logs.filter((l) => isPlausibleMealLog(l)).reduce((s, l) => s + Number(l.fat_g || 0), 0))}F</span>}
           </p>
+          {proteinBudget != null && <p className="text-[10px] text-muted-foreground">Protein {Math.round(logs.filter(isPlausibleMealLog).reduce((s, l) => s + Number(l.protein_g), 0))} / {proteinBudget} g</p>}
         </div>
         <div className="flex items-center gap-1.5">
           <button onClick={onAdd} className="w-8 h-8 icon-round pill-btn-soft flex items-center justify-center" aria-label={`Lägg till i ${meal}`}>
@@ -168,7 +174,7 @@ function SortableMeal({ meal, isCustom, logs, mealKcal, onAdd, onRename, onDelet
           </DropdownMenu>
         </div>
       </div>
-      {logs.length > 0 && (
+      {!simple && logs.length > 0 && (
         <div className="px-3 pt-2 flex items-center justify-between gap-2">
           <div className="flex -space-x-1.5 overflow-hidden pt-0.5">
             {uniqueMealIcons(logs.slice(0, 5)).map((emoji, i) => (
@@ -204,6 +210,12 @@ export default function NutritionView({ userId, isHonorary: isHonoraryProp = fal
   const [date, setDate] = useState(() => new Date());
   const [logs, setLogs] = useState<MealLog[]>([]);
   const [targets, setTargets] = useState(DEFAULT_TARGETS);
+  const [simple, setSimple] = useState(true);
+  const [detailsOpen, setDetailsOpen] = useState(false);
+  const [savedAllocation, setSavedAllocation] = useState<MealAllocation>({});
+  const [allocationOpen, setAllocationOpen] = useState(false);
+  const [complete, setComplete] = useState(false);
+  const [completionSaving, setCompletionSaving] = useState(false);
   const [microTargets, setMicroTargets] = useState<Micros>({});
   const [slots, setSlots] = useState<string[]>(DEFAULT_SLOTS);
   const [picker, setPicker] = useState<string | null>(null);
@@ -353,11 +365,17 @@ export default function NutritionView({ userId, isHonorary: isHonoraryProp = fal
 
   async function load() {
     const y = new Date(date); y.setDate(y.getDate() - 1);
-    const [logsR, goalsR, yR] = await Promise.all([
+    const [logsR, goalsR, yR, prefsR, completeR] = await Promise.all([
       supabase.from("meal_logs").select("*").eq("user_id", userId).eq("log_date", dateKey).order("created_at"),
       supabase.from("nutrition_goals").select("*").eq("user_id", userId).maybeSingle(),
       supabase.from("meal_logs").select("*").eq("user_id", userId).eq("log_date", toLocalDateKey(y)).order("created_at"),
+      supabase.from("nutrition_preferences").select("*").eq("user_id", userId).maybeSingle(),
+      supabase.from("nutrition_complete_days").select("log_date").eq("user_id", userId).eq("log_date", dateKey).maybeSingle(),
     ]);
+    if (logsR.error || prefsR.error || completeR.error) { toast({ title: "Kostuppgifterna kunde inte hämtas", variant: "destructive" }); return; }
+    setSimple(prefsR.data?.simple_view ?? true);
+    setSavedAllocation((prefsR.data?.meal_allocation ?? {}) as MealAllocation);
+    setComplete(!!completeR.data);
     setLogs((logsR.data as MealLog[]) || []);
     setYesterdayLogs(yR.data || []);
     if (goalsR.data) {
@@ -418,6 +436,24 @@ export default function NutritionView({ userId, isHonorary: isHonoraryProp = fal
     const extras = Array.from(new Set(logs.map((l) => l.meal_type))).filter((m) => !slots.includes(m));
     return [...slots, ...extras];
   }, [slots, logs]);
+  const allocation = useMemo(() => allocationForSlots(savedAllocation, allSlots), [savedAllocation, allSlots]);
+  const budgets = mealTargets(allocation, targets.kcal, targets.protein_g);
+  async function savePreferences(value: MealAllocation, nextSimple = simple) {
+    const { error } = await supabase.from("nutrition_preferences").upsert({ user_id: userId, simple_view: nextSimple, meal_allocation: value }, { onConflict: "user_id" });
+    if (error) { toast({ title: "Kunde inte spara kostval", variant: "destructive" }); return false; }
+    setSavedAllocation(value); setSimple(nextSimple); return true;
+  }
+  async function toggleComplete() {
+    if (completionSaving) return;
+    setCompletionSaving(true);
+    const result = complete
+      ? await supabase.from("nutrition_complete_days").delete().eq("user_id", userId).eq("log_date", dateKey)
+      : await supabase.from("nutrition_complete_days").upsert({ user_id: userId, log_date: dateKey });
+    setCompletionSaving(false);
+    if (result.error) { toast({ title: "Kunde inte ändra dagens status", variant: "destructive" }); return; }
+    setComplete(!complete);
+    window.dispatchEvent(new Event("grim:nutrition-completion-changed"));
+  }
 
   // Kostposter utanför gränserna räknas inte i totalerna (visas märkta i listan).
   const plausibleLogs = useMemo(() => logs.filter((l) => isPlausibleMealLog(l)), [logs]);
@@ -447,6 +483,7 @@ export default function NutritionView({ userId, isHonorary: isHonoraryProp = fal
     }
     return out;
   }, [logs]);
+  const coverage = nutrientCoverage(plausibleLogs.map((l) => pickMicros(l)));
 
   /** Copy yesterday's logged items (optionally only one meal) to the shown day. */
   async function copyFromYesterday(meal?: string) {
@@ -537,6 +574,7 @@ export default function NutritionView({ userId, isHonorary: isHonoraryProp = fal
       ...(item.micros || {}),
       nova_group: item.nova_group ?? null,
       sugar_g: item.sugar_g ?? null,
+      nutrition_source: nutritionSource(item),
       food_id: item.source === "food" && isUuid ? item.id : null,
       custom_food_id: item.source === "custom_food" && isUuid ? item.id : null,
       recipe_id: item.source === "recipe" && isUuid ? item.id : null,
@@ -580,6 +618,10 @@ export default function NutritionView({ userId, isHonorary: isHonoraryProp = fal
 
       {/* Snabbvalen ligger precis under veckodagen, före energikortet. */}
       <div>
+        <div className="flex gap-1 justify-center mb-2" role="group" aria-label="Kostvy">
+          <Button size="sm" variant={simple ? "secondary" : "ghost"} aria-pressed={simple} disabled={!loaded} onClick={() => void savePreferences(allocation, true)}>Enkel</Button>
+          <Button size="sm" variant={!simple ? "secondary" : "ghost"} aria-pressed={!simple} disabled={!loaded} onClick={() => void savePreferences(allocation, false)}>Detaljerad</Button>
+        </div>
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <button data-tour="nutrition-add-meal" className="w-full pill-btn-ghost shadow-soft py-2 text-xs">
@@ -588,6 +630,7 @@ export default function NutritionView({ userId, isHonorary: isHonoraryProp = fal
           </DropdownMenuTrigger>
           <DropdownMenuContent align="center" className="rounded-xl">
             <DropdownMenuItem data-tour="nutrition-goals" onClick={() => setGoalsOpen(true)}><Target className="w-3.5 h-3.5 mr-2" /> Mål</DropdownMenuItem>
+            <DropdownMenuItem onClick={() => setAllocationOpen(true)}><Target className="w-3.5 h-3.5 mr-2" /> Fördelning mellan måltider</DropdownMenuItem>
             <DropdownMenuItem data-tour="nutrition-recipes" onClick={() => { setCuratedTargetMeal(null); setCuratedOpen(true); }}><ChefHat className="w-3.5 h-3.5 mr-2" /> Recept</DropdownMenuItem>
             {isHonorary && <DropdownMenuItem onClick={() => setDayAiOpen(true)}><Sparkles className="w-3.5 h-3.5 mr-2" /> Beskriv dagen med AI</DropdownMenuItem>}
             <DropdownMenuSeparator />
@@ -602,11 +645,11 @@ export default function NutritionView({ userId, isHonorary: isHonoraryProp = fal
 
       <div className="rounded-2xl bg-card shadow-soft border border-border/40 p-4 space-y-4">
         <div data-tour="nutrition-rings">
-          {!loaded ? <div className="h-64 rounded-2xl bg-muted/40 animate-pulse" aria-label="Laddar kostdata" /> : <NutritionHero kcal={totals.kcal} burned={burned} protein={totals.protein} fat={totals.fat} carbs={totals.carbs} fiber={totals.fiber} targets={targets} micros={microTotals} quality={foodQualityScore(logs)} microTargets={microTargets} />}
+          {!loaded ? <div className="h-64 rounded-2xl bg-muted/40 animate-pulse" aria-label="Laddar kostdata" /> : <NutritionHero simple={simple && !detailsOpen} coverage={coverage} kcal={totals.kcal} burned={burned} protein={totals.protein} fat={totals.fat} carbs={totals.carbs} fiber={totals.fiber} targets={targets} micros={microTotals} quality={foodQualityScore(logs)} microTargets={microTargets} />}
           {loaded && !hasGoals && <p className="text-[11px] text-muted-foreground text-center mt-2">Standardmål 2000 kcal – öppna <b>Mer → Mål</b> och fyll i ålder, vikt och längd så räknar vi ut ditt eget behov.</p>}
         </div>
 
-        <FastingWidget userId={userId} />
+        {(!simple || detailsOpen) && <FastingWidget userId={userId} />}
 
         {loaded && logs.length === 0 && (
           <div className="rounded-2xl bg-primary/5 border border-primary/25 p-3 text-center space-y-2">
@@ -647,7 +690,9 @@ export default function NutritionView({ userId, isHonorary: isHonoraryProp = fal
                     onEditLog={(l) => setEditingLog(l)}
                     onQuickLog={() => { hapticLight(); setQuickMeal(meal); }}
                     onSaveTemplate={ml.length > 0 ? () => saveMealAsTemplate(meal) : undefined}
-                    budget={(MEAL_SHARE[meal.toLowerCase()] ?? 0.15) * targets.kcal}
+                    budget={budgets[meal]?.kcal}
+                    proteinBudget={budgets[meal]?.protein}
+                    simple={simple}
                     feeling={feelings[meal]}
                     onFeeling={(k) => setFeeling(meal, k)}
                     onCopyYesterday={() => { hapticLight(); setPastOpen(true); }}
@@ -660,6 +705,9 @@ export default function NutritionView({ userId, isHonorary: isHonoraryProp = fal
 
 
       </div>
+      <Button variant={complete ? "secondary" : "outline"} className="w-full" disabled={!loaded || completionSaving || dateKey > toLocalDateKey(new Date())} aria-pressed={complete} onClick={() => void toggleComplete()}>{complete ? "✓ Dagen är färdigregistrerad" : "Markera dagen färdigregistrerad"}</Button>
+      <MealAllocationDialog open={allocationOpen} onOpenChange={setAllocationOpen} allocation={allocation} targets={targets} onSave={savePreferences} />
+      {simple && <Button variant="ghost" className="w-full" aria-expanded={detailsOpen} onClick={() => setDetailsOpen((v) => !v)}>{detailsOpen ? "Dölj fler kostdetaljer" : "Fler kostdetaljer"}</Button>}
 
       {isHonorary && (
         <DayFoodDialog
@@ -676,6 +724,7 @@ export default function NutritionView({ userId, isHonorary: isHonoraryProp = fal
                 kcal: item.kcal, protein_g: item.protein_g, fat_g: item.fat_g, carbs_g: item.carbs_g, fiber_g: item.fiber_g || 0,
                 food_id: item.food_id, custom_food_id: item.custom_food_id, recipe_id: item.recipe_id,
                 nova_group: item.nova_group ?? null, ...(item.micros || {}),
+                nutrition_source: nutritionSource(item),
               };
             });
             const { data, error } = await supabase.from("meal_logs").insert(insert as any).select("id");
@@ -701,9 +750,9 @@ export default function NutritionView({ userId, isHonorary: isHonoraryProp = fal
         />
       )}
 
-      <WaterTracker userId={userId} dateKey={dateKey} goalMl={waterGoal} />
+      {(!simple || detailsOpen) && <WaterTracker userId={userId} dateKey={dateKey} goalMl={waterGoal} />}
 
-      <NutritionInsights userId={userId} dateKey={dateKey} targets={targets} refreshKey={logs.length + Math.round(totals.kcal)} />
+      {(!simple || detailsOpen) && <NutritionInsights userId={userId} dateKey={dateKey} targets={targets} refreshKey={logs.length + Math.round(totals.kcal) + Number(complete)} />}
 
       <FoodPickerDialog
         open={!!picker}
@@ -797,6 +846,7 @@ export default function NutritionView({ userId, isHonorary: isHonoraryProp = fal
             <div>
               <p className="font-serif text-lg">Redigera livsmedel</p>
               <p className="text-xs text-muted-foreground truncate">{editingLog.item_name}</p>
+              <p className="text-xs text-muted-foreground">Källa: {nutritionSource(editingLog as MealLog & { nutrition_source?: string })}</p>
             </div>
             <div className="space-y-1">
               <label className="text-xs font-bold">Mängd ({editingLog.unit})</label>

@@ -2,6 +2,8 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { useState } from "react";
 import { ChevronDown } from "lucide-react";
 import { MICROS, formatMicro, qualityTone, type Micros } from "@/lib/micronutrients";
+import { Button } from "@/components/ui/button";
+import { nutrientCoverage } from "@/lib/nutritionExperience";
 
 interface Props {
   kcal: number;
@@ -13,6 +15,8 @@ interface Props {
   micros?: Micros;
   quality?: number | null;
   microTargets?: Micros;
+  simple?: boolean;
+  coverage?: ReturnType<typeof nutrientCoverage>;
   targets: { kcal: number; protein_g: number; fat_g: number; carbs_g: number; fiber_g?: number | null };
 }
 
@@ -33,9 +37,9 @@ function Ring({ size, stroke, pct, color, children }: { size: number; stroke: nu
 }
 
 /** Kalorihjälte: Kvar = Mål − Ätit (målet bygger redan på träningsvolymen; Förbränt visas bara som info), plus fyra makroringar. */
-export default function NutritionHero({ kcal, burned, protein, fat, carbs, fiber, targets, micros = {}, microTargets = {}, quality = null }: Props) {
+export default function NutritionHero({ kcal, burned, protein, fat, carbs, fiber, targets, micros = {}, microTargets = {}, quality = null, simple = false, coverage }: Props) {
   const [microOpen, setMicroOpen] = useState(false);
-  const microRows = MICROS.filter((m) => (microTargets[m.key] ?? 0) > 0 || micros[m.key] != null);
+  const microRows = MICROS;
   // Målet bygger redan på vald aktivitetsnivå, så dagens träning läggs INTE på målet — "Förbränt" visas bara som info.
   const budget = targets.kcal;
   const carbTarget = targets.carbs_g;
@@ -48,6 +52,14 @@ export default function NutritionHero({ kcal, burned, protein, fat, carbs, fiber
     { label: "Kolhydrater", v: carbs, t: carbTarget, color: "hsl(199 89% 48%)" },
     { label: "Fiber", v: fiber, t: fiberTarget, color: "hsl(25 60% 50%)" },
   ];
+  if (simple) return <div className="space-y-3 py-2">
+    <div className="flex items-end justify-between gap-3">
+      <div><p className={`text-3xl font-bold tabular-nums ${over ? "text-destructive" : ""}`}>{Math.abs(left)}</p><p className="text-xs text-muted-foreground">kcal {over ? "över målet" : "kvar"}</p></div>
+      <p className="text-xs text-muted-foreground tabular-nums">Ätit {Math.round(kcal)} / {Math.round(budget)} kcal</p>
+    </div>
+    <div className="flex justify-between text-sm"><span>Protein</span><span className="font-semibold tabular-nums">{Math.round(protein)} / {targets.protein_g} g</span></div>
+    <progress aria-label="Proteinmål" className="w-full h-2 accent-primary" value={Math.min(protein, targets.protein_g)} max={targets.protein_g || 1} />
+  </div>;
   return (
     <div className="space-y-4">
       {quality != null && (
@@ -93,26 +105,28 @@ export default function NutritionHero({ kcal, burned, protein, fat, carbs, fiber
       </div>
       {microRows.length > 0 && (
         <div className="rounded-2xl bg-muted/40">
-          <button onClick={() => setMicroOpen((v) => !v)} aria-expanded={microOpen}
+          <Button variant="ghost" onClick={() => setMicroOpen((v) => !v)} aria-expanded={microOpen}
             className="w-full flex items-center justify-between px-3 py-2 text-xs font-semibold">
             Mikronäringsämnen
             <ChevronDown className={`w-4 h-4 transition-transform ${microOpen ? "rotate-180" : ""}`} />
-          </button>
+          </Button>
           {microOpen && (
             <div className="px-3 pb-3 space-y-2">
               {microRows.map((m) => {
-                const v = Number(micros[m.key] ?? 0);
+                const v = micros[m.key];
                 const t = Number(microTargets[m.key] ?? 0);
-                const pct = t > 0 ? Math.min(100, (v / t) * 100) : 0;
+                const pct = t > 0 && v != null ? Math.min(100, (v / t) * 100) : 0;
+                const status = coverage?.[m.key];
                 return (
                   <div key={m.key}>
                     <div className="flex justify-between text-[11px]">
                       <span className="font-medium">{m.label}</span>
                       <span className="tabular-nums text-muted-foreground">
-                        {formatMicro(v)}{t > 0 ? ` / ${formatMicro(t)}` : ""} {m.unit}
+                        {v == null ? "Saknas" : `${formatMicro(v)}${t > 0 ? ` / ${formatMicro(t)}` : ""} ${m.unit}`}
                       </span>
                     </div>
-                    {t > 0 && (
+                    {status && status.known < status.total && <p className="text-[10px] text-warning">Ofullständigt underlag · {status.known} av {status.total} poster{v != null ? " · endast kända värden summerade" : ""}</p>}
+                    {t > 0 && v != null && status?.known === status?.total && (
                       <div className="h-1.5 rounded-full bg-muted mt-1 overflow-hidden">
                         <div className="h-full bg-primary rounded-full transition-all" style={{ width: `${pct}%` }} />
                       </div>
