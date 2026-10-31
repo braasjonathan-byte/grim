@@ -19,6 +19,7 @@ export default function NutritionTrendCard({ userId }: { userId: string }) {
   const [metric, setMetric] = useState<Metric>("kcal");
   const [logs, setLogs] = useState<any[]>([]);
   const [goals, setGoals] = useState<Record<string, number>>({});
+  const [completeDays, setCompleteDays] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     const from = new Date(); from.setDate(from.getDate() - 29);
@@ -26,7 +27,9 @@ export default function NutritionTrendCard({ userId }: { userId: string }) {
       supabase.from("meal_logs").select("log_date,kcal,protein_g,fat_g,carbs_g,fiber_g,sugar_g,nova_group")
         .eq("user_id", userId).gte("log_date", toLocalDateKey(from)).limit(5000),
       supabase.from("nutrition_goals").select("daily_kcal,protein_g,fat_g,carbs_g").eq("user_id", userId).maybeSingle(),
-    ]).then(([l, g]) => {
+      supabase.from("nutrition_complete_days").select("log_date").eq("user_id", userId).gte("log_date", toLocalDateKey(from)),
+    ]).then(([l, g, c]) => {
+      setCompleteDays(new Set((c.data || []).map((d) => d.log_date)));
       setLogs(l.data || []);
       if (g.data) setGoals({ kcal: g.data.daily_kcal, protein_g: g.data.protein_g, fat_g: g.data.fat_g, carbs_g: g.data.carbs_g, quality: 70 });
       else setGoals({ quality: 70 });
@@ -43,16 +46,17 @@ export default function NutritionTrendCard({ userId }: { userId: string }) {
       const rows = byDay.get(key) || [];
       const sum = (k: string) => rows.length ? Math.round(rows.reduce((s, r) => s + Number(r[k] || 0), 0)) : null;
       out.push({
+        complete: completeDays.has(key),
         label: d.toLocaleDateString("sv-SE", days === 7 ? { weekday: "short" } : { day: "numeric", month: "numeric" }),
         kcal: sum("kcal"), protein_g: sum("protein_g"), fat_g: sum("fat_g"), carbs_g: sum("carbs_g"),
         quality: foodQualityScore(rows),
       });
     }
     return out;
-  }, [logs, days]);
+  }, [logs, days, completeDays]);
 
-  const m = METRICS.find((x) => x.key === metric)!;
-  const vals = data.map((d) => d[metric]).filter((v) => v != null) as number[];
+  const m = METRICS.find((x) => x.key === metric) ?? METRICS[0];
+  const vals = data.filter((d) => d.complete).map((d) => d[metric]).filter((v) => v != null) as number[];
   const avg = vals.length ? Math.round(vals.reduce((a, b) => a + b, 0) / vals.length) : null;
   const goal = goals[metric];
 
@@ -75,7 +79,7 @@ export default function NutritionTrendCard({ userId }: { userId: string }) {
         ))}
       </div>
       <p className="text-xs text-muted-foreground">
-        Snitt: <span className="font-bold text-foreground tabular-nums">{avg ?? "–"} {m.unit}</span>
+        Snitt färdigregistrerade dagar: <span className="font-bold text-foreground tabular-nums">{avg ?? "–"} {m.unit}</span>
         {goal ? <> · Mål: <span className="tabular-nums">{goal} {m.unit}</span></> : null}
       </p>
       <div className="h-48 -ml-4">

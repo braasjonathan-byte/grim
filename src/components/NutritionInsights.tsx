@@ -7,6 +7,7 @@ import { WEIGHT_CHANGED_EVENT } from "@/lib/bodyWeight";
 import { isPlausibleMealLog, validateNumber, parseDecimal } from "@/lib/inputValidation";
 import { useToast } from "@/hooks/use-toast";
 import { useStatsSettings, WEIGHT_RANGES, weightRangeFrom, autoShowBodyWeight } from "@/lib/statsSettings";
+import { completeDayAverage } from "@/lib/nutritionExperience";
 
 type Tab = "week" | "forecast" | "weight" | "foods";
 type Log = { log_date: string; item_name: string; amount: number; unit: string; kcal: number; protein_g: number; fat_g: number; carbs_g: number };
@@ -30,6 +31,7 @@ export default function NutritionInsights({ userId, dateKey, targets, refreshKey
   const [tab, setTabState] = useState<Tab>(() => { try { return (sessionStorage.getItem("grim_nutrition_insights_tab") as Tab) || "week"; } catch { return "week"; } });
   const setTab = (t: Tab) => { setTabState(t); try { sessionStorage.setItem("grim_nutrition_insights_tab", t); } catch { /* ignore */ } };
   const [logs, setLogs] = useState<Log[]>([]);
+  const [completeDays, setCompleteDays] = useState<Set<string>>(new Set());
   const [weights, setWeights] = useState<{ log_date: string; weight_kg: number }[]>([]);
   const [weightInput, setWeightInput] = useState("");
   const [saving, setSaving] = useState(false);
@@ -53,12 +55,15 @@ export default function NutritionInsights({ userId, dateKey, targets, refreshKey
   };
 
   useEffect(() => {
+    const loadComplete = () => supabase.from("nutrition_complete_days").select("log_date").eq("user_id", userId).gte("log_date", from).lte("log_date", to).then(({ data }) => setCompleteDays(new Set((data || []).map((d) => d.log_date)));
+    void loadComplete();
+    window.addEventListener("grim:nutrition-completion-changed", loadComplete);
     supabase.from("meal_logs").select("log_date,item_name,amount,unit,kcal,protein_g,fat_g,carbs_g")
       .eq("user_id", userId).gte("log_date", from).lte("log_date", to).limit(5000)
       .then(({ data }) => setLogs(((data || []) as Log[]).filter((l) => isPlausibleMealLog(l))));
     loadWeights();
     window.addEventListener(WEIGHT_CHANGED_EVENT, loadWeights);
-    return () => window.removeEventListener(WEIGHT_CHANGED_EVENT, loadWeights);
+    return () => { window.removeEventListener(WEIGHT_CHANGED_EVENT, loadWeights); window.removeEventListener("grim:nutrition-completion-changed", loadComplete); };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [userId, from, to, refreshKey, weightDays]);
 
@@ -74,14 +79,14 @@ export default function NutritionInsights({ userId, dateKey, targets, refreshKey
 
   const week = useMemo(() => Array.from({ length: 7 }, (_, i) => {
     const d = addDays(monday, i); const k = toLocalDateKey(d); const v = byDay.get(k);
-    return { key: k, label: d.toLocaleDateString("sv-SE", { weekday: "short" }).replace(".", ""), kcal: v ? Math.round(v.kcal) : 0, protein: v ? Math.round(v.protein) : 0, fat: v ? Math.round(v.fat) : 0, carbs: v ? Math.round(v.carbs) : 0, logged: !!v };
-  }), [byDay, monday.getTime()]);
+    return { key: k, label: d.toLocaleDateString("sv-SE", { weekday: "short" }).replace(".", ""), kcal: v ? Math.round(v.kcal) : 0, protein: v ? Math.round(v.protein) : 0, fat: v ? Math.round(v.fat) : 0, carbs: v ? Math.round(v.carbs) : 0, logged: !!v, complete: completeDays.has(k) };
+  }), [byDay, completeDays, monday.getTime()]);
 
   // ---- Prognos ----
   const forecast = useMemo(() => {
     const todayKey = toLocalDateKey(new Date());
     const past = week.filter((d) => d.key <= todayKey);
-    const logged = past.filter((d) => d.logged);
+    const logged = past.filter((d) => d.complete);
     const sum = logged.reduce((s, d) => s + d.kcal, 0);
     const avg = logged.length ? sum / logged.length : 0;
     // Prognosen bygger bara på loggade dagar: alla ologgade dagar (även passerade) räknas med snittet, aldrig som 0.
@@ -92,7 +97,7 @@ export default function NutritionInsights({ userId, dateKey, targets, refreshKey
     let reachDay: number | null = null;
     if (avg > 0) {
       let acc = 0;
-      for (let i = 0; i < 7; i++) { const d = week[i]; acc += d.key <= todayKey && d.logged ? d.kcal : avg; if (acc >= goal) { reachDay = i; break; } }
+      for (let i = 0; i < 7; i++) { const d = week[i]; acc += d.key <= todayKey && d.complete ? d.kcal : avg; if (acc >= goal) { reachDay = i; break; } }
     }
     const proteinDays = logged.filter((d) => d.protein >= targets.protein_g * 0.9).length;
     const proteinRate = logged.length ? proteinDays / logged.length : 0;
@@ -162,8 +167,9 @@ export default function NutritionInsights({ userId, dateKey, targets, refreshKey
         <div className="space-y-2">
           <p className="text-xs text-muted-foreground">
             Vecka från {monday.toLocaleDateString("sv-SE", { day: "numeric", month: "short" })} · Snitt{" "}
-            <span className="font-bold text-foreground tabular-nums">{fmt(forecastAvg(week))} kcal</span> · Mål {fmt(targets.kcal)}
+            <span className="font-bold text-foreground tabular-nums">{completeDayAverage(week) == null ? "–" : fmt(completeDayAverage(week) ?? 0)} kcal</span> · Mål {fmt(targets.kcal)}
           </p>
+          <p className="text-[11px] text-muted-foreground">{week.filter((d) => d.complete).length} av 7 dagar färdigregistrerade · snittet använder endast dessa dagar.</p>
           <div className="h-40">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={week} margin={{ top: 5, right: 5, left: -20, bottom: 0 }}>
@@ -178,11 +184,11 @@ export default function NutritionInsights({ userId, dateKey, targets, refreshKey
           </div>
           <div className="grid grid-cols-3 gap-2 text-center">
             {([["Protein", "protein", targets.protein_g], ["Fett", "fat", targets.fat_g], ["Kolhydr.", "carbs", targets.carbs_g]] as const).map(([label, k, goal]) => {
-              const d = week.filter((x) => x.logged); const avg = d.length ? d.reduce((s, x) => s + x[k], 0) / d.length : 0;
+              const d = week.filter((x) => x.complete); const avg = d.length ? d.reduce((s, x) => s + x[k], 0) / d.length : null;
               return (
                 <div key={k} className="rounded-xl bg-muted/50 py-2">
                   <p className="text-[10px] text-muted-foreground">{label} snitt</p>
-                  <p className="text-sm font-bold tabular-nums">{fmt(avg)} g</p>
+                  <p className="text-sm font-bold tabular-nums">{avg == null ? "–" : fmt(avg)} g</p>
                   <p className="text-[10px] text-muted-foreground">mål {fmt(goal)} g</p>
                 </div>
               );
@@ -194,7 +200,7 @@ export default function NutritionInsights({ userId, dateKey, targets, refreshKey
       {tab === "forecast" && (
         <div className="space-y-2 text-sm">
           {forecast.logged === 0 ? (
-            <p className="text-xs text-muted-foreground">Logga minst en dag den här veckan så räknar appen fram en prognos.</p>
+            <p className="text-xs text-muted-foreground">Markera minst en dag den här veckan som färdigregistrerad för att visa prognosen.</p>
           ) : (
             <>
               <div className="rounded-xl bg-muted/50 p-3">
@@ -210,7 +216,7 @@ export default function NutritionInsights({ userId, dateKey, targets, refreshKey
               </div>
               <div className="rounded-xl bg-muted/50 p-3">
                 <p className="text-xs text-muted-foreground">Proteinmål (minst 90 %)</p>
-                <p className="text-sm">Nått {forecast.proteinDays} av {forecast.logged} loggade dagar – i den takten <span className="font-bold">{forecast.proteinProjected} av 7</span> dagar.</p>
+                <p className="text-sm">Nått {forecast.proteinDays} av {forecast.logged} färdigregistrerade dagar – i den takten <span className="font-bold">{forecast.proteinProjected} av 7</span> dagar.</p>
               </div>
               {weightTrend != null && (
                 <div className="rounded-xl bg-muted/50 p-3">
@@ -218,7 +224,7 @@ export default function NutritionInsights({ userId, dateKey, targets, refreshKey
                   <p className="text-sm">{weightTrend > 0 ? "+" : ""}{weightTrend.toFixed(2).replace(".", ",")} kg/vecka enligt dina vägningar.</p>
                 </div>
               )}
-              <p className="text-[10px] text-muted-foreground">Prognosen bygger bara på dagar du har loggat.</p>
+              <p className="text-[10px] text-muted-foreground">Prognosen bygger bara på färdigregistrerade dagar.</p>
             </>
           )}
         </div>

@@ -11,6 +11,7 @@ import { searchMenu } from "@/lib/restaurantSearch";
 import { searchFoods } from "@/lib/foodSearch";
 import { gramsForFood } from "@/lib/nutritionCalc";
 import { pickImage } from "@/lib/pickImage";
+import { nutritionSource } from "@/lib/nutritionExperience";
 
 interface Props {
   open: boolean;
@@ -36,14 +37,14 @@ function match(it: AiItem, restaurant: string | null, foods: Props["foods"], idx
     const m = hit.item;
     const f = (it.kind === "menu" ? m.g : (it.grams || m.g)) / m.g;
     return { source: "custom_food", id: `rest-${idx}-${Date.now()}`, name: `${m.n} (${m.r})`, amount: Math.round(m.g * f), unit: "g",
-      kcal: m.kcal * f, protein_g: m.p * f, fat_g: m.f * f, carbs_g: m.c * f, fiber_g: 0 };
+      kcal: m.kcal * f, protein_g: m.p * f, fat_g: m.f * f, carbs_g: m.c * f, fiber_g: 0, nutrition_source: "Restaurang · ungefärliga menyvärden" };
   }
   const food = searchFoods(foods.filter((x) => x.source !== "recipe"), it.name)[0];
   if (!food) return null;
   const g = gramsForFood(it.grams || 100, "g", food.name);
   const f = g / 100;
   return { source: food.source as PickedItem["source"], id: food.id, name: food.name, amount: Math.round(g), unit: "g",
-    kcal: food.kcal * f, protein_g: food.protein_g * f, fat_g: food.fat_g * f, carbs_g: food.carbs_g * f, fiber_g: (food.fiber_g || 0) * f };
+    kcal: food.kcal * f, protein_g: food.protein_g * f, fat_g: food.fat_g * f, carbs_g: food.carbs_g * f, fiber_g: (food.fiber_g || 0) * f, nutrition_source: nutritionSource(food) };
 }
 
 type Photo = { url: string; kind: "meal" | "menu" };

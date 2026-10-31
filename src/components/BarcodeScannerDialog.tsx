@@ -221,6 +221,7 @@ export default function BarcodeScannerDialog({ open, onOpenChange, onPick }: Pro
       fat_g: found.food.fat_g * factor,
       carbs_g: found.food.carbs_g * factor,
       fiber_g: (found.food.fiber_g || 0) * factor,
+      nutrition_source: found.source === "livsmedelsverket" ? "Livsmedelsverket" : "Open Food Facts · förpackningsuppgifter, ej verifierade",
     }, next ? { keepScanning: true } : undefined);
     if (next) {
       toast({ title: `${found.food.name} tillagd`, description: "Skanna nästa vara" });
