@@ -148,6 +148,7 @@ export default function AIFoodScanDialog({ open, onOpenChange, onPick }: Props) 
             .insert({
               user_id: uid,
               name,
+              nutrition_source: result.source === "livsmedelsverket" ? "Livsmedelsverket" : "AI-uppskattat · foto eller förpackningstolkning",
               kcal: result.food.kcal,
               protein_g: result.food.protein_g,
               fat_g: result.food.fat_g,
@@ -176,6 +177,7 @@ export default function AIFoodScanDialog({ open, onOpenChange, onPick }: Props) 
       protein_g: result.food.protein_g * factor,
       fat_g: result.food.fat_g * factor,
       carbs_g: result.food.carbs_g * factor,
+      nutrition_source: result.source === "livsmedelsverket" ? "Livsmedelsverket" : "AI-uppskattat · foto eller förpackningstolkning",
     });
     onOpenChange(false);
   }
