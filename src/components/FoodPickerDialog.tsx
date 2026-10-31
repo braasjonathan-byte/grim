@@ -464,7 +464,10 @@ export default function FoodPickerDialog({ open, onOpenChange, onPick, userId, h
           <>
             <div className="relative">
               <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
-              <Input value={query} onChange={(e) => setQuery(e.target.value)} placeholder={isHonorary ? "Sök, eller beskriv vad du åt…" : "Sök livsmedel eller recept…"} className={`pl-9 ${isHonorary ? "pr-20" : "pr-11"} rounded-xl bg-muted/50 border-transparent`} autoFocus />
+              <Input value={query} onChange={(e) => setQuery(e.target.value)} placeholder={isHonorary ? "Sök, eller beskriv vad du åt…" : "Sök livsmedel eller recept…"} className={`pl-9 ${isHonorary ? "pr-[7.5rem]" : "pr-20"} rounded-xl bg-muted/50 border-transparent`} autoFocus />
+              <button onClick={() => setBarcodeOpen(true)} aria-label="Skanna streckkod" className={`absolute ${isHonorary ? "right-[4.75rem]" : "right-10"} top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-primary/10 text-primary flex items-center justify-center hover:bg-primary/20`}>
+                <ScanBarcode className="w-4 h-4" />
+              </button>
               {isHonorary && <button onClick={() => setDescribe({ text: query.trim(), menu: false })} aria-label="Beskriv måltiden med text eller foto" className="absolute right-10 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-primary/10 text-primary flex items-center justify-center hover:bg-primary/20">
                 <Camera className="w-4 h-4" />
               </button>}
@@ -482,7 +485,6 @@ export default function FoodPickerDialog({ open, onOpenChange, onPick, userId, h
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="center" className="rounded-xl">
                     <DropdownMenuItem onClick={() => setManualOpen(true)}><PencilLine className="w-3.5 h-3.5 mr-2" /> Eget</DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => setBarcodeOpen(true)}><ScanBarcode className="w-3.5 h-3.5 mr-2" /> Streckkod</DropdownMenuItem>
                     {isHonorary && <>
                       <DropdownMenuItem onClick={() => setManualOpen(true)}><Sparkles className="w-3.5 h-3.5 mr-2" /> AI-skanna</DropdownMenuItem>
                       <DropdownMenuItem onClick={() => setDescribe({ text: "", menu: false })}><Sparkles className="w-3.5 h-3.5 mr-2" /> Beskriv måltiden</DropdownMenuItem>
