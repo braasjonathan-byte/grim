@@ -64,13 +64,14 @@ export default function RestaurantSearchDialog({ open, onOpenChange, onPick, ini
   const [extraIndex, setExtraIndex] = useState("none");
   const choices = combo ? menuChoices(combo) : null;
   const effective = combo && choices ? fromMenu(customizedMenu(combo, choices.sides[Number(sideIndex)] ?? null, choices.drinks[Number(drinkIndex)] ?? null, extraIndex === "none" ? null : choices.extras[Number(extraIndex)] ?? null)) : selected;
-  const amountError = validateNumber(amount, unit === "g" ? "foodGrams" : { min: 0.1, max: 50, unit }).error;
+  const amountError = validateNumber(amount, unit === "g" ? "foodGrams" : { min: 0.1, max: 50, unit }).error
+    || (effective ? validateNumber(effective.serving_g && unit === "portion" ? parseDecimal(amount) * effective.serving_g : gramsForFood(parseDecimal(amount), unit, effective.product_name), "foodGrams").error : null);
   // Always read the latest field values — never a value captured in an older render.
   const reqRef = useRef(0);
 
 
   useEffect(() => {
-    if (!open) { setItem(""); setResults([]); setSelected(null); setLoading(false); }
+    if (!open) { setItem(""); setResults([]); setSelected(null); setCombo(null); setLoading(false); }
     else if (initial) { pick(fromMenu(initial)); setCombo(initial.parts ? initial : null); }
   }, [open, initial]);
 

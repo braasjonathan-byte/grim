@@ -1,12 +1,12 @@
 # Roadmap
 
 ## Kostförbättringar 31 oktober 2026
-- [ ] 7. Anpassa dryck, pommesstorlek och tillbehör i restaurangmenyer.
-- [ ] 8. Visa källan till livsmedlets näringsvärden.
-- [ ] 11. Skilj saknade mikronäringsvärden från noll och markera ofullständigt underlag.
-- [ ] 12. Markera dagar färdigregistrerade; använd dessa i snitt och prognoser.
-- [ ] 15. Personlig kalorifördelning och proteinfördelning mellan måltider, med korrekta totaler.
-- [ ] 1. Enkel/detaljerad kostvy utan att ta bort funktioner.
+- [x] 7. Anpassa dryck, pommesstorlek och tillbehör i restaurangmenyer; Big Mac med Zero verifierad och tillagd (838 kcal), testpost borttagen.
+- [x] 8. Visa källan i öppnat livsmedel och sparad kostpost; äldre poster utan ursprung märks ärligt som okända.
+- [x] 11. Saknade mikronäringsvärden visas som Saknas, kända nollor bevaras; ofullständigt underlag verifierat i kostfliken.
+- [x] 12. Färdigregistrering sparas per dag och konto, verifierad efter omladdning; snitt/prognoser använder kompletta dagar.
+- [x] 15. Kalorier och protein fördelas separat via reglage; 100 % krävs för vardera, testat sparlås och sparning.
+- [x] 1. Enkel/detaljerad kostvy; måltider öppnas vid tryck och fler detaljer finns kvar. Verifierad inloggad, 20 tester godkända.
 
 ## Testrapport 17 okt 2026 (punkt 1–4)
 - [x] 1. Offlinesynk: omspelning körs nu var 15:e sekund, vid "online" och när appen blir synlig; vyn laddar om när kön spelats upp (grim:offline-queue-flushed) och cachen sparar server+köade rader så inget försvinner vid omladdning.
