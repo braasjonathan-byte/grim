@@ -22,8 +22,10 @@ export const MICRO_SELECT = MICROS.map((m) => m.key).join(",") + ",nova_group,su
 export function microsFromOFF(n: Record<string, any>): Micros {
   const out: Micros = {};
   for (const m of MICROS) {
-    const v = Number(n?.[m.off]);
-    if (Number.isFinite(v) && v > 0) out[m.key] = Math.round(v * m.factor * 1000) / 1000;
+    const raw = n?.[m.off];
+    if (raw == null || raw === "") continue;
+    const v = Number(raw);
+    if (Number.isFinite(v) && v >= 0) out[m.key] = Math.round(v * m.factor * 1000) / 1000;
   }
   return out;
 }

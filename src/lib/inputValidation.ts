@@ -33,6 +33,7 @@ export const RULES = {
   goalFiber: { min: 0, max: 100, unit: "g", optional: true },
   customKcal: { min: 0, max: 900, unit: "kcal" },
   customMacro: { min: 0, max: 100, unit: "g", optional: true },
+  mealShare: { min: 0, max: 100, unit: "%", integer: true },
 } satisfies Record<string, NumberRule>;
 
 export type RuleName = keyof typeof RULES;
