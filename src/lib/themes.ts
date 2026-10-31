@@ -1,3 +1,4 @@
+import { syncWidgetTheme } from "./nutritionWidget";
 export interface ThemeDefinition {
   id: string;
   name: string;
@@ -620,4 +621,7 @@ export function applyTheme(themeId: string) {
   Object.entries(overrides).forEach(([key, value]) => {
     root.style.setProperty(key, value);
   });
+
+  // Hemskärmswidgeten följer valt tema.
+  setTimeout(syncWidgetTheme, 0);
 }

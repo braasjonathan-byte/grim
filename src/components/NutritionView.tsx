@@ -11,6 +11,7 @@ import { ChevronLeft, ChevronRight, Plus, Target, Trash2, Pencil, GripVertical, 
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 
 import NutritionHero from "./NutritionHero";
+import { syncWidgetNutrition } from "@/lib/nutritionWidget";
 import FoodPickerDialog, { PickedItem } from "./FoodPickerDialog";
 import RecipeEditor from "./RecipeEditor";
 import NutritionGoalsDialog from "./NutritionGoalsDialog";
@@ -427,6 +428,16 @@ export default function NutritionView({ userId, isHonorary: isHonoraryProp = fal
     carbs: plausibleLogs.reduce((s, l) => s + Number(l.carbs_g), 0),
     fiber: plausibleLogs.reduce((s, l) => s + Number(l.fiber_g || 0), 0),
   }), [plausibleLogs]);
+
+  // Hemskärmswidget: skriv dagens totaler när de ändras (bara för idag).
+  useEffect(() => {
+    if (!loaded || dateKey !== toLocalDateKey(new Date())) return;
+    syncWidgetNutrition({
+      date: dateKey, kcal: totals.kcal, burned: burned || 0, targetKcal: targets.kcal,
+      protein: totals.protein, fat: totals.fat, carbs: totals.carbs,
+      targetProtein: targets.protein_g, targetFat: targets.fat_g, targetCarbs: targets.carbs_g,
+    });
+  }, [loaded, dateKey, totals, burned, targets]);
 
   const microTotals = useMemo(() => {
     const out: Micros = {};

@@ -1,4 +1,5 @@
 import { useAppSettings } from "@/lib/appSettings";
+import { listenWidgetLaunch } from "@/lib/nutritionWidget";
 import AppBanner from "@/components/admin/AppBanner";
 import { lazyRetry } from "@/lib/lazyRetry";
 import { useState, useEffect, useCallback, useRef, lazy, Suspense } from "react";
@@ -215,6 +216,9 @@ const Index = () => {
       setUnreadPosts(0);
     }
   }, []);
+
+  // Hemskärmswidget → öppna Kost direkt
+  useEffect(() => listenWidgetLaunch((t) => { if (t === "nutrition") setTab("nutrition"); }), [setTab]);
 
   // Listen for tour navigation events
   useEffect(() => {

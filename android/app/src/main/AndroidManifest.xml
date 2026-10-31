@@ -81,6 +81,13 @@
                 android:name="android.support.FILE_PROVIDER_PATHS"
                 android:resource="@xml/file_paths"></meta-data>
         </provider>
+        <!-- GRIM_WIDGET: hemskärms-widget (kcal) -->
+        <receiver android:name="se.grim.app.GrimKcalWidget" android:exported="false" android:label="Grim kcal">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/grim_kcal_widget_info" />
+        </receiver>
     </application>
 
     <!-- Permissions -->

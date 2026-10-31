@@ -69,6 +69,19 @@ for (const f of FEATURES) {
   }
 }
 
+// GRIM_WIDGET: hemskärms-widgeten (GrimKcalWidget) måste finnas kvar efter cap sync.
+if (!xml.includes("se.grim.app.GrimKcalWidget")) {
+  xml = xml.replace(/(\s*)<\/application>/, `
+        <receiver android:name="se.grim.app.GrimKcalWidget" android:exported="false" android:label="Grim kcal">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/grim_kcal_widget_info" />
+        </receiver>$1</application>`);
+  changed = true;
+  console.log("[patch-android-manifest] Added GrimKcalWidget receiver");
+}
+
 const MLKIT_BARCODE_META = 'android:name="com.google.mlkit.vision.DEPENDENCIES"';
 if (!xml.includes(MLKIT_BARCODE_META)) {
   xml = xml.replace(

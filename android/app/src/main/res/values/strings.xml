@@ -8,4 +8,5 @@
          integritetspolicy-länken i behörighetsdialogen. Utan strängen kraschar
          PermissionsRationaleActivity i capacitor-health. -->
     <string name="privacy_policy_url">https://grim.lovable.app/privacy</string>
+    <string name="grim_widget_description">Kalorier kvar idag</string>
 </resources>

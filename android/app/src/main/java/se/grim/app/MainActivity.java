@@ -20,6 +20,8 @@ public class MainActivity extends BridgeActivity {
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
+        registerPlugin(GrimWidgetPlugin.class);
+        captureWidgetTab(getIntent());
         super.onCreate(savedInstanceState);
 
         // Keep the WebView inside Android's system bars. This prevents both
@@ -37,6 +39,11 @@ public class MainActivity extends BridgeActivity {
 
     @Override
     protected void onNewIntent(Intent intent) {
+        if (captureWidgetTab(intent) && getBridge() != null) {
+            // Appen körs redan: be JS byta flik direkt.
+            GrimWidgetPlugin.pendingTab = null;
+            getBridge().triggerWindowJSEvent("grimOpenTab", "{\"tab\":\"nutrition\"}");
+        }
         if (GrimHealthRequestState.isInFlight()) {
             Log.w("GrimMainActivity", "deferring intent while health permission dialog is in flight");
             deferredIntent = intent;
@@ -55,5 +62,14 @@ public class MainActivity extends BridgeActivity {
             super.onNewIntent(pending);
             setIntent(pending);
         }
+    }
+
+    // GRIM_WIDGET: klick på hemskärms-widgeten öppnar Kost.
+    private boolean captureWidgetTab(Intent intent) {
+        if (intent == null) return false;
+        String tab = intent.getStringExtra(GrimKcalWidget.EXTRA_TAB);
+        if (tab == null) return false;
+        GrimWidgetPlugin.pendingTab = tab;
+        return true;
     }
 }
