@@ -125,7 +125,7 @@ function SortableMeal({ meal, isCustom, logs, mealKcal, onAdd, onRename, onDelet
           <Button variant="ghost" className="h-auto p-0 text-sm font-bold first-letter:uppercase font-serif max-w-full justify-start" aria-label={`Visa ${meal}`} aria-expanded={!simple || expanded} onClick={() => setExpanded((v) => !v)}><span className="truncate">{meal}</span></Button>
           <p className={`text-[10px] tabular-nums ${budget && mealKcal > budget * 1.1 ? "text-destructive font-semibold" : "text-muted-foreground"}`}>
             {Math.round(mealKcal)}{budget ? ` / ${Math.round(budget)}` : ""} kcal
-            {logs.length > 0 && <span className="text-muted-foreground font-normal"> · {Math.round(logs.filter((l) => isPlausibleMealLog(l)).reduce((s, l) => s + Number(l.protein_g || 0), 0))}P {Math.round(logs.filter((l) => isPlausibleMealLog(l)).reduce((s, l) => s + Number(l.carbs_g || 0), 0))}K {Math.round(logs.filter((l) => isPlausibleMealLog(l)).reduce((s, l) => s + Number(l.fat_g || 0), 0))}F</span>}
+            {!simple && logs.length > 0 && <span className="text-muted-foreground font-normal"> · {Math.round(logs.filter((l) => isPlausibleMealLog(l)).reduce((s, l) => s + Number(l.protein_g || 0), 0))}P {Math.round(logs.filter((l) => isPlausibleMealLog(l)).reduce((s, l) => s + Number(l.carbs_g || 0), 0))}K {Math.round(logs.filter((l) => isPlausibleMealLog(l)).reduce((s, l) => s + Number(l.fat_g || 0), 0))}F</span>}
           </p>
           {proteinBudget != null && <p className="text-[10px] text-muted-foreground">Protein {Math.round(logs.filter(isPlausibleMealLog).reduce((s, l) => s + Number(l.protein_g), 0))} / {proteinBudget} g</p>}
         </div>
@@ -480,11 +480,11 @@ export default function NutritionView({ userId, isHonorary: isHonoraryProp = fal
   const microTotals = useMemo(() => {
     const out: Micros = {};
     for (const m of MICROS) {
-      const vals = logs.map((l: any) => l[m.key]).filter((v) => v != null);
+      const vals = plausibleLogs.map((l: any) => l[m.key]).filter((v) => v != null);
       if (vals.length) out[m.key] = vals.reduce((a: number, v: any) => a + Number(v), 0);
     }
     return out;
-  }, [logs]);
+  }, [plausibleLogs]);
   const coverage = nutrientCoverage(plausibleLogs.map((l) => pickMicros(l)));
 
   /** Copy yesterday's logged items (optionally only one meal) to the shown day. */
