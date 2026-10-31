@@ -13,6 +13,7 @@ export const STATS_SECTIONS = [
   { key: "strength", label: "Styrka & personliga rekord" },
   { key: "calendar", label: "Träningskalender" },
   { key: "bodyWeight", label: "Viktkurva" },
+  { key: "progressPhotos", label: "Progressbilder" },
   { key: "weightProgression", label: "Viktprogression per övning" },
   { key: "calorieIntake", label: "Intagna kalorier" },
 ] as const;

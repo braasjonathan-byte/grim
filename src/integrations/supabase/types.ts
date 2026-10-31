@@ -14,6 +14,12 @@ export type Database = {
   }
   public: {
     Tables: {
+      progress_photos: {
+        Row: { created_at: string; id: string; note: string | null; pose: string | null; storage_path: string; taken_on: string; user_id: string }
+        Insert: { created_at?: string; id?: string; note?: string | null; pose?: string | null; storage_path: string; taken_on?: string; user_id: string }
+        Update: { created_at?: string; id?: string; note?: string | null; pose?: string | null; storage_path?: string; taken_on?: string; user_id?: string }
+        Relationships: []
+      }
       announcements: {
         Row: {
           author_id: string

@@ -11,6 +11,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { BarChart3, CheckCircle, Flame, Footprints, Weight, Star, Swords, ChevronLeft, ChevronRight, Sparkles, SlidersHorizontal } from "lucide-react";
 import PeriodRecapView from "@/components/PeriodRecapView";
 import BodyWeightChart from "@/components/BodyWeightChart";
+import ProgressPhotos from "@/components/ProgressPhotos";
 import WeightProgressionChart from "@/components/WeightProgressionChart";
 import PersonalRecords from "@/components/PersonalRecords";
 import EmptyState from "@/components/EmptyState";
@@ -897,6 +898,7 @@ const WorkoutStats = ({ userId }: WorkoutStatsProps) => {
 
       {/* Body weight chart */}
       {show("bodyWeight") && <BodyWeightChart userId={userId} />}
+      {show("progressPhotos") && <ProgressPhotos userId={userId} />}
 
       {/* Weight progression chart */}
       {show("weightProgression") && <WeightProgressionChart userId={userId} />}
