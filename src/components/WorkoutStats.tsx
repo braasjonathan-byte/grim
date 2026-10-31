@@ -3,7 +3,6 @@ import { sessionVolumeKg } from "@/lib/checkedSets";
 import { WORKOUTS_CHANGED_EVENT } from "@/lib/workoutHistory";
 import NutritionTrendCard from "./NutritionTrendCard";
 import { useStatsSettings, STATS_SECTIONS, autoShowBodyWeight } from "@/lib/statsSettings";
-import GoalWeightChart from "@/components/GoalWeightChart";
 import CalorieIntakeChart from "@/components/CalorieIntakeChart";
 import { parseNum, isPlausibleSet } from "@/lib/inputValidation";
 import { StatsSkeleton } from "@/components/LoadingSkeletons";
@@ -898,7 +897,6 @@ const WorkoutStats = ({ userId }: WorkoutStatsProps) => {
 
       {/* Body weight chart */}
       {show("bodyWeight") && <BodyWeightChart userId={userId} />}
-      {show("goalWeight") && <GoalWeightChart userId={userId} />}
 
       {/* Weight progression chart */}
       {show("weightProgression") && <WeightProgressionChart userId={userId} />}

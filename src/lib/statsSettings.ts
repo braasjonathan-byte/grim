@@ -14,7 +14,6 @@ export const STATS_SECTIONS = [
   { key: "calendar", label: "Träningskalender" },
   { key: "bodyWeight", label: "Viktkurva" },
   { key: "weightProgression", label: "Viktprogression per övning" },
-  { key: "goalWeight", label: "Mot målvikten" },
   { key: "calorieIntake", label: "Intagna kalorier" },
 ] as const;
 export type StatsSection = (typeof STATS_SECTIONS)[number]["key"];
@@ -46,13 +45,16 @@ const KEY = "grim_stats_settings";
 const EVENT = "grim:stats-settings-changed";
 interface State { hidden: StatsSection[]; weightDays: number; touched?: StatsSection[]; bodyWeightAutoShown?: boolean }
 
+const KNOWN = new Set<string>(STATS_SECTIONS.map((x) => x.key));
+const known = (a: unknown): StatsSection[] => (Array.isArray(a) ? a.filter((k): k is StatsSection => KNOWN.has(k)) : []);
+
 const read = (): State => {
   try {
     const raw = localStorage.getItem(KEY);
     if (!raw) return { hidden: [...DEFAULT_HIDDEN], weightDays: DEFAULT_WEIGHT_DAYS };
     const s = JSON.parse(raw);
     const days = WEIGHT_RANGES.some((r) => r.days === s.weightDays) ? s.weightDays : DEFAULT_WEIGHT_DAYS;
-    return { hidden: Array.isArray(s.hidden) ? s.hidden : [], weightDays: days, touched: Array.isArray(s.touched) ? s.touched : [], bodyWeightAutoShown: !!s.bodyWeightAutoShown };
+    return { hidden: known(s.hidden), weightDays: days, touched: known(s.touched), bodyWeightAutoShown: !!s.bodyWeightAutoShown };
   } catch { return { hidden: [...DEFAULT_HIDDEN], weightDays: DEFAULT_WEIGHT_DAYS }; }
 };
 const write = (s: State) => { localStorage.setItem(KEY, JSON.stringify(s)); window.dispatchEvent(new Event(EVENT)); };
