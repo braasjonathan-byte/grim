@@ -4,10 +4,11 @@ import ConfirmValueDialog, { FieldError } from "@/components/ConfirmValueDialog"
 const QUICK_MACRO: NumberRule = { min: 0, max: 1000, unit: "g", optional: true };
 import { hapticLight } from "@/lib/haptics";
 import { loadWorkoutBurned } from "@/lib/workoutBurned";
+import { loadStoredHealthDays } from "@/lib/healthSync";
 import { firstClick, exclusive } from "@/lib/clickGuard";
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { ChevronLeft, ChevronRight, Plus, Target, Trash2, Pencil, GripVertical, ChefHat, Bookmark, MoreHorizontal, CopyPlus, Zap, BookmarkPlus, ArrowRightLeft, Copy, Sparkles } from "lucide-react";
+import { ChevronLeft, ChevronRight, Plus, Target, Trash2, Pencil, GripVertical, ChefHat, Bookmark, MoreHorizontal, CopyPlus, Zap, BookmarkPlus, ArrowRightLeft, Copy, Sparkles, Flame } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 
 import NutritionHero from "./NutritionHero";
@@ -224,6 +225,8 @@ export default function NutritionView({ userId, isHonorary: isHonoraryProp = fal
   const [dayAiOpen, setDayAiOpen] = useState(false);
   const [waterGoal, setWaterGoal] = useState(2000);
   const [burned, setBurned] = useState(0);
+  // Samma källa som Hem: health_daily.activeCalories från hälsoappen.
+  const [activeKcal, setActiveKcal] = useState<number | null>(null);
   const [loaded, setLoaded] = useState(false);
   const [hasGoals, setHasGoals] = useState(true);
   const [feelings, setFeelings] = useState<Record<string, string>>({});
@@ -399,6 +402,12 @@ export default function NutritionView({ userId, isHonorary: isHonoraryProp = fal
         if (!cancelled) setFeelings(remote);
       });
     loadWorkoutBurned(userId, dateKey).then(setBurned).catch(() => setBurned(0));
+    loadStoredHealthDays(userId, 31)
+      .then((rows) => {
+        const row = rows.find((r) => r.day === dateKey);
+        setActiveKcal(row && row.activeCalories > 0 ? row.activeCalories : null);
+      })
+      .catch(() => setActiveKcal(null));
     return () => { cancelled = true; };
   }, [feelKey, userId, dateKey]);
 
@@ -606,6 +615,12 @@ export default function NutritionView({ userId, isHonorary: isHonoraryProp = fal
       <div className="rounded-2xl bg-card shadow-soft border border-border/40 p-4 space-y-4">
         <div data-tour="nutrition-rings">
           {!loaded ? <div className="h-64 rounded-2xl bg-muted/40 animate-pulse" aria-label="Laddar kostdata" /> : <NutritionHero kcal={totals.kcal} burned={burned} protein={totals.protein} fat={totals.fat} carbs={totals.carbs} fiber={totals.fiber} targets={targets} micros={microTotals} quality={foodQualityScore(logs)} microTargets={microTargets} />}
+          {loaded && activeKcal != null && (
+            <div className="mt-2 flex items-center justify-between rounded-xl border border-border bg-card px-3 py-2" aria-label="Aktiva kalorier">
+              <span className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground"><Flame className="h-4 w-4" />Aktiva kcal</span>
+              <span className="text-sm font-bold">{activeKcal.toLocaleString("sv-SE")} <span className="text-[11px] font-normal text-muted-foreground">från hälsoappen</span></span>
+            </div>
+          )}
           {loaded && !hasGoals && <p className="text-[11px] text-muted-foreground text-center mt-2">Standardmål 2000 kcal – öppna <b>Mer → Mål</b> och fyll i ålder, vikt och längd så räknar vi ut ditt eget behov.</p>}
         </div>
 
