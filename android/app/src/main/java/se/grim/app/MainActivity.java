@@ -44,7 +44,7 @@ public class MainActivity extends BridgeActivity {
             GrimWidgetPlugin.pendingTab = null;
             getBridge().triggerWindowJSEvent("grimOpenTab", "{\"tab\":\"nutrition\"}");
         }
-        if (GrimHealthRequestState.isInFlight()) {
+        if (GrimHealthRequestState.getInFlight()) {
             Log.w("GrimMainActivity", "deferring intent while health permission dialog is in flight");
             deferredIntent = intent;
             return;
@@ -53,9 +53,9 @@ public class MainActivity extends BridgeActivity {
     }
 
     @Override
-    protected void onResume() {
+    public void onResume() {
         super.onResume();
-        if (deferredIntent != null && !GrimHealthRequestState.isInFlight()) {
+        if (deferredIntent != null && !GrimHealthRequestState.getInFlight()) {
             Intent pending = deferredIntent;
             deferredIntent = null;
             Log.i("GrimMainActivity", "replaying deferred intent after health permission dialog");

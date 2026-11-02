@@ -143,7 +143,7 @@ describe("Android-konfiguration för Health Connect", () => {
     expect(patch).toContain("CoroutineScope(Dispatchers.Main).launch {");
 
     const mainActivity = read("android/app/src/main/java/se/grim/app/MainActivity.java");
-    expect(mainActivity).toContain("GrimHealthRequestState.isInFlight()");
+    expect(mainActivity).toContain("GrimHealthRequestState.getInFlight()");
     expect(mainActivity).toContain("protected void onNewIntent(Intent intent)");
     expect(mainActivity).toContain("deferredIntent");
   });
