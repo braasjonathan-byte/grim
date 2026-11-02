@@ -56,6 +56,7 @@ import ConfirmValueDialog from "@/components/ConfirmValueDialog";
 import ShareWorkoutPromptDialog from "@/components/ShareWorkoutPromptDialog";
 import { loadPrivacySettings, DEFAULT_PRIVACY, type PrivacySettings } from "@/lib/socialPrivacy";
 import WorkoutCompleteOverlay from "@/components/WorkoutCompleteOverlay";
+import { touchOngoingWorkout, endOngoingWorkout, cleanupStaleOngoingWorkout } from "@/lib/workoutOngoing";
 import { summarizeCompletion, type WorkoutSummary } from "@/lib/workoutSummary";
 import AutoSaveInput from "@/components/AutoSaveInput";
 import IntervalTimeMSInput from "@/components/IntervalTimeMSInput";
@@ -418,6 +419,8 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
   // Ask the user after marking a workout done whether to share to friends feed.
   const [sharePromptDialog, setSharePromptDialog] = useState<{ week: number; day: string; caption: string | null; loading: boolean } | null>(null);
   const [completeCelebration, setCompleteCelebration] = useState<{ title: string; summary: WorkoutSummary } | null>(null);
+  useEffect(() => { cleanupStaleOngoingWorkout(); }, []);
+  useEffect(() => { if (completeCelebration) void endOngoingWorkout(); }, [completeCelebration]);
   const [pendingShare, setPendingShare] = useState<{ week: number; day: string; caption: string | null; loading: boolean } | null>(null);
   const pendingShareRef = useRef<{ week: number; day: string; caption: string | null; loading: boolean } | null>(null);
   useEffect(() => { pendingShareRef.current = pendingShare; }, [pendingShare]);
@@ -486,6 +489,10 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
       try { perExercise = JSON.parse(localStorage.getItem("grim_rest_seconds_by_exercise") || "{}")[exerciseName.toLowerCase()]; } catch {}
     }
     const setRestTimerSeconds = perExercise || localStorage.getItem("grim_set_rest_timer_seconds") || "90";
+    if (wasChecked) {
+      // Pågående-notis (Android): passet syns på låsskärmen med vilotimerns sluttid.
+      void touchOngoingWorkout({ exercise: exerciseName, restSeconds: setRestTimerEnabled ? Math.max(1, Math.round(Number(setRestTimerSeconds) || 0)) : 0 });
+    }
     if (!wasChecked || !setRestTimerEnabled) return;
     const seconds = Math.max(1, Math.round(Number(setRestTimerSeconds) || 0));
     if (!seconds) return;

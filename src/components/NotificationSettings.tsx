@@ -3,6 +3,7 @@ import { Bell, BellOff, ExternalLink, Loader2, Check, Clock, AlarmClock, Send } 
 import { supabase } from "@/integrations/supabase/client";
 import { Capacitor } from "@capacitor/core";
 import { openAppSettings } from "@/lib/openSettings";
+import { ONGOING_ENABLED_KEY, endOngoingWorkout, isOngoingNotificationEnabled } from "@/lib/workoutOngoing";
 
 function urlBase64ToUint8Array(base64String: string): Uint8Array {
   const padding = "=".repeat((4 - (base64String.length % 4)) % 4);
@@ -34,6 +35,7 @@ const NotificationSettings = ({ userId }: NotificationSettingsProps) => {
   const [loading, setLoading] = useState(false);
   const [supported, setSupported] = useState(true);
   const [justEnabled, setJustEnabled] = useState(false);
+  const [ongoingEnabled, setOngoingEnabled] = useState(isOngoingNotificationEnabled);
 
   // Reminder state
   const [reminderEnabled, setReminderEnabled] = useState(false);
@@ -216,6 +218,25 @@ const NotificationSettings = ({ userId }: NotificationSettingsProps) => {
         )}
         <h3 className="text-sm font-bold">🔔 Notiser</h3>
       </div>
+
+      {Capacitor.isNativePlatform() && (
+        <label className="flex items-center justify-between gap-3 text-sm">
+          <span>
+            Pågående pass på låsskärmen
+            <span className="block text-[11px] text-muted-foreground">Visar styrkepasset och när vilan är slut</span>
+          </span>
+          <input
+            type="checkbox"
+            className="w-5 h-5 accent-primary"
+            checked={ongoingEnabled}
+            onChange={(e) => {
+              setOngoingEnabled(e.target.checked);
+              localStorage.setItem(ONGOING_ENABLED_KEY, e.target.checked ? "1" : "0");
+              if (!e.target.checked) void endOngoingWorkout();
+            }}
+          />
+        </label>
+      )}
 
       {!supported ? (
         <p className="text-xs text-muted-foreground">
