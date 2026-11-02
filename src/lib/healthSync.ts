@@ -72,6 +72,7 @@ type HealthPluginLike = {
     dataType: "steps" | "active-calories" | "sleep" | "mindfulness";
     bucket: string;
   }) => Promise<{ aggregatedData: { startDate: string; value: number }[] }>;
+  queryRecords?: (req: { startDate: string; endDate: string; dataType: string }) => Promise<{ records: { startDate: string; value: number }[] }>;
   queryWorkouts: (req: {
     startDate: string;
     endDate: string;
@@ -1404,4 +1405,37 @@ export async function importBackgroundCache(userId: string): Promise<number> {
   await saveHealthDays(userId, rows);
   healthLog("background cache imported", { rows: rows.length, readAt: state?.cache?.summary?.readAt });
   return rows.length;
+}
+
+
+// ---------------------------------------------------------------------------
+// Kroppssammansättning (valfri, separat behörighet – påverkar inte läsflödet).
+export const BODY_COMP_PERMISSIONS = ["READ_BODY_FAT", "READ_LEAN_BODY_MASS"] as const;
+export type BodyComposition = { bodyFatPct: number | null; leanKg: number | null; at: string | null; granted: boolean };
+
+export async function readBodyComposition(request = false): Promise<BodyComposition> {
+  const empty: BodyComposition = { bodyFatPct: null, leanKg: null, at: null, granted: false };
+  const plugin = loadPlugin();
+  if (!plugin || typeof plugin.queryRecords !== "function") return empty;
+  const perms = [...BODY_COMP_PERMISSIONS] as string[];
+  let granted = permissionMap(await withTimeout(plugin.checkHealthPermissions({ permissions: perms }), STEP_TIMEOUT_MS, "timeout").catch(() => undefined));
+  if (request && !granted.READ_BODY_FAT && !granted.READ_LEAN_BODY_MASS) {
+    granted = permissionMap(await withDialogTimeout(plugin.requestHealthPermissions({ permissions: perms }), "Hälsoappen svarade inte.", DIALOG_VISIBLE_TIMEOUT_MS).catch(() => undefined));
+  }
+  if (!granted.READ_BODY_FAT && !granted.READ_LEAN_BODY_MASS) return empty;
+  const end = new Date();
+  const start = new Date(end.getTime() - 90 * 864e5);
+  const latest = async (dataType: string, ok: boolean) => {
+    if (!ok) return null;
+    const res = await withTimeout(plugin.queryRecords!({ startDate: start.toISOString(), endDate: end.toISOString(), dataType }), STEP_TIMEOUT_MS, "timeout").catch(() => null);
+    const recs = res?.records ?? [];
+    return recs.length ? recs[recs.length - 1] : null;
+  };
+  const [bf, lean] = await Promise.all([latest("body-fat", !!granted.READ_BODY_FAT), latest("lean-body-mass", !!granted.READ_LEAN_BODY_MASS)]);
+  return {
+    bodyFatPct: bf ? Math.round(bf.value * 10) / 10 : null,
+    leanKg: lean ? Math.round(lean.value * 10) / 10 : null,
+    at: bf?.startDate ?? lean?.startDate ?? null,
+    granted: true,
+  };
 }

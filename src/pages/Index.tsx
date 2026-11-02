@@ -224,9 +224,15 @@ const Index = () => {
     const uid = user?.id;
     if (!uid) return;
     void syncWidgetWeek(uid);
-    const onVis = () => { if (document.visibilityState === "visible") void syncWidgetWeek(uid); };
+    // Synka även när appen lämnas (widgeten syns direkt efteråt) och när ett pass ändras.
+    const onVis = () => void syncWidgetWeek(uid);
+    const onWorkouts = () => void syncWidgetWeek(uid);
     document.addEventListener("visibilitychange", onVis);
-    return () => document.removeEventListener("visibilitychange", onVis);
+    window.addEventListener("grim:workouts-changed", onWorkouts);
+    return () => {
+      document.removeEventListener("visibilitychange", onVis);
+      window.removeEventListener("grim:workouts-changed", onWorkouts);
+    };
   }, [user?.id]);
 
   // Listen for tour navigation events

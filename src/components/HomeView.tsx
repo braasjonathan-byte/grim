@@ -39,6 +39,7 @@ import { loadUntrainedRegions, buildSuggestion } from "@/lib/untrainedMuscles";
 import { restingHrSignal } from "@/lib/restingHr";
 import HealthWorkoutPrompt from "@/components/HealthWorkoutPrompt";
 import HomeTrainingStats from "@/components/HomeTrainingStats";
+import HomeHealthTrends, { WeeklySummaryEntry } from "@/components/HomeHealthTrends";
 import DailyRecipeCard from "@/components/DailyRecipeCard";
 import { getCardioModes, getStoredCardioMode } from "@/lib/cardioUnits";
 
@@ -143,7 +144,7 @@ const HomeView = ({ userId, onNavigate, isHonorary = false }: HomeViewProps) => 
     const todayKeyLocal = toLocalDateKey(new Date());
     const applyStored = async () => {
       try {
-        const stored = await loadStoredHealthDays(userId, 8);
+        const stored = await loadStoredHealthDays(userId, 15);
         if (cancelled) return;
         setHealthHistory(stored);
         const row = stored.find((r) => r.day === todayKeyLocal) ?? stored[stored.length - 1] ?? null;
@@ -631,9 +632,12 @@ const HomeView = ({ userId, onNavigate, isHonorary = false }: HomeViewProps) => 
               Sömn i natt: {formatSleep(healthToday.sleepMinutes)}
             </p>
           )}
+          <HomeHealthTrends days={healthHistory} />
 
         </div>
       )}
+
+      <WeeklySummaryEntry />
 
       {/* 1d. Träningsstatistik vecka/månad/år med grenval direkt i kortet */}
       <HomeTrainingStats userId={userId} />
