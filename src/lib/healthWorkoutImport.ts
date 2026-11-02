@@ -182,6 +182,17 @@ export async function importHealthWorkouts(
     // Samma format som manuell registrering av t.ex. Promenad/Löpning: en enda
     // konditionsövning. Övriga värden sparas som dold metadata – aldrig som egna
     // rader i details (varje rad tolkas annars som en styrkeövning).
+    // Rikare puls-vy: max/lägsta + nedsamplad kurva sparas med konditionsraden.
+    const condKey = `__cond__${w.label}`;
+    if (loggedWeights[condKey] && (w.maxHeartRate || w.hrCurve?.length)) {
+      try {
+        const c = JSON.parse(loggedWeights[condKey]);
+        if (w.maxHeartRate) c.pulseMax = String(w.maxHeartRate);
+        if (w.minHeartRate) c.pulseMin = String(w.minHeartRate);
+        if (w.hrCurve && w.hrCurve.length > 1) c.hr = w.hrCurve;
+        loggedWeights[condKey] = JSON.stringify(c);
+      } catch { /* behåll originalet */ }
+    }
     const meta = healthWorkoutMeta(w);
     if (meta) loggedWeights[HC_META_KEY] = meta;
 

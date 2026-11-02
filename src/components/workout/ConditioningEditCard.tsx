@@ -1,3 +1,4 @@
+import HeartRateCurve from "@/components/HeartRateCurve";
 import { useState, useEffect, useRef } from "react";
 import { parseNum, validateCardioEntry, validateNumber } from "@/lib/inputValidation";
 import { toast } from "sonner";
@@ -302,6 +303,9 @@ export const ConditioningEditCard = ({ name, lineIndex, planId, planCondTime, pl
           {savedData?.elev && <p className="text-xs">⛰ <span className="font-mono font-semibold">{savedData.elev} m</span></p>}
           {displayPulse && <p className="text-xs">❤️ <span className="font-mono font-semibold">{displayPulse} bpm</span></p>}
         </div>
+        {(Array.isArray(savedData?.hr) && savedData!.hr.length > 1) || savedData?.pulseMax ? (
+          <HeartRateCurve hr={savedData?.hr} avg={displayPulse} max={savedData?.pulseMax} min={savedData?.pulseMin} minutes={Number(savedData?.time) || null} />
+        ) : null}
         {Array.isArray(savedData?.route) && (savedData!.route as any[]).length > 1 && (
           <RouteMap route={savedData!.route as [number, number][]} height={180} collapsible defaultOpen={false} />
         )}

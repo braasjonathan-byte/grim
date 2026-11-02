@@ -1,5 +1,6 @@
 import { Capacitor, registerPlugin } from "@capacitor/core";
 import { supabase } from "@/integrations/supabase/client";
+import { downsampleHr } from "@/lib/hrCurve";
 
 export type HealthDay = {
   day: string;
@@ -1017,6 +1018,9 @@ export type HealthWorkout = {
   steps: number | null;
   avgHeartRate: number | null;
   maxHeartRate: number | null;
+  minHeartRate?: number | null;
+  /** Nedsamplad pulsserie (bpm) för pulskurva. */
+  hrCurve?: number[] | null;
   /** Paketnamn för appen som skrev passet till Health Connect. */
   sourceBundleId?: string;
 };
@@ -1144,6 +1148,8 @@ export async function readHealthWorkouts(days = 30): Promise<HealthWorkout[]> {
         steps: w.steps ? Math.round(w.steps) : null,
         avgHeartRate: bpms.length ? Math.round(bpms.reduce((a, b) => a + b, 0) / bpms.length) : null,
         maxHeartRate: bpms.length ? Math.max(...bpms) : null,
+        minHeartRate: bpms.length ? Math.min(...bpms) : null,
+        hrCurve: bpms.length > 1 ? downsampleHr(w.heartRate ?? []) : null,
       } satisfies HealthWorkout;
     });
   // GRIM_HC_WRITE: pass som Grim själv skrivit ska inte importeras tillbaka (loop).
