@@ -1,0 +1,111 @@
+import { useEffect, useState } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import { toLocalDateKey } from "@/lib/dateUtils";
+import { TrendingUp, Info, Check } from "lucide-react";
+import { toast } from "@/hooks/use-toast";
+import { showUndoToast } from "@/lib/undoToast";
+import {
+  ADAPTIVE_APPLIED_KEY, ADAPTIVE_WINDOW_DAYS, adaptiveTarget, computeAdaptiveTdee, type AdaptiveTdeeResult,
+} from "@/lib/adaptiveTdee";
+
+interface Props {
+  userId: string;
+  currentKcal: number;
+  hasGoals: boolean;
+  onApplied: () => void;
+}
+
+type Applied = { date: string; from: number; to: number };
+
+/** Adaptiv TDEE: räknar om kcal-målet från vikttrend + faktiskt intag. */
+export default function AdaptiveTdeeCard({ userId, currentKcal, hasGoals, onApplied }: Props) {
+  const [res, setRes] = useState<AdaptiveTdeeResult | null>(null);
+  const [goal, setGoal] = useState<{ goal_type: string; weekly_loss_kg: number | null; protein_g: number; fat_g: number } | null>(null);
+  const [showInfo, setShowInfo] = useState(false);
+  const [applied, setApplied] = useState<Applied | null>(() => {
+    try { return JSON.parse(localStorage.getItem(ADAPTIVE_APPLIED_KEY) || "null"); } catch { return null; }
+  });
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const since = new Date(); since.setDate(since.getDate() - ADAPTIVE_WINDOW_DAYS);
+      const sinceKey = toLocalDateKey(since);
+      const todayKey = toLocalDateKey(new Date());
+      const [w, m, g] = await Promise.all([
+        supabase.from("body_weight_logs").select("log_date, weight_kg").eq("user_id", userId).gte("log_date", sinceKey).order("log_date"),
+        supabase.from("meal_logs").select("log_date, kcal").eq("user_id", userId).gte("log_date", sinceKey).lt("log_date", todayKey).limit(5000),
+        supabase.from("nutrition_goals").select("goal_type, weekly_loss_kg, protein_g, fat_g").eq("user_id", userId).maybeSingle(),
+      ]);
+      if (cancelled) return;
+      const intake: Record<string, number> = {};
+      for (const r of m.data || []) intake[r.log_date] = (intake[r.log_date] || 0) + Number(r.kcal || 0);
+      setRes(computeAdaptiveTdee((w.data || []).map((r) => ({ date: r.log_date, kg: Number(r.weight_kg) })), intake));
+      setGoal(g.data as any);
+    })();
+    return () => { cancelled = true; };
+  }, [userId, currentKcal]);
+
+  if (!res || !hasGoals) return null;
+
+  const suggested = res.ok && res.tdee ? adaptiveTarget(res.tdee, goal?.goal_type || "maintain", goal?.weekly_loss_kg) : null;
+  const diff = suggested != null ? suggested - currentKcal : 0;
+  const worthIt = suggested != null && Math.abs(diff) >= 100;
+
+  async function apply() {
+    if (suggested == null || !goal) return;
+    const from = currentKcal;
+    const protein_g = goal.protein_g;
+    const fat_g = Math.round((suggested * 0.28) / 9);
+    const carbs_g = Math.max(0, Math.round((suggested - protein_g * 4 - fat_g * 9) / 4));
+    const { error } = await supabase.from("nutrition_goals").update({ daily_kcal: suggested, fat_g, carbs_g }).eq("user_id", userId);
+    if (error) { toast({ title: "Kunde inte uppdatera målet", description: error.message, variant: "destructive" }); return; }
+    const a = { date: toLocalDateKey(new Date()), from, to: suggested };
+    localStorage.setItem(ADAPTIVE_APPLIED_KEY, JSON.stringify(a));
+    setApplied(a);
+    onApplied();
+    showUndoToast(`Nytt kcal-mål: ${suggested} kcal`, async () => {
+      await supabase.from("nutrition_goals").update({ daily_kcal: from, fat_g: goal.fat_g, carbs_g: Math.max(0, Math.round((from - protein_g * 4 - goal.fat_g * 9) / 4)) }).eq("user_id", userId);
+      localStorage.removeItem(ADAPTIVE_APPLIED_KEY);
+      setApplied(null);
+      onApplied();
+    });
+  }
+
+  return (
+    <div className="rounded-2xl bg-card shadow-soft border border-border/40 p-3 space-y-2">
+      <div className="flex items-center justify-between">
+        <p className="text-xs font-bold flex items-center gap-1.5"><TrendingUp className="w-3.5 h-3.5 text-primary" /> Adaptiv förbrukning</p>
+        <button onClick={() => setShowInfo((v) => !v)} aria-label="Hur fungerar det?" className="text-muted-foreground"><Info className="w-3.5 h-3.5" /></button>
+      </div>
+      {showInfo && (
+        <p className="text-[11px] text-muted-foreground leading-snug">
+          Vi jämför vad du faktiskt ätit de senaste {ADAPTIVE_WINDOW_DAYS} dagarna med hur din vikttrend rört sig.
+          Ett kilo kroppsvikt ≈ 7 700 kcal, så: <b>förbrukning ≈ snittintag − viktförändring × 7 700</b>.
+          Dagar under 800 kcal räknas som ofullständigt loggade och hoppas över. Ju mer du loggar och väger dig, desto säkrare.
+        </p>
+      )}
+      {!res.ok ? (
+        <p className="text-[11px] text-muted-foreground">{res.reason} – sedan räknar vi ut din verkliga förbrukning.</p>
+      ) : (
+        <>
+          <div className="grid grid-cols-3 gap-2 text-center">
+            <div><p className="text-base font-bold tabular-nums">{res.tdee}</p><p className="text-[10px] text-muted-foreground">Förbrukning/dag</p></div>
+            <div><p className="text-base font-bold tabular-nums">{res.avgIntake}</p><p className="text-[10px] text-muted-foreground">Snittintag</p></div>
+            <div><p className="text-base font-bold tabular-nums">{res.kgPerWeek! > 0 ? "+" : ""}{res.kgPerWeek?.toFixed(2)}</p><p className="text-[10px] text-muted-foreground">kg/vecka</p></div>
+          </div>
+          {applied && applied.to === currentKcal ? (
+            <p className="text-[11px] text-success flex items-center gap-1"><Check className="w-3 h-3" /> Målet justerades {new Date(applied.date).toLocaleDateString("sv-SE", { day: "numeric", month: "short" })}: {applied.from} → {applied.to} kcal</p>
+          ) : null}
+          {worthIt ? (
+            <button onClick={apply} className="w-full pill-btn bg-primary text-primary-foreground py-2 text-xs font-semibold">
+              Justera mål {currentKcal} → {suggested} kcal ({diff > 0 ? "+" : ""}{diff})
+            </button>
+          ) : (
+            <p className="text-[11px] text-muted-foreground">Ditt mål ({currentKcal} kcal) stämmer med din faktiska förbrukning.</p>
+          )}
+        </>
+      )}
+    </div>
+  );
+}

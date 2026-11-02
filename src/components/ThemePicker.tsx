@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Crown, Palette, ChevronDown, Check } from "lucide-react";
+import { Crown, Palette, ChevronDown, Check, Sparkles } from "lucide-react";
 import { THEMES, applyTheme, storeThemeId } from "@/lib/themes";
 import { supabase } from "@/integrations/supabase/client";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
@@ -27,6 +27,14 @@ const ThemePicker = ({ userId, isHonorary, currentTheme, onThemeChange }: ThemeP
       .from("profiles")
       .update({ theme: themeId } as any)
       .eq("user_id", userId);
+  };
+
+  const openSupporter = () => {
+    // Samma deep link som Stripe-returen: Verktyg › Inställningar › Medlemskap
+    sessionStorage.setItem("grim_tools_open", "settings:supporter");
+    window.dispatchEvent(new CustomEvent("grim:open-supporter"));
+    const el = document.querySelector("[data-supporter-section]");
+    if (el) el.scrollIntoView({ behavior: "smooth", block: "center" });
   };
 
   const currentThemeDef = THEMES.find((t) => t.id === currentTheme);
@@ -66,18 +74,46 @@ const ThemePicker = ({ userId, isHonorary, currentTheme, onThemeChange }: ThemeP
               </div>
             </div>
 
+            {/* Supporter Pro-teman (nya) */}
+            <div>
+              <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1.5 font-semibold flex items-center gap-1">
+                <Sparkles className="w-3 h-3 text-warning" /> Supporter Pro – nytt
+              </p>
+              <div className="grid grid-cols-3 gap-2">
+                {THEMES.filter((t) => t.pro).map((theme) => (
+                  <ThemeCard
+                    key={theme.id}
+                    theme={theme}
+                    isActive={currentTheme === theme.id}
+                    locked={!isHonorary}
+                    onSelect={handleSelect}
+                  />
+                ))}
+              </div>
+            </div>
+
+            {!isHonorary && (
+              <button
+                type="button"
+                onClick={openSupporter}
+                className="w-full flex items-center justify-center gap-2 py-2 text-xs font-semibold border border-warning/60 text-warning hover:bg-warning/10"
+              >
+                <Crown className="w-3.5 h-3.5" /> Lås upp alla premiumteman – Bli Supporter
+              </button>
+            )}
+
             {/* Premium themes */}
             <div>
               <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1.5 font-semibold flex items-center gap-1">
-                <Crown className="w-3 h-3 text-warning" /> Exklusivt för hedersmedlemmar
+                <Crown className="w-3 h-3 text-warning" /> Premium (Supporter &amp; heder)
               </p>
               {!isHonorary && (
                 <p className="text-xs text-muted-foreground mb-2">
-                  🔒 Exklusivt för hedersmedlemmar
+                  🔒 Kräver Supporter eller hedersmedlemskap
                 </p>
               )}
               <div className="grid grid-cols-3 gap-2">
-                {THEMES.filter((t) => t.premium).map((theme) => (
+                {THEMES.filter((t) => t.premium && !t.pro).map((theme) => (
                   <ThemeCard
                     key={theme.id}
                     theme={theme}

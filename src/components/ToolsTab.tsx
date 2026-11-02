@@ -141,6 +141,15 @@ const ToolsTab = ({ userId, isAdmin, isHonorary, userRole, onViewUserPlan, onLog
     sessionStorage.removeItem("grim_tools_open");
     return f === "settings:supporter" ? "supporter" : null;
   });
+  useEffect(() => {
+    const open = () => {
+      sessionStorage.removeItem("grim_tools_open");
+      setSubView("settings");
+      setOpenItem("supporter");
+    };
+    window.addEventListener("grim:open-supporter", open);
+    return () => window.removeEventListener("grim:open-supporter", open);
+  }, []);
   const [editLayout, setEditLayout] = useState(false);
   const { order, save: saveLayout } = useToolLayout();
   const [collapsed, setCollapsed] = useState<Set<string>>(() => {

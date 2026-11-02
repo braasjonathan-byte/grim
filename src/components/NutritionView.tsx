@@ -13,6 +13,8 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel,
 import NutritionHero from "./NutritionHero";
 import { syncWidgetNutrition, syncWidgetWeek } from "@/lib/nutritionWidget";
 import FoodPickerDialog, { PickedItem } from "./FoodPickerDialog";
+import AdaptiveTdeeCard from "./AdaptiveTdeeCard";
+import MealSuggestions, { slotForNow } from "./MealSuggestions";
 import RecipeEditor from "./RecipeEditor";
 import NutritionGoalsDialog from "./NutritionGoalsDialog";
 import MealNameDialog from "./MealNameDialog";
@@ -607,7 +609,35 @@ export default function NutritionView({ userId, isHonorary: isHonoraryProp = fal
           {loaded && !hasGoals && <p className="text-[11px] text-muted-foreground text-center mt-2">Standardmål 2000 kcal – öppna <b>Mer → Mål</b> och fyll i ålder, vikt och längd så räknar vi ut ditt eget behov.</p>}
         </div>
 
+        {loaded && <AdaptiveTdeeCard userId={userId} currentKcal={targets.kcal} hasGoals={hasGoals} onApplied={load} />}
+
         <FastingWidget userId={userId} />
+
+        {/* Upprepade måltider: ett tryck från egen historik (MFP/Lifesum-stil), direkt i flödet. */}
+        {loaded && (() => {
+          const want = slotForNow();
+          const quickSlot = allSlots.find((m) => m.toLowerCase() === want) || allSlots[0] || want;
+          return (
+            <div className="rounded-2xl bg-muted/30 border border-border/40 p-3 space-y-2" data-tour="nutrition-quick-repeat">
+              <MealSuggestions
+                key={`${dateKey}:${quickSlot}:${logs.length}`}
+                userId={userId}
+                meal={quickSlot}
+                onPick={(item) => { hapticLight(); void addLog(quickSlot, item, true); }}
+                onPickMany={async (items) => {
+                  hapticLight();
+                  for (const it of items) await addLog(quickSlot, it, true);
+                  toast({ title: `Loggade ${items.length} livsmedel i ${quickSlot}` });
+                }}
+              />
+              <div className="flex gap-1.5">
+                <button onClick={() => setTemplatesOpen(true)} className="flex-1 pill-btn-ghost py-1.5 text-[11px]"><Bookmark className="w-3 h-3" /> Mallar</button>
+                <button onClick={() => { hapticLight(); setPastOpen(true); }} className="flex-1 pill-btn-ghost py-1.5 text-[11px]"><CopyPlus className="w-3 h-3" /> Från senaste veckan</button>
+                <button onClick={() => { hapticLight(); setPicker(quickSlot); }} className="flex-1 pill-btn bg-primary text-primary-foreground py-1.5 text-[11px] font-semibold"><Plus className="w-3 h-3" /> Sök</button>
+              </div>
+            </div>
+          );
+        })()}
 
         {loaded && logs.length === 0 && (
           <div className="rounded-2xl bg-primary/5 border border-primary/25 p-3 text-center space-y-2">
