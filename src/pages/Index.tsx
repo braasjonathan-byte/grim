@@ -1,5 +1,5 @@
 import { useAppSettings } from "@/lib/appSettings";
-import { listenWidgetLaunch } from "@/lib/nutritionWidget";
+import { listenWidgetLaunch, syncWidgetWeek } from "@/lib/nutritionWidget";
 import AppBanner from "@/components/admin/AppBanner";
 import { lazyRetry } from "@/lib/lazyRetry";
 import { useState, useEffect, useCallback, useRef, lazy, Suspense } from "react";
@@ -219,6 +219,15 @@ const Index = () => {
 
   // Hemskärmswidget → öppna Kost direkt
   useEffect(() => listenWidgetLaunch((t) => { if (t === "nutrition") setTab("nutrition"); }), [setTab]);
+  // Widgetens veckovy: synka vid inloggning och när appen kommer tillbaka i förgrunden.
+  useEffect(() => {
+    const uid = user?.id;
+    if (!uid) return;
+    void syncWidgetWeek(uid);
+    const onVis = () => { if (document.visibilityState === "visible") void syncWidgetWeek(uid); };
+    document.addEventListener("visibilitychange", onVis);
+    return () => document.removeEventListener("visibilitychange", onVis);
+  }, [user?.id]);
 
   // Listen for tour navigation events
   useEffect(() => {

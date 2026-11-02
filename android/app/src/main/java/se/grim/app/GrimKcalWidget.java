@@ -18,6 +18,7 @@ import android.view.View;
 import android.widget.RemoteViews;
 
 import java.text.SimpleDateFormat;
+import java.util.Calendar;
 import java.util.Date;
 import java.util.Locale;
 
@@ -25,6 +26,76 @@ import java.util.Locale;
 public class GrimKcalWidget extends AppWidgetProvider {
     public static final String PREFS = "se.grim.app.widget";
     public static final String EXTRA_TAB = "grim_open_tab";
+    public static final String ACTION_LOG_FOOD = "se.grim.app.LOG_FOOD";
+
+    static PendingIntent openNutrition(Context ctx, String action, int req) {
+        Intent open = new Intent(ctx, MainActivity.class);
+        open.setAction(action);
+        open.putExtra(EXTRA_TAB, "nutrition");
+        open.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_SINGLE_TOP);
+        return PendingIntent.getActivity(ctx, req, open, PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
+    }
+
+    private static final String[] DAY_LETTERS = {"S", "M", "T", "O", "T", "F", "L"}; // Calendar.SUNDAY = 1
+
+    /** Senaste 7 dagarna (äldst → idag): kcal-stapel mot mål + prick för genomfört pass. */
+    static Bitmap weekChart(SharedPreferences p, int w, int h, float dp, float target,
+                            int fg, int mutedFg, int primary, int muted, int destructive) {
+        SimpleDateFormat fmt = new SimpleDateFormat("yyyy-MM-dd", Locale.US);
+        float[] kcal = new float[7]; float[] burned = new float[7]; int[] sess = new int[7]; String[] letters = new String[7];
+        Calendar cal = Calendar.getInstance();
+        cal.add(Calendar.DAY_OF_YEAR, -6);
+        for (int i = 0; i < 7; i++) {
+            String key = fmt.format(cal.getTime());
+            letters[i] = DAY_LETTERS[cal.get(Calendar.DAY_OF_WEEK) - 1];
+            // Slå upp på datum så att gammal data (appen ej öppnad idag) hamnar på rätt dag.
+            for (int j = 0; j < 7; j++) {
+                if (key.equals(p.getString("wD" + j, ""))) {
+                    kcal[i] = p.getFloat("wK" + j, 0); burned[i] = p.getFloat("wB" + j, 0); sess[i] = Math.round(p.getFloat("wS" + j, 0));
+                }
+            }
+            cal.add(Calendar.DAY_OF_YEAR, 1);
+        }
+        float max = Math.max(target, 1);
+        for (float k : kcal) max = Math.max(max, k);
+        int sessions = 0, logged = 0; float sumK = 0, sumB = 0;
+        for (int i = 0; i < 7; i++) { sessions += sess[i]; sumB += burned[i]; if (kcal[i] > 0) { logged++; sumK += kcal[i]; } }
+
+        Bitmap b = Bitmap.createBitmap(Math.max(w, 1), Math.max(h, 1), Bitmap.Config.ARGB_8888);
+        Canvas c = new Canvas(b);
+        Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG);
+        float labelW = 58 * dp;
+        // Vänster: veckosammanfattning.
+        paint.setColor(fg); paint.setTextSize(11 * dp); paint.setFakeBoldText(true);
+        c.drawText(logged > 0 ? Math.round(sumK / logged) + " kcal" : "– kcal", 0, 14 * dp, paint);
+        paint.setFakeBoldText(false); paint.setColor(mutedFg); paint.setTextSize(9 * dp);
+        c.drawText("snitt/dag", 0, 25 * dp, paint);
+        c.drawText(sessions + " pass · " + Math.round(sumB) + " brända", 0, 37 * dp, paint);
+        // Höger: 7 staplar.
+        float col = (w - labelW) / 7f, barW = Math.min(10 * dp, col * 0.5f);
+        float top = 2 * dp, base = h - 16 * dp, tgtY = base - (base - top) * (target / max);
+        paint.setColor(muted); paint.setStrokeWidth(1 * dp);
+        if (target > 0) c.drawLine(labelW, tgtY, w, tgtY, paint);
+        paint.setTextAlign(Paint.Align.CENTER);
+        for (int i = 0; i < 7; i++) {
+            float cx = labelW + col * i + col / 2f;
+            float bh = Math.max(kcal[i] > 0 ? 2 * dp : 0, (base - top) * (kcal[i] / max));
+            paint.setColor(muted);
+            c.drawRoundRect(new RectF(cx - barW / 2, top, cx + barW / 2, base), barW / 2, barW / 2, paint);
+            if (bh > 0) {
+                paint.setColor(target > 0 && kcal[i] > target * 1.05f ? destructive : primary);
+                c.drawRoundRect(new RectF(cx - barW / 2, base - bh, cx + barW / 2, base), barW / 2, barW / 2, paint);
+            }
+            boolean isToday = i == 6;
+            paint.setColor(isToday ? fg : mutedFg); paint.setTextSize(8.5f * dp); paint.setFakeBoldText(isToday);
+            c.drawText(letters[i], cx - (sess[i] > 0 ? 3 * dp : 0), h - 4 * dp, paint);
+            if (sess[i] > 0) { // träningsprick
+                paint.setColor(Color.parseColor("#eab308"));
+                c.drawCircle(cx + 5 * dp, h - 7 * dp, 2.5f * dp, paint);
+            }
+        }
+        return b;
+    }
 
     @Override
     public void onUpdate(Context ctx, AppWidgetManager mgr, int[] ids) {
@@ -68,7 +139,12 @@ public class GrimKcalWidget extends AppWidgetProvider {
 
         Bundle opts = mgr.getAppWidgetOptions(id);
         int minW = opts != null ? opts.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_WIDTH, 110) : 110;
+        int minH = opts != null ? opts.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_HEIGHT, 110) : 110;
         boolean wide = minW >= 200;
+        // Veckovyn: alltid i bred layout; i 2×2 bara om widgeten dragits upp på höjden.
+        boolean showWeek = wide || minH >= 200;
+        // Bred men låg (4×2): veckovyn ersätter makroraden så ringen får plats.
+        boolean showMacros = wide && (minH >= 170 || !showWeek);
 
         RemoteViews v = new RemoteViews(ctx.getPackageName(), R.layout.grim_kcal_widget);
         v.setInt(R.id.widget_root, "setBackgroundColor", bg);
@@ -82,7 +158,7 @@ public class GrimKcalWidget extends AppWidgetProvider {
 
         v.setViewVisibility(R.id.widget_side, wide ? View.VISIBLE : View.GONE);
         v.setViewVisibility(R.id.widget_side_r, wide ? View.VISIBLE : View.GONE);
-        v.setViewVisibility(R.id.widget_macros, wide ? View.VISIBLE : View.GONE);
+        v.setViewVisibility(R.id.widget_macros, showMacros ? View.VISIBLE : View.GONE);
         if (wide) {
             v.setTextViewText(R.id.widget_eaten, String.valueOf(Math.round(kcal)));
             v.setTextColor(R.id.widget_eaten, fg);
@@ -102,12 +178,17 @@ public class GrimKcalWidget extends AppWidgetProvider {
             for (int t : new int[]{R.id.widget_l_carbs, R.id.widget_l_fat, R.id.widget_l_prot}) v.setTextColor(t, mutedFg);
         }
 
-        Intent open = new Intent(ctx, MainActivity.class);
-        open.setAction("se.grim.app.OPEN_NUTRITION");
-        open.putExtra(EXTRA_TAB, "nutrition");
-        open.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_SINGLE_TOP);
-        PendingIntent pi = PendingIntent.getActivity(ctx, 4711, open, PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
-        v.setOnClickPendingIntent(R.id.widget_root, pi);
+        v.setViewVisibility(R.id.widget_week, showWeek ? View.VISIBLE : View.GONE);
+        if (showWeek) {
+            int wPx = Math.round(Math.max(minW - 12, 96) * dp);
+            v.setImageViewBitmap(R.id.widget_week, weekChart(p, wPx, Math.round(46 * dp), dp, target, fg, mutedFg, primary, muted, destructive));
+        }
+        v.setTextColor(R.id.widget_kost, fg);
+        v.setInt(R.id.widget_kost, "setBackgroundColor", muted);
+
+        // Hela widgeten och snabbknappen öppnar dagens kostlogg (Kost-fliken).
+        v.setOnClickPendingIntent(R.id.widget_root, openNutrition(ctx, "se.grim.app.OPEN_NUTRITION", 4711));
+        v.setOnClickPendingIntent(R.id.widget_kost, openNutrition(ctx, ACTION_LOG_FOOD, 4712));
         mgr.updateAppWidget(id, v);
     }
 

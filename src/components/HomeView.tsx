@@ -639,7 +639,7 @@ const HomeView = ({ userId, onNavigate, isHonorary = false }: HomeViewProps) => 
       <HomeTrainingStats userId={userId} />
 
       {/* 1e. Dagens recept utifrån målet */}
-      <DailyRecipeCard userId={userId} isHonorary={isHonorary} onOpen={() => onNavigate("nutrition")} />
+      <DailyRecipeCard userId={userId} isHonorary={isHonorary} />
 
       {/* 2. Streak + weekly progress */}
       <div className="grid grid-cols-2 gap-3">

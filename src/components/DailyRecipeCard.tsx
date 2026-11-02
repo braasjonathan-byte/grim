@@ -5,6 +5,9 @@ import { useCuratedRecipes } from "@/lib/curatedRecipesLive";
 import type { CuratedRecipe } from "@/data/curatedRecipes";
 import { GOAL_LABEL, type GoalType } from "@/lib/nutritionCalc";
 import { toLocalDateKey } from "@/lib/dateUtils";
+import CuratedRecipesDialog from "@/components/CuratedRecipesDialog";
+import type { PickedItem } from "@/components/FoodPickerDialog";
+import { useToast } from "@/hooks/use-toast";
 
 type R = CuratedRecipe & { own?: boolean };
 
@@ -32,20 +35,22 @@ const WHY: Record<string, string> = {
 const slotNow = () => { const h = new Date().getHours(); return h < 10 ? "frukost" : h < 14 ? "lunch" : h < 17 ? "mellanmål" : "middag"; };
 const hash = (s: string) => { let h = 0; for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) | 0; return Math.abs(h); };
 
-export default function DailyRecipeCard({ userId, isHonorary, onOpen }: { userId: string; isHonorary: boolean; onOpen?: () => void }) {
+export default function DailyRecipeCard({ userId, isHonorary }: { userId: string; isHonorary: boolean }) {
   const curated = useCuratedRecipes();
+  const { toast } = useToast();
+  const [detailOpen, setDetailOpen] = useState(false);
   const [goal, setGoal] = useState<string | null>(null);
   const [own, setOwn] = useState<R[]>([]);
 
   useEffect(() => {
     supabase.from("nutrition_goals").select("goal_type").eq("user_id", userId).maybeSingle()
       .then(({ data }) => setGoal(data?.goal_type || null));
-    supabase.from("recipes").select("id,name,category,servings,instructions,kcal_per_serving,protein_g_per_serving,fat_g_per_serving,carbs_g_per_serving,image_url")
+    supabase.from("recipes").select("id,name,category,servings,instructions,kcal_per_serving,protein_g_per_serving,fat_g_per_serving,carbs_g_per_serving,image_url,ingredients")
       .eq("user_id", userId).then(({ data }) => setOwn(((data || []) as any[]).map((r) => ({
         id: r.id, name: r.name, category: (r.category || "").toLowerCase(), servings: Number(r.servings) || 1, instructions: r.instructions || "",
         kcal_per_serving: Math.round(Number(r.kcal_per_serving) || 0), protein_g_per_serving: Math.round(Number(r.protein_g_per_serving) || 0),
         fat_g_per_serving: Math.round(Number(r.fat_g_per_serving) || 0), carbs_g_per_serving: Math.round(Number(r.carbs_g_per_serving) || 0),
-        ingredients: [], image_url: r.image_url || null, own: true,
+        ingredients: Array.isArray(r.ingredients) ? r.ingredients : [], image_url: r.image_url || null, own: true,
       }))));
   }, [userId]);
 
@@ -62,6 +67,20 @@ export default function DailyRecipeCard({ userId, isHonorary, onOpen }: { userId
     return sorted[hash(`${toLocalDateKey(new Date())}|${userId}|${goal}|${slot}`) % sorted.length];
   }, [goal, own, curated, isHonorary, slot, userId]);
 
+  // Registrera från detaljvyn (ett tryck bort): samma meal_logs-rad som Kost → addLog.
+  async function logPicked(item: PickedItem) {
+    const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    const { error } = await supabase.from("meal_logs").insert({
+      user_id: userId, log_date: toLocalDateKey(new Date()), meal_type: slot, item_name: item.name,
+      amount: item.amount, unit: item.unit,
+      kcal: item.kcal, protein_g: item.protein_g, fat_g: item.fat_g, carbs_g: item.carbs_g, fiber_g: item.fiber_g || 0,
+      recipe_id: item.source === "recipe" && UUID_RE.test(item.id) ? item.id : null,
+    });
+    if (error) { toast({ title: "Kunde inte registrera", description: error.message, variant: "destructive" }); return; }
+    setDetailOpen(false);
+    toast({ title: "Registrerat ✓", description: `${item.name} lades till i ${slot} (${Math.round(item.kcal)} kcal).` });
+  }
+
   if (!goal) return null;
   return (
     <section className="rounded-2xl border border-border bg-card p-4 space-y-2" aria-label="Dagens recept">
@@ -73,7 +92,7 @@ export default function DailyRecipeCard({ userId, isHonorary, onOpen }: { userId
       {!pick ? (
         <p className="text-xs text-muted-foreground">Inget recept matchar ditt mål ({GOAL_LABEL[goal as GoalType] ?? goal}) än. Spara egna recept under Kost → Recept så föreslår jag ett här.</p>
       ) : (
-        <button type="button" onClick={onOpen} className="w-full text-left flex gap-3 items-center">
+        <button type="button" onClick={() => setDetailOpen(true)} className="w-full text-left flex gap-3 items-center">
           {pick.image_url && <img src={pick.image_url} alt={pick.name} className="w-20 h-20 rounded-xl object-cover shrink-0" loading="lazy" />}
           <div className="min-w-0 space-y-0.5">
             <p className="text-sm font-semibold">{pick.name}</p>
@@ -81,6 +100,17 @@ export default function DailyRecipeCard({ userId, isHonorary, onOpen }: { userId
             <p className="text-[11px] text-muted-foreground">{WHY[goal] ?? WHY.custom}</p>
           </div>
         </button>
+      )}
+      {pick && (
+        <CuratedRecipesDialog
+          open={detailOpen}
+          onOpenChange={setDetailOpen}
+          isHonorary={isHonorary}
+          userId={userId}
+          initialRecipe={pick}
+          addLabel={`Registrera i ${slot}`}
+          onPick={(item) => { void logPicked(item); }}
+        />
       )}
     </section>
   );

@@ -18,9 +18,13 @@ interface Props {
   onCreateOwn?: () => void;
   /** Redigera eget recept (id) eller ett färdigt recept som kopia (recipe). */
   onEdit?: (target: { ownId: string } | { template: CuratedRecipe }) => void;
+  /** Öppna direkt i detaljvyn för detta recept (t.ex. Dagens recept på Hem). */
+  initialRecipe?: CuratedRecipe | null;
+  /** Text på lägg-till-knappen (standard: "Lägg till i måltid"). */
+  addLabel?: string;
 }
 
-export default function CuratedRecipesDialog({ open, onOpenChange, isHonorary, userId, onPick, onCreateOwn, onEdit }: Props) {
+export default function CuratedRecipesDialog({ open, onOpenChange, isHonorary, userId, onPick, onCreateOwn, onEdit, initialRecipe, addLabel }: Props) {
   const [query, setQuery] = useState("");
   const curated = useCuratedRecipes();
   const [cat, setCat] = useState<string>(isHonorary ? "alla" : "mina");
@@ -30,6 +34,11 @@ export default function CuratedRecipesDialog({ open, onOpenChange, isHonorary, u
   const [myRecipes, setMyRecipes] = useState<CuratedRecipe[]>([]);
   const [ingredientUnits, setIngredientUnits] = useState<Record<number, string>>({});
   const [measureFoods, setMeasureFoods] = useState<Array<FoodMeasure & { id: string; name: string }>>([]);
+
+  // Öppnad från ett specifikt recept → visa detaljvyn direkt.
+  useEffect(() => {
+    if (open && initialRecipe) { setSelected(initialRecipe); setSelectedIndex(0); setPortions("1"); }
+  }, [open, initialRecipe]);
 
   useEffect(() => {
     setIngredientUnits({});
@@ -272,7 +281,7 @@ export default function CuratedRecipesDialog({ open, onOpenChange, isHonorary, u
                 <label className="text-xs font-medium">Antal portioner</label>
                 <Input value={portions} onChange={(e) => setPortions(e.target.value)} inputMode="decimal" className="rounded-xl bg-muted/50 border-transparent" />
                 <button onClick={confirmAdd} className="w-full pill-btn-primary py-3">
-                  Lägg till i måltid
+                  {addLabel ?? "Lägg till i måltid"}
                 </button>
               </div>
             )}

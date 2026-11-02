@@ -11,7 +11,7 @@ import { ChevronLeft, ChevronRight, Plus, Target, Trash2, Pencil, GripVertical, 
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 
 import NutritionHero from "./NutritionHero";
-import { syncWidgetNutrition } from "@/lib/nutritionWidget";
+import { syncWidgetNutrition, syncWidgetWeek } from "@/lib/nutritionWidget";
 import FoodPickerDialog, { PickedItem } from "./FoodPickerDialog";
 import RecipeEditor from "./RecipeEditor";
 import NutritionGoalsDialog from "./NutritionGoalsDialog";
@@ -437,7 +437,8 @@ export default function NutritionView({ userId, isHonorary: isHonoraryProp = fal
       protein: totals.protein, fat: totals.fat, carbs: totals.carbs,
       targetProtein: targets.protein_g, targetFat: targets.fat_g, targetCarbs: targets.carbs_g,
     });
-  }, [loaded, dateKey, totals, burned, targets]);
+    void syncWidgetWeek(userId);
+  }, [loaded, dateKey, totals, burned, targets, userId]);
 
   const microTotals = useMemo(() => {
     const out: Micros = {};

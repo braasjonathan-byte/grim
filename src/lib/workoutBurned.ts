@@ -5,6 +5,14 @@ import { isCompletedWorkout } from "@/lib/completionCounting";
 
 /** Summerar uppskattade förbrända kalorier från alla genomförda pass ett visst datum (YYYY-MM-DD). */
 export async function loadWorkoutBurned(userId: string, dateKey: string): Promise<number> {
+  const r = await loadWorkoutBurnedRange(userId, [dateKey]);
+  return r[dateKey]?.kcal ?? 0;
+}
+
+/** Förbrända kcal + antal genomförda pass per datum (YYYY-MM-DD) för flera dagar på en gång. */
+export async function loadWorkoutBurnedRange(userId: string, dateKeys: string[]): Promise<Record<string, { kcal: number; sessions: number }>> {
+  const out: Record<string, { kcal: number; sessions: number }> = {};
+  for (const k of dateKeys) out[k] = { kcal: 0, sessions: 0 };
   const [{ data: comps }, { data: plans }, { data: profile }] = await Promise.all([
     supabase.from("workout_completions").select("week, day, done, skipped, logged_weights, logged_pulse, logged_distance_km").eq("user_id", userId).eq("done", true),
     supabase.from("workout_plans").select("week, day, details").eq("user_id", userId),
@@ -13,7 +21,6 @@ export async function loadWorkoutBurned(userId: string, dateKey: string): Promis
   const start = profile?.plan_start_date ?? null;
   const weight = Number(profile?.weight_kg) || 75;
   const details = new Map((plans || []).map((p) => [`${p.week}-${p.day}`, p.details || ""]));
-  let total = 0;
   for (const c of comps || []) {
     if (!isCompletedWorkout(c as any)) continue;
     let key: string | null = null;
@@ -22,7 +29,7 @@ export async function loadWorkoutBurned(userId: string, dateKey: string): Promis
       const d = getPlanDayDateValue(start, c.week, c.day.replace(/_[a-z0-9]+$/i, ""));
       key = d ? toUtcDateKey(d) : null;
     }
-    if (key !== dateKey) continue;
+    if (!key || !(key in out)) continue;
     const det = details.get(`${c.week}-${c.day}`) || "";
     let kcal = estimateCalories(det, c.logged_weights as any, c.logged_pulse ?? null, weight, profile?.gender ?? null, profile?.age ?? null);
     const km = Number((c as any).logged_distance_km) || 0;
@@ -34,7 +41,9 @@ export async function loadWorkoutBurned(userId: string, dateKey: string): Promis
     // Cykling med watt: mekaniskt arbete i kJ ≈ förbrända kcal (verkningsgrad ~24 %).
     const w = det.match(/(\d{2,4})\s*W\b/); const mins = det.match(/(\d{1,3})\s*min\b/);
     if (w && mins && /cykl|cykel|bike|watt/i.test(det)) kcal = Math.max(kcal, Number(w[1]) * Number(mins[1]) * 60 / 1000);
-    total += kcal;
+    out[key].kcal += kcal;
+    out[key].sessions += 1;
   }
-  return Math.round(total);
+  for (const k of dateKeys) out[k].kcal = Math.round(out[k].kcal);
+  return out;
 }

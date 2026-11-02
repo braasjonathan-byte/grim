@@ -309,6 +309,24 @@ function walk(directory) {
 
 walk(nodeModules);
 
+// GRIM_WIDGET: hemskärms-widgeten får bara data om GrimWidgetPlugin registreras
+// i MainActivity. AAB 10110 skeppades utan det (insets-patchen skrev över filen).
+const mainActivityPath = path.join(root, "android", "app", "src", "main", "java", "se", "grim", "app", "MainActivity.java");
+if (fs.existsSync(mainActivityPath)) {
+  const ma = fs.readFileSync(mainActivityPath, "utf8");
+  if (!/registerPlugin\(\s*GrimWidgetPlugin\.class\s*\)/.test(ma)) {
+    failures.push("MainActivity.java: registerPlugin(GrimWidgetPlugin.class) is missing (widget gets no data)");
+  }
+  if (!ma.includes("captureWidgetTab") || !ma.includes("grimOpenTab")) {
+    failures.push("MainActivity.java: widget deep link handling (captureWidgetTab / grimOpenTab) is missing");
+  }
+  for (const f of ["GrimWidgetPlugin.java", "GrimKcalWidget.java"]) {
+    if (!fs.existsSync(path.join(path.dirname(mainActivityPath), f))) failures.push(`android/.../se/grim/app/${f} is missing`);
+  }
+} else {
+  failures.push("android/app/src/main/java/se/grim/app/MainActivity.java is missing");
+}
+
 if (checked === 0) {
   console.error("[verify-android-plugins] No Android plugin Gradle files found.");
   process.exit(1);
