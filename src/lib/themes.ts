@@ -7,6 +7,7 @@ export interface ThemeDefinition {
   pro?: boolean; // nya premiumteman 2026 – visas i egen sektion
   forceDark: boolean; // forces dark mode (all except "light")
   followSystem?: boolean; // follows prefers-color-scheme instead of forceDark
+  backgroundImage?: string; // dämpad bakgrundsbild (se .theme-bg-image i index.css)
   preview: { bg: string; card: string; accent: string };
   dark: Record<string, string>; // CSS var overrides (applied on top of base dark/light)
   light: Record<string, string>;
@@ -701,6 +702,36 @@ export const THEMES: ThemeDefinition[] = [
       "--input": "212 25% 86%",
     },
   },
+  {
+    id: "grim-huva",
+    name: "GRIM Huva",
+    emoji: "🖤",
+    premium: true,
+    pro: true,
+    forceDark: true,
+    backgroundImage: "/assets/grim-hood-bg.webp",
+    preview: { bg: "#050505", card: "#141414", accent: "#ffffff" },
+    dark: {
+      "--background": "0 0% 3%",
+      "--foreground": "0 0% 98%",
+      "--card": "0 0% 8%",
+      "--card-foreground": "0 0% 98%",
+      "--popover": "0 0% 8%",
+      "--popover-foreground": "0 0% 98%",
+      "--primary": "0 0% 100%",
+      "--primary-foreground": "0 0% 4%",
+      "--secondary": "0 0% 14%",
+      "--secondary-foreground": "0 0% 98%",
+      "--muted": "0 0% 14%",
+      "--muted-foreground": "0 0% 72%",
+      "--accent": "0 0% 18%",
+      "--accent-foreground": "0 0% 98%",
+      "--border": "0 0% 22%",
+      "--input": "0 0% 22%",
+      "--ring": "0 0% 85%",
+    },
+    light: {},
+  },
 ];
 
 const THEME_STORAGE_KEY = "gymberget_color_theme";
@@ -786,6 +817,15 @@ export function applyTheme(themeId: string) {
   Object.entries(overrides).forEach(([key, value]) => {
     root.style.setProperty(key, value);
   });
+
+  // Dämpad bakgrundsbild (bara teman med backgroundImage).
+  if (theme.backgroundImage) {
+    root.style.setProperty("--theme-bg-image", `url("${theme.backgroundImage}")`);
+    root.classList.add("theme-bg-image");
+  } else {
+    root.style.removeProperty("--theme-bg-image");
+    root.classList.remove("theme-bg-image");
+  }
 
   // Hemskärmswidgeten följer valt tema.
   setTimeout(syncWidgetTheme, 0);

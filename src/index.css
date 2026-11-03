@@ -553,3 +553,28 @@ button:not([data-no-press]),
   20% { transform: scale(1.25); }
   40% { transform: scale(1); }
 }
+
+/* Tema med bakgrundsbild (t.ex. «GRIM Huva»). Läsbarhet först:
+   bilden ligger fast bakom allt, gråskala, ~9 % opacitet och under en
+   kraftig gradient så att text/kort/knappar behåller full kontrast.
+   Kort och listor har ogenomskinlig bakgrund (--card), så bilden syns
+   bara i tomrum/marginaler. */
+html.theme-bg-image body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background-image:
+    linear-gradient(to bottom, hsl(var(--background)) 0%, hsl(var(--background) / 0.96) 35%, hsl(var(--background) / 0.88) 100%),
+    var(--theme-bg-image);
+  background-size: cover, min(560px, 100vw) auto;
+  background-position: center, center bottom;
+  background-repeat: no-repeat;
+  filter: grayscale(1);
+  opacity: 1;
+}
+html.theme-bg-image body { background-color: hsl(var(--background)); }
+@media (prefers-reduced-transparency: reduce) {
+  html.theme-bg-image body::before { display: none; }
+}
