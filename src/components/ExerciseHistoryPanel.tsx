@@ -4,6 +4,8 @@ import { useEffect, useState } from "react";
 import { Loader2, TrendingUp } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
+import E1rmChart from "@/components/E1rmChart";
+import { suggestProgression } from "@/lib/progression";
 import { sv } from "date-fns/locale";
 
 interface StrengthSet {
@@ -291,6 +293,20 @@ const ExerciseHistoryPanel = ({
       <p className="text-[10px] uppercase tracking-wide text-muted-foreground flex items-center gap-1.5">
         <TrendingUp className="w-3 h-3" /> {visible.length} av {totalFound} loggade pass
       </p>
+      {(() => {
+        const strength = sessions.filter((x) => x.kind === "strength" && x.sets.some((st) => !st.implausible && st.reps > 0));
+        if (strength.length === 0) return null;
+        const latest = [...strength].sort((a, b) => b.date.getTime() - a.date.getTime())[0];
+        const clean = latest.sets.filter((st) => !st.implausible);
+        const reps = clean.map((st) => st.reps).filter((r) => r > 0);
+        const sug = suggestProgression(clean, reps.length ? Math.max(...reps) : undefined);
+        return (
+          <>
+            {sug && <p className="text-[11px] font-semibold text-primary">Nästa pass: {sug.label}</p>}
+            <E1rmChart sessions={strength.map((x) => ({ date: x.date, sets: x.sets.filter((st) => !st.implausible) }))} />
+          </>
+        );
+      })()}
       {visible.map((s, idx) => (
         <div key={idx} className="rounded-xl border border-border bg-secondary p-3 space-y-1.5">
           <div className="flex items-center justify-between gap-2">

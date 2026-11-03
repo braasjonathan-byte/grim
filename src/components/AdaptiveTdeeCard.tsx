@@ -16,12 +16,21 @@ interface Props {
 }
 
 type Applied = { date: string; from: number; to: number };
+const CHECKIN_KEY = "grim_tdee_checkin_v1";
+/** Veckovis incheckning: visas om ≥7 dagar sedan senaste (godkänd eller avböjd). */
+export function checkinDue(lastIso: string | null, now = new Date()): boolean {
+  if (!lastIso) return true;
+  const t = new Date(lastIso).getTime();
+  return !Number.isFinite(t) || now.getTime() - t >= 7 * 86400000;
+}
 
 /** Adaptiv TDEE: räknar om kcal-målet från vikttrend + faktiskt intag. */
 export default function AdaptiveTdeeCard({ userId, currentKcal, hasGoals, onApplied }: Props) {
   const [res, setRes] = useState<AdaptiveTdeeResult | null>(null);
   const [goal, setGoal] = useState<{ goal_type: string; weekly_loss_kg: number | null; protein_g: number; fat_g: number } | null>(null);
   const [showInfo, setShowInfo] = useState(false);
+  const [lastCheckin, setLastCheckin] = useState<string | null>(() => { try { return localStorage.getItem(CHECKIN_KEY); } catch { return null; } });
+  const markCheckin = () => { const v = new Date().toISOString(); try { localStorage.setItem(CHECKIN_KEY, v); } catch { /* ignore */ } setLastCheckin(v); };
   const [applied, setApplied] = useState<Applied | null>(() => {
     try { return JSON.parse(localStorage.getItem(ADAPTIVE_APPLIED_KEY) || "null"); } catch { return null; }
   });
@@ -54,6 +63,7 @@ export default function AdaptiveTdeeCard({ userId, currentKcal, hasGoals, onAppl
 
   async function apply() {
     if (suggested == null || !goal) return;
+    markCheckin();
     const from = currentKcal;
     const protein_g = goal.protein_g;
     const fat_g = Math.round((suggested * 0.28) / 9);
@@ -97,6 +107,19 @@ export default function AdaptiveTdeeCard({ userId, currentKcal, hasGoals, onAppl
           {applied && applied.to === currentKcal ? (
             <p className="text-[11px] text-success flex items-center gap-1"><Check className="w-3 h-3" /> Målet justerades {new Date(applied.date).toLocaleDateString("sv-SE", { day: "numeric", month: "short" })}: {applied.from} → {applied.to} kcal</p>
           ) : null}
+          {worthIt && checkinDue(lastCheckin) && (
+            <div className="rounded-xl bg-primary/10 border border-primary/30 p-2.5 space-y-1.5">
+              <p className="text-[11px] font-bold">Veckans incheckning</p>
+              <p className="text-[11px] text-muted-foreground leading-snug">
+                Du har ätit i snitt <b>{res.avgIntake} kcal</b> och vikten har gått {res.kgPerWeek! > 0 ? "upp" : "ned"} <b>{Math.abs(res.kgPerWeek!).toFixed(2)} kg/vecka</b>.
+                Det betyder att du förbrukar ca <b>{res.tdee} kcal/dag</b>. För ditt mål föreslår vi <b>{suggested} kcal</b> ({diff > 0 ? "+" : ""}{diff} mot nu).
+              </p>
+              <div className="flex gap-2">
+                <button onClick={apply} className="flex-1 pill-btn bg-primary text-primary-foreground py-1.5 text-xs font-semibold">Uppdatera till {suggested}</button>
+                <button onClick={markCheckin} className="flex-1 pill-btn bg-secondary py-1.5 text-xs font-semibold">Behåll {currentKcal}</button>
+              </div>
+            </div>
+          )}
           {worthIt ? (
             <button onClick={apply} className="w-full pill-btn bg-primary text-primary-foreground py-2 text-xs font-semibold">
               Justera mål {currentKcal} → {suggested} kcal ({diff > 0 ? "+" : ""}{diff})
