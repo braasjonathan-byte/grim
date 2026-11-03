@@ -36,6 +36,11 @@ const NotificationSettings = ({ userId }: NotificationSettingsProps) => {
   const [supported, setSupported] = useState(true);
   const [justEnabled, setJustEnabled] = useState(false);
   const [ongoingEnabled, setOngoingEnabled] = useState(isOngoingNotificationEnabled);
+  const [smartPush, setSmartPush] = useState(true);
+  useEffect(() => {
+    supabase.from("profiles").select("smart_push").eq("user_id", userId).maybeSingle()
+      .then(({ data }) => { if (data && (data as any).smart_push === false) setSmartPush(false); });
+  }, [userId]);
 
   // Reminder state
   const [reminderEnabled, setReminderEnabled] = useState(false);
@@ -218,6 +223,24 @@ const NotificationSettings = ({ userId }: NotificationSettingsProps) => {
         )}
         <h3 className="text-sm font-bold">🔔 Notiser</h3>
       </div>
+
+      <label className="flex items-center justify-between gap-3 text-sm">
+        <span>
+          Smarta påminnelser
+          <span className="block text-[11px] text-muted-foreground">Kvällspåminnelse om du inte loggat mat, när din svit är i fara och när vänner hejar</span>
+        </span>
+        <input
+          type="checkbox"
+          className="w-5 h-5 accent-primary"
+          checked={smartPush}
+          onChange={async (e) => {
+            const on = e.target.checked;
+            setSmartPush(on);
+            const { error } = await supabase.from("profiles").update({ smart_push: on } as any).eq("user_id", userId);
+            if (error) setSmartPush(!on);
+          }}
+        />
+      </label>
 
       {Capacitor.isNativePlatform() && (
         <label className="flex items-center justify-between gap-3 text-sm">

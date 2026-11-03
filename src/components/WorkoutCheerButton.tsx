@@ -36,6 +36,7 @@ const WorkoutCheerButton = ({ toUserId, fromUserId, week, day, fullWidth = false
       toast.error("Kunde inte skicka hejarop");
       return;
     }
+    supabase.functions.invoke("notify-smart", { body: { type: "cheer", toUserId } }).catch(() => { /* push är best effort */ });
     setSentEmoji(emoji);
     toast.success(`${emoji} skickat!`);
     setTimeout(() => setSentEmoji(null), 2500);

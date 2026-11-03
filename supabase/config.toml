@@ -64,3 +64,6 @@ verify_jwt = true
 
 [functions.mcp]
 verify_jwt = false
+
+[functions.notify-smart]
+verify_jwt = false
