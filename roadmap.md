@@ -1,7 +1,7 @@
 # Roadmap
 
 ## Android-inloggning (3 nov 2026)
-- [ ] Verifiera och rätta att felrapporteringen blockerar profil, roll och tema; testa pluginproxy, saknat plugin och fortsatt profilinläsning.
+- [x] Felrapporteringen blockerar inte längre profil, roll eller tema: proxy och saknat plugin hanteras; 6 regressionstester godkända och inloggad profil/tema verifierade med simulerat saknat Android-plugin. Fysisk Android-enhet ej testad.
 
 ## Testrapport 17 okt 2026 (punkt 1–4)
 - [x] 1. Offlinesynk: omspelning körs nu var 15:e sekund, vid "online" och när appen blir synlig; vyn laddar om när kön spelats upp (grim:offline-queue-flushed) och cachen sparar server+köade rader så inget försvinner vid omladdning.
