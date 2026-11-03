@@ -47,6 +47,8 @@ function loadAllFoods(): Promise<any[]> {
         const { data, error } = await supabase.from("foods")
           .select(`id,name,kcal,protein_g,fat_g,carbs_g,fiber_g,default_piece_weight_g,group_name,suitable_units,density_g_per_dl,${MICRO_SELECT}`)
 
+          // OFF-cachade märkesvaror (kan bli många) söks på servern i stället.
+          .or("nutrition_source.is.null,nutrition_source.neq.off")
           .order("name").range(from, from + 999);
         if (error) { foodsCache = null; throw error; }
         all.push(...(data || []));
@@ -222,17 +224,32 @@ export default function FoodPickerDialog({ open, onOpenChange, onPick, userId, h
     setOffLoading(true);
     setOffResults([]);
     const t = setTimeout(async () => {
+      // Lokalt cachade OFF-produkter (foods, nutrition_source=off) visas direkt.
+      let localRows: FoodRow[] = [];
+      try {
+        const words = term.split(/\s+/).map((w) => w.replace(/[%_,()]/g, "")).filter((w) => w.length >= 2).slice(0, 4);
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        let q: any = (supabase.from("foods") as any)
+          .select(`id,name,kcal,protein_g,fat_g,carbs_g,fiber_g,default_piece_weight_g,group_name,suitable_units,density_g_per_dl,${MICRO_SELECT}`)
+          .eq("nutrition_source", "off");
+        for (const w of words) q = q.ilike("name", `%${w}%`);
+        const { data: local } = await q.limit(40);
+        localRows = ((local || []) as any[]).map((f) => ({ ...f, piece_g: f.default_piece_weight_g, source: "food" }));
+        if (!cancelled && localRows.length) setOffResults(localRows);
+      } catch { /* lokal cache är valfri */ }
       try {
         const { data, error } = await supabase.functions.invoke("nutrition-search", { body: { query: term } });
         if (cancelled) return;
         if (error || data?.error) throw new Error(data?.error || "Märkesprodukterna kunde inte hämtas. Försök igen eller skanna streckkoden.");
+        const localNames = new Set(localRows.map((r) => String(r.name).toLowerCase()));
         const rows: FoodRow[] = (data?.products || []).map((p: any) => ({
           ...p,
           ...microsFromOFF(p.nutriments || {}),
           sugar_g: p.nutriments?.sugars_100g != null ? Number(p.nutriments.sugars_100g) : null,
-        }));
-        setOffResults(rows);
+        })).filter((r: FoodRow) => !localNames.has(String(r.name).toLowerCase()));
+        setOffResults([...localRows, ...rows]);
       } catch (error) {
+        if (!cancelled && localRows.length) { setOffResults(localRows); return; }
         if (!cancelled) {
           setOffResults([]);
           setOffError(error instanceof Error ? error.message : "Märkesprodukterna kunde inte hämtas.");

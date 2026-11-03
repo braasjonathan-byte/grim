@@ -1,6 +1,6 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { corsHeaders } from "npm:@supabase/supabase-js@2/cors";
-import { offFood, type OFFProduct } from "../_shared/offProduct.ts";
+import { offFood, cacheOffProducts, type OFFProduct } from "../_shared/offProduct.ts";
 
 const respond = (body: unknown, status = 200) => new Response(JSON.stringify(body), {
   status, headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -58,6 +58,11 @@ Deno.serve(async (req) => {
         if (index >= 1 && index <= 3 && words.length && !words.every((w) => hay.includes(w))) continue;
         products.set(product.code!, product);
       }
+    }
+    if (succeeded && products.size) {
+      const userClient = createClient(url, key, { global: { headers: { Authorization: `Bearer ${token}` } } });
+      // Cacha upp till 25 träffar lokalt (fel ignoreras).
+      await cacheOffProducts(userClient, [...products.values()], 25);
     }
     if (!succeeded) return respond({ products: [], unavailable: true, error: "Märkesprodukterna kunde inte hämtas just nu. Försök igen eller skanna streckkoden." });
     return respond({ products: [...products.values()].map((product) => ({

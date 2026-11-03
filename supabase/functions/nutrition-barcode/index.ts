@@ -1,5 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { offFood as parseOFFFood } from "../_shared/offProduct.ts";
+import { offFood as parseOFFFood, cacheOffProducts } from "../_shared/offProduct.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -51,6 +51,9 @@ Deno.serve(async (req) => {
       return new Response(JSON.stringify({ found: false, message: "Produktnamn saknas" }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
     const brand = offFood.brand;
+    // Spara produkten lokalt i foods (kvalitetsfilter + dubblettskydd i DB).
+    const userClient = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_ANON_KEY")!, { global: { headers: { Authorization: `Bearer ${token}` } } });
+    await cacheOffProducts(userClient, [{ ...off.product, code: barcode }], 1);
 
     // Use Open Food Facts data directly — it's keyed to the actual barcode.
     // Fuzzy-matching against Livsmedelsverket by a single token gave wildly
