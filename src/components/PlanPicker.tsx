@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Dumbbell, Sparkles, Wrench, ChevronRight, ArrowLeft, CalendarIcon, Trophy, Search, X, CalendarDays, Info, Waves } from "lucide-react";
-import { planTemplates, liftLabels, planCategoryLabels, padWeeksTo7Days, reorderDaysToPreferred, ALL_DAYS, type TemplatePlan, type FitnessProfile, type PlanCategory } from "@/data/planTemplates";
+import { planTemplates, templateMeta, liftLabels, planCategoryLabels, padWeeksTo7Days, reorderDaysToPreferred, ALL_DAYS, type TemplatePlan, type FitnessProfile, type PlanCategory } from "@/data/planTemplates";
 import SchemaBuilder from "@/components/SchemaBuilder";
 import TriathlonWizard from "@/components/TriathlonWizard";
 import FitnessProfileForm from "@/components/FitnessProfileForm";
@@ -59,6 +59,8 @@ const PlanPicker = ({ userId, onDone, onBack }: PlanPickerProps) => {
   const [hasActivePlan, setHasActivePlan] = useState(false);
   const [isNewUser, setIsNewUser] = useState(false);
   const [beginnerFilterOn, setBeginnerFilterOn] = useState(false);
+  const [homeFilterOn, setHomeFilterOn] = useState(false);
+  const [daysFilter, setDaysFilter] = useState<number | null>(null);
   const [pendingApply, setPendingApply] = useState<{ template: TemplatePlan; rmValues?: Record<string, number>; profile?: FitnessProfile } | null>(null);
 
   useEffect(() => {
@@ -80,6 +82,9 @@ const PlanPicker = ({ userId, onDone, onBack }: PlanPickerProps) => {
   const filteredTemplates = planTemplates
     .filter(t => {
       if (beginnerFilterOn && !t.isBeginnerFriendly) return false;
+      const meta = templateMeta(t);
+      if (homeFilterOn && meta.equipment === "gym") return false;
+      if (daysFilter != null && meta.daysPerWeek !== daysFilter) return false;
       if (activeFilter && t.category !== activeFilter) return false;
       if (normalizedQuery && !t.name.toLowerCase().includes(normalizedQuery)) return false;
       return true;
@@ -835,6 +840,21 @@ const PlanPicker = ({ userId, onDone, onBack }: PlanPickerProps) => {
         >
           🔰 Nybörjare
         </button>
+        <button
+          onClick={() => { setHomeFilterOn((v) => !v); setSelected(null); }}
+          className={`px-3 py-1.5 rounded-full text-xs font-medium transition-all ${homeFilterOn ? "bg-primary text-primary-foreground" : "bg-secondary text-muted-foreground hover:text-foreground"}`}
+        >
+          🏠 Hemma
+        </button>
+        {[2, 3, 4, 5, 6].map((n) => (
+          <button
+            key={`d${n}`}
+            onClick={() => { setDaysFilter((v) => (v === n ? null : n)); setSelected(null); }}
+            className={`px-3 py-1.5 rounded-full text-xs font-medium transition-all ${daysFilter === n ? "bg-primary text-primary-foreground" : "bg-secondary text-muted-foreground hover:text-foreground"}`}
+          >
+            {n} d/v
+          </button>
+        ))}
         {categories.map((cat) => (
           <button
             key={cat}
@@ -872,6 +892,20 @@ const PlanPicker = ({ userId, onDone, onBack }: PlanPickerProps) => {
               <div className="flex items-start gap-3">
                 <div className="flex-1">
                   <h3 className="font-bold text-sm">{template.name}</h3>
+                  {(() => {
+                    const m = templateMeta(template);
+                    const chips = [
+                      m.daysPerWeek ? `${m.daysPerWeek} d/v` : null,
+                      `${template.weeks} v`,
+                      m.level !== "alla" ? m.level : null,
+                      m.equipment === "hantlar" ? "hantlar" : m.equipment === "kroppsvikt" ? "kroppsvikt" : null,
+                    ].filter(Boolean) as string[];
+                    return (
+                      <div className="flex flex-wrap gap-1 mt-1">
+                        {chips.map((c) => <span key={c} className="text-[10px] px-1.5 py-0.5 rounded bg-secondary text-muted-foreground">{c}</span>)}
+                      </div>
+                    );
+                  })()}
                   <p className="text-xs text-muted-foreground mt-1">
                     {template.description.replace(/(\d+)\s*pass\/vecka/g, "rek. $1 pass/vecka").replace(/(\d+–\d+)\s*pass\/vecka/g, "rek. $1 pass/vecka")}
                   </p>

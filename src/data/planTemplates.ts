@@ -1,3 +1,4 @@
+import { extraPlanTemplates } from "@/data/planTemplatesExtra";
 export interface FitnessProfile {
   max_distance_km: number | null;
   time_10km_min: number | null;
@@ -45,6 +46,24 @@ export interface TemplatePlan {
   generateFlexible?: (profile: FitnessProfile, opts: FlexibleRunOptions) => TemplatePlanDay[];
   /** Marks plans well suited for complete beginners (surfaced in the "Nybörjare" filter and sorted first for new users) */
   isBeginnerFriendly?: boolean;
+  /** Nivå: nybörjare / medel / avancerad (för filter och märkning). */
+  level?: "nybörjare" | "medel" | "avancerad" | "alla";
+  /** Pass per vecka (om utelämnat läses det ur beskrivningen "N pass/vecka"). */
+  daysPerWeek?: number;
+  /** Utrustning: gym, hantlar (hemma) eller kroppsvikt. */
+  equipment?: "gym" | "hantlar" | "kroppsvikt";
+}
+
+/** Härled pass/vecka, nivå och utrustning för filter i PlanPicker. */
+export function templateMeta(t: TemplatePlan): { daysPerWeek: number | null; level: string; equipment: "gym" | "hantlar" | "kroppsvikt" } {
+  let days = t.daysPerWeek ?? null;
+  if (days == null) {
+    const m = t.description.match(/(\d+)(?:–(\d+))?\s*pass\/vecka/);
+    if (m) days = parseInt(m[1], 10);
+  }
+  const level = t.level ?? (t.isBeginnerFriendly ? "nybörjare" : "alla");
+  const equipment = t.equipment ?? (t.category === "kroppsvikt" ? "kroppsvikt" : "gym");
+  return { daysPerWeek: days, level, equipment };
 }
 
 export interface TemplatePlanDay {
@@ -1793,6 +1812,7 @@ export const planTemplates: TemplatePlan[] = [
     requiredLifts: [],
     generateFromProfile: generatePostpartum,
   },
+  ...extraPlanTemplates,
 ];
 
 export const liftLabels: Record<string, string> = {
