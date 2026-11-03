@@ -9,3 +9,8 @@ describe("progression", () => {
   it("kroppsvikt", () => { expect(suggestProgression([{ kg: 0, reps: 10 }])?.reps).toBe(11); });
   it("tomt", () => { expect(suggestProgression([])).toBeNull(); });
 });
+import { relativeEffort, effortLabel } from "@/lib/hrCurve";
+describe("relative effort", () => {
+  it("z2 45 min = 90", () => { expect(relativeEffort([0, 1, 0, 0, 0], 45)).toBe(90); expect(effortLabel(90)).toBe("Måttlig"); });
+  it("0 min", () => { expect(relativeEffort([1, 0, 0, 0, 0], 0)).toBe(0); });
+});

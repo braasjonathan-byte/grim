@@ -230,6 +230,19 @@ export const GpsTrackerControl = ({ onStop, autoStart = false, onCancel, storage
           {summary.splits && summary.splits.length > 0 && (
             <div className="border border-border rounded-md p-2 bg-secondary/50">
               <p className="text-[10px] uppercase tracking-widest text-muted-foreground font-bold mb-1">Splits</p>
+              {summary.splits.length >= 2 && (() => {
+                const sp = summary.splits as number[];
+                const fast = Math.min(...sp), slow = Math.max(...sp);
+                return (
+                  <div className="flex items-end gap-0.5 h-10 mb-1.5" role="img" aria-label="Tempo per km">
+                    {sp.map((sec, i) => (
+                      <div key={i} title={`km ${i + 1}: ${fmtTime(Math.round(sec))}/km`}
+                        className={`flex-1 rounded-t ${sec === fast ? "bg-success" : "bg-primary/60"}`}
+                        style={{ height: `${30 + 70 * (slow === fast ? 1 : (slow - sec) / (slow - fast))}%` }} />
+                    ))}
+                  </div>
+                );
+              })()}
               <div className="grid grid-cols-5 gap-1">
                 {summary.splits.map((sec, i) => (
                   <div key={i} className="text-center">

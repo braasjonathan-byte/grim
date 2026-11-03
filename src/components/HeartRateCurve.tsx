@@ -1,6 +1,6 @@
 import { useMemo } from "react";
 import { useProfileBasics } from "@/lib/profileBasics";
-import { HR_ZONES, zoneShares } from "@/lib/hrCurve";
+import { HR_ZONES, effortLabel, relativeEffort, zoneShares } from "@/lib/hrCurve";
 
 interface Props {
   hr?: number[] | null;
@@ -34,6 +34,7 @@ export default function HeartRateCurve({ hr, avg, max, min, minutes }: Props) {
         <span>❤️ Snitt <b className="tabular-nums">{avgVal || "–"}</b></span>
         <span>Max <b className="tabular-nums">{maxObserved || "–"}</b></span>
         <span>Lägsta <b className="tabular-nums">{minObserved || "–"}</b></span>
+        {series.length > 1 && minutes ? (() => { const e = relativeEffort(shares, minutes); return e > 0 ? <span className="ml-auto" title="Relativ ansträngning: minuter i pulszon × zonvikt">⚡ <b className="tabular-nums">{e}</b> {effortLabel(e)}</span> : null; })() : null}
       </div>
       {series.length > 1 && (
         <>

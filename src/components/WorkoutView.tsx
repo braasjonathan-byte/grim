@@ -347,7 +347,9 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
   const [condPulseMaxInput, setCondPulseMaxInput] = useState("");
   const [condPulseMinInput, setCondPulseMinInput] = useState("");
   // Fyller i snitt/max/lägsta puls från en inspelad pulsmätning
-  const applyHrResult = (r: { avg: number; max: number; min: number }) => {
+  const [condHrSeries, setCondHrSeries] = useState<number[] | null>(null);
+  const applyHrResult = (r: { avg: number; max: number; min: number; series?: number[] }) => {
+    setCondHrSeries(r.series && r.series.length > 1 ? r.series : null);
     setCondPulseInput(String(r.avg));
     setCondPulseMaxInput(String(r.max));
     setCondPulseMinInput(String(r.min));
@@ -3131,7 +3133,7 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
       setCondAutoField(null);
       setCondIntervalsInput("");
       setCondRestInput("");
-      setCondPulseInput(""); setCondPulseMaxInput(""); setCondPulseMinInput("");
+      setCondPulseInput(""); setCondPulseMaxInput(""); setCondPulseMinInput(""); setCondHrSeries(null);
       return;
     }
     const lastWeight = findLastWeight(exerciseName);
@@ -3279,8 +3281,12 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
     const savedIntervalRows = isInterval && condIntervalsInput.trim()
       ? toSavedIntervalRows(condIntervalRows.slice(0, parseInt(condIntervalsInput.trim()) || 0))
       : [];
-    const intervalCondData: Record<string, any> | null = (savedIntervalRows.length > 0 || intervalMeta)
+    const hrCondData: Record<string, any> | null = condHrSeries && condPulseInput.trim()
+      ? { hr: condHrSeries, ...(condPulseMaxInput.trim() ? { pulseMax: condPulseMaxInput.trim() } : {}), ...(condPulseMinInput.trim() ? { pulseMin: condPulseMinInput.trim() } : {}) }
+      : null;
+    const intervalCondData: Record<string, any> | null = (savedIntervalRows.length > 0 || intervalMeta || hrCondData)
       ? {
+          ...(hrCondData || {}),
           ...(savedIntervalRows.length > 0 ? { intervals: savedIntervalRows } : {}),
           ...(intervalMeta || {}),
           ...(totalElapsedMin > 0 ? { time: String(Math.round(totalElapsedMin * 100) / 100) } : {}),
@@ -3321,7 +3327,7 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
       setCondAutoField(null);
       setCondIntervalsInput("");
       setCondRestInput("");
-      setCondPulseInput(""); setCondPulseMaxInput(""); setCondPulseMinInput("");
+      setCondPulseInput(""); setCondPulseMaxInput(""); setCondPulseMinInput(""); setCondHrSeries(null);
       setCondSpmInput("");
       setCondIntervalRows([]);
       setIsWarmupMode(false);
@@ -3350,7 +3356,7 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
     setCondAutoField(null);
     setCondIntervalsInput("");
     setCondRestInput("");
-    setCondPulseInput(""); setCondPulseMaxInput(""); setCondPulseMinInput("");
+    setCondPulseInput(""); setCondPulseMaxInput(""); setCondPulseMinInput(""); setCondHrSeries(null);
     setCondSpmInput("");
     setCondIntervalRows([]);
     setIsWarmupMode(false);
@@ -3463,7 +3469,7 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
     setCondTempoInput("");
     setCondDistanceInput("");
     setCondAutoField(null);
-    setCondPulseInput(""); setCondPulseMaxInput(""); setCondPulseMinInput("");
+    setCondPulseInput(""); setCondPulseMaxInput(""); setCondPulseMinInput(""); setCondHrSeries(null);
     setCondSpmInput("");
   };
 
@@ -5105,7 +5111,7 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
                               setCondAutoField(null);
                               setCondIntervalsInput("");
                               setCondRestInput("");
-                              setCondPulseInput(""); setCondPulseMaxInput(""); setCondPulseMinInput("");
+                              setCondPulseInput(""); setCondPulseMaxInput(""); setCondPulseMinInput(""); setCondHrSeries(null);
                             }}
                             className="w-full bg-warning/10 border border-warning/30 rounded-lg p-3 text-left hover:bg-warning/20 transition-colors animate-fade-in"
                           >
@@ -8775,7 +8781,7 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
                             setCondDistanceInput("");
                             setCondIntervalsInput("");
                             setCondRestInput("");
-                            setCondPulseInput(""); setCondPulseMaxInput(""); setCondPulseMinInput("");
+                            setCondPulseInput(""); setCondPulseMaxInput(""); setCondPulseMinInput(""); setCondHrSeries(null);
                           }}
                           className="w-full bg-warning/10 border border-warning/30 rounded-lg p-3 text-left hover:bg-warning/20 transition-colors animate-fade-in"
                         >

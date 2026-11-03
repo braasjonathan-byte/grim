@@ -8,10 +8,11 @@ import {
   subscribeHeartRate,
   type HeartRateRecording,
 } from "@/lib/heartRate";
+import { downsampleHr } from "@/lib/hrCurve";
 
 interface Props {
   /** Anropas när en inspelning stoppas, med snitt-, max- och lägsta puls. */
-  onResult: (r: { avg: number; max: number; min: number }) => void;
+  onResult: (r: { avg: number; max: number; min: number; series?: number[] }) => void;
 }
 
 /** Liten ruta för att spela in puls under ett pass och få snitt/max/lägsta. */
@@ -31,7 +32,10 @@ const HeartRateRecorder = ({ onResult }: Props) => {
   const stop = () => {
     const r = stopHeartRateRecording();
     if (r.avg != null && r.max != null && r.min != null) {
-      onResult({ avg: r.avg, max: r.max, min: r.min });
+      const series = r.series && r.series.length > 1
+        ? downsampleHr(r.series.map((bpm, i) => ({ timestamp: String(i).padStart(6, "0"), bpm })))
+        : undefined;
+      onResult({ avg: r.avg, max: r.max, min: r.min, series });
     }
   };
 

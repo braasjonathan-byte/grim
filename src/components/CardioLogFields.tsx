@@ -33,7 +33,7 @@ interface CardioLogFieldsProps {
   pulse: string;
   onPulseChange: (value: string) => void;
   /** Snitt/max/lägsta puls från en inspelning. */
-  onHrResult?: (r: { avg: number; max: number; min: number }) => void;
+  onHrResult?: (r: { avg: number; max: number; min: number; series?: number[] }) => void;
   pulseMax?: string;
   pulseMin?: string;
   /** Watt (t.ex. cykling) – visas parallellt med km/h, inte som ersättning. */

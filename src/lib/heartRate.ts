@@ -57,6 +57,8 @@ export type HeartRateRecording = {
   max: number | null;
   min: number | null;
   startedAt: number | null;
+  /** Pulsserie (≈1 värde per 5 s) för pulskurva/zoner. */
+  series?: number[];
 };
 
 let recording: HeartRateRecording = {
@@ -68,12 +70,18 @@ let recording: HeartRateRecording = {
   startedAt: null,
 };
 let recSum = 0;
+let recSeries: number[] = [];
+let recLastSampleAt = 0;
+const SERIES_INTERVAL_MS = 5000;
+const SERIES_MAX = 4000;
 
 export const getHeartRateRecording = (): HeartRateRecording => recording;
 
 const addRecordingSample = (bpm: number) => {
   if (!recording.recording) return;
   recSum += bpm;
+  const now = Date.now();
+  if (now - recLastSampleAt >= SERIES_INTERVAL_MS && recSeries.length < SERIES_MAX) { recSeries.push(bpm); recLastSampleAt = now; }
   const samples = recording.samples + 1;
   recording = {
     ...recording,
@@ -87,19 +95,21 @@ const addRecordingSample = (bpm: number) => {
 
 export const startHeartRateRecording = () => {
   recSum = 0;
+  recSeries = []; recLastSampleAt = 0;
   recording = { recording: true, samples: 0, avg: null, max: null, min: null, startedAt: Date.now() };
   if (snapshot.bpm) addRecordingSample(snapshot.bpm);
   emit();
 };
 
 export const stopHeartRateRecording = (): HeartRateRecording => {
-  recording = { ...recording, recording: false };
+  recording = { ...recording, recording: false, series: recSeries.slice() };
   emit();
   return recording;
 };
 
 export const clearHeartRateRecording = () => {
   recSum = 0;
+  recSeries = [];
   recording = { recording: false, samples: 0, avg: null, max: null, min: null, startedAt: null };
   emit();
 };

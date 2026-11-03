@@ -34,3 +34,18 @@ export function zoneShares(hr: number[], maxHr: number): number[] {
   }
   return counts.map((c) => (hr.length ? c / hr.length : 0));
 }
+
+/**
+ * Relativ ansträngning (Strava-inspirerad, förenklad TRIMP): minuter i zon × zonvikt.
+ * Vikter Z1–Z5 = 1,2,3,4,5 → 45 min jämnt i Z2 ≈ 90.
+ */
+export function relativeEffort(shares: number[], minutes: number): number {
+  if (!(minutes > 0)) return 0;
+  return Math.round(shares.reduce((sum, s, i) => sum + s * minutes * (i + 1), 0));
+}
+export function effortLabel(score: number): string {
+  if (score < 50) return "Lätt";
+  if (score < 120) return "Måttlig";
+  if (score < 200) return "Tuff";
+  return "Mycket tuff";
+}
