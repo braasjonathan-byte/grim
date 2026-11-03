@@ -4,7 +4,7 @@ import { describe, expect, it, vi } from "vitest";
 
 // Execute the actual callback with isolated dependencies; no rendering or
 // native device is needed to reproduce blocked logging/fallback queries.
-const source = readFileSync(new URL("../pages/Index.tsx", import.meta.url), "utf8");
+const source = readFileSync("src/pages/Index.tsx", "utf8");
 const start = source.indexOf("const loadUserData = useCallback(async (uid: string) => {");
 const end = source.indexOf("\n  }, []);", start);
 if (start < 0 || end < 0) throw new Error("Profile loading callback not found");
