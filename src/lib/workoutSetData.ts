@@ -11,7 +11,7 @@ export const parseExerciseWeight = (line: string | null | undefined): {name: str
 
 export type LoggedSetInfo = { kg: string; reps: string; mode?: "add" | "sub" };
 
-export const getExerciseSetDataFromWeights = (weights: Record<string, any> | null | undefined, exerciseName: string): LoggedSetInfo[] => {
+export const getExerciseSetDataFromWeights = (weights: Record<string, any> | null | undefined, exerciseName: string, opts?: { skipWarmups?: boolean }): LoggedSetInfo[] => {
   if (!weights) return [];
   const wantedKey = normalizeExerciseKey(exerciseName);
   let storedName = exerciseName;
@@ -33,7 +33,9 @@ export const getExerciseSetDataFromWeights = (weights: Record<string, any> | nul
     if (!Array.isArray(parsed)) return [];
 
     const storedKey = normalizeExerciseKey(storedName);
+    const types = opts?.skipWarmups ? getSetTypes(weights, storedName) : "";
     return parsed.map((set, si) => {
+      if (types[si] === "w") return { kg: "", reps: "" };
       const kgRaw = set?.kg !== undefined && set?.kg !== null ? String(set.kg).trim() : "";
       const reps = set?.reps !== undefined && set?.reps !== null ? String(set.reps).trim() : "";
       const kgNum = parseFloat(kgRaw.replace(",", "."));

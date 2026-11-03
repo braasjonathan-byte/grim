@@ -1,3 +1,4 @@
+import { getSetTypes } from "@/lib/setTypes";
 import { isPlausibleSet, parseNum, formatDecimal, IMPLAUSIBLE_LABEL } from "@/lib/inputValidation";
 import { getCardioDistUnit, getStoredCardioMode, resolveTempoDisplay } from "@/lib/cardioUnits";
 import { useEffect, useState } from "react";
@@ -31,12 +32,13 @@ interface HistorySession {
   };
 }
 
-const safelyParseSets = (value: any): StrengthSet[] => {
+const safelyParseSets = (value: any, types = ""): StrengthSet[] => {
   try {
     const parsed = typeof value === "string" ? JSON.parse(value) : value;
     if (!Array.isArray(parsed)) return [];
     return parsed
-      .map((s: any) => ({ kg: parseNum(s?.kg) || 0, reps: parseNum(s?.reps) || 0, implausible: !isPlausibleSet(s?.kg, s?.reps) }))
+      // Uppvärmningsset visas men räknas inte i topp/volym/e1RM (markeras som implausible-exkluderade).
+      .map((s: any, i: number) => ({ kg: parseNum(s?.kg) || 0, reps: parseNum(s?.reps) || 0, implausible: !isPlausibleSet(s?.kg, s?.reps) || types[i] === "w" }))
       .filter((s) => s.reps > 0 || s.kg > 0);
   } catch {
     return [];
@@ -154,7 +156,7 @@ const ExerciseHistoryPanel = ({
             const value = weights[k];
             if (k.startsWith("__setdata__")) {
               if (normalizeKey(k.replace(/^__setdata__/, "")) !== targetKey) continue;
-              const sets = safelyParseSets(value);
+              const sets = safelyParseSets(value, getSetTypes(weights, k.replace(/^__setdata__/, "")));
               if (sets.length === 0) continue;
               collected.push({
                 date,

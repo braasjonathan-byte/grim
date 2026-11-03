@@ -57,6 +57,8 @@ import WorkoutCompleteOverlay from "@/components/WorkoutCompleteOverlay";
 import { getRestSecondsFor } from "@/lib/restTimer";
 import { getSetType, getSetTypes, withSetType, nextSetType, setLabel, getSuperset, nextSupersetLetter, shouldStartRest, supersetMembers, SET_TYPE_KEY, SUPERSET_KEY } from "@/lib/setTypes";
 import StrengthSetRowV2 from "@/components/workout/StrengthSetRowV2";
+import ExerciseLeadIn from "@/components/workout/ExerciseLeadIn";
+import { formatPrevSummary, getRpes, withRpe, RPE_KEY, warmupRamp, isHeavyCompound, prependWarmups, bumpLineSets, suggestSubstitutes } from "@/lib/underPass";
 import { touchOngoingWorkout, endOngoingWorkout, cleanupStaleOngoingWorkout } from "@/lib/workoutOngoing";
 import { summarizeCompletion, type WorkoutSummary } from "@/lib/workoutSummary";
 import AutoSaveInput from "@/components/AutoSaveInput";
@@ -192,6 +194,7 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
   const [repsEditor, setRepsEditor] = useState<{planId: string; lineIndex: number; name: string; reps: string; timeBased: boolean} | null>(null);
   const [repsEditorSaving, setRepsEditorSaving] = useState(false);
 
+  const findLastSetDataRef = useRef<((name: string) => LoggedSetInfo[]) | null>(null);
   const [replaceExerciseTarget, setReplaceExerciseTarget] = useState<{planId: string; lineIndex: number; name: string} | null>(null);
   const [exerciseSearch, setExerciseSearch] = useState("");
   const [selectedMuscle, setSelectedMuscle] = useState<string | null>(null);
@@ -1023,6 +1026,17 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
   }, [customExercises]);
 
 
+  // Smarta byten för «Byt ut övning»: samma muskel + utrustning, loggade förut först.
+  const smartSubstitutes = useMemo(() => {
+    if (!replaceExerciseTarget) return undefined;
+    const plan = plans.find((p) => p.id === replaceExerciseTarget.planId);
+    const inPlan = (plan?.details || "").split(/[;\n]/).map((l) => l.split("—")[0].trim()).filter(Boolean);
+    return suggestSubstitutes(replaceExerciseTarget.name, allExercises, {
+      exclude: inPlan,
+      hasHistory: (n) => findLastSetDataRef.current?.(n)?.length ? true : false,
+    });
+  }, [replaceExerciseTarget, allExercises, plans]);
+
   const filteredExercises = fuzzyFilterSort(
     allExercises.filter((e) => !selectedMuscle || e.muscleGroup === selectedMuscle),
     exerciseSearch,
@@ -1805,6 +1819,22 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
   };
 
   // Modify set count for an exercise in a plan
+  // Lägg till uppvärmningsrampa (U-set) först i övningen. Räknas inte i volym/PR/e1RM.
+  const addWarmupRamp = async (planId: string, exerciseIndex: number, partName: string, week: number, day: string, ramp: { kg: number; reps: number; pct: number }[], oldCount: number) => {
+    const plan = plans.find(p => p.id === planId);
+    if (!plan || !ramp.length) return;
+    const separator = plan.details.includes("\n") ? "\n" : "; ";
+    const lines = plan.details.split(/[;\n]/).map(s => s.trim()).filter(Boolean);
+    const line = lines[exerciseIndex];
+    if (!line || !/(\d+)\s*[×x]/i.test(line)) return;
+    lines[exerciseIndex] = bumpLineSets(line, ramp.length);
+    const newDetails = lines.join(separator);
+    await supabase.from("workout_plans").update({ details: newDetails }).eq("id", planId);
+    setPlans(prev => prev.map(p => p.id === planId ? { ...p, details: newDetails } : p));
+    triggerSave();
+    await updateCompletionWeights(week, day, (existing) => prependWarmups(existing, partName, ramp, oldCount));
+  };
+
   const modifySetCount = async (planId: string, exerciseIndex: number, delta: number, week: number, day: string) => {
     const plan = plans.find(p => p.id === planId);
     if (!plan) return;
@@ -2727,17 +2757,21 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
     return week * 10 + (dayIndex >= 0 ? dayIndex : fallbackIndex / 1000);
   };
 
-  const findLastSetData = (exerciseName: string): LoggedSetInfo[] => {
+  const findLastSetData = (exerciseName: string, opts?: { skipWarmups?: boolean }): LoggedSetInfo[] => {
+    return findLastSetDataImpl(exerciseName, opts);
+  };
+  findLastSetDataRef.current = findLastSetData;
+  const findLastSetDataImpl = (exerciseName: string, opts?: { skipWarmups?: boolean }): LoggedSetInfo[] => {
     const candidates: Array<{ sort: number; data: LoggedSetInfo[] }> = [];
 
     archivedCompletions.forEach((archComp, index) => {
-      const data = getExerciseSetDataFromWeights(archComp.logged_weights as Record<string, any> | null, exerciseName);
+      const data = getExerciseSetDataFromWeights(archComp.logged_weights as Record<string, any> | null, exerciseName, opts);
       if (data.length > 0) candidates.push({ sort: -1000000 + index, data });
     });
 
     Object.entries(completions).forEach(([key, comp], index) => {
       if (!comp?.done) return;
-      const data = getExerciseSetDataFromWeights(comp.logged_weights as Record<string, any> | null, exerciseName);
+      const data = getExerciseSetDataFromWeights(comp.logged_weights as Record<string, any> | null, exerciseName, opts);
       if (data.length === 0) return;
       const [weekRaw, ...dayParts] = key.split("-");
       const week = Number(comp.week ?? weekRaw);
@@ -3037,6 +3071,15 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
           const reps = setsMatch ? parseInt(setsMatch[2]) : 10;
           const initData = Array.from({ length: sets }, () => ({ kg: newWeight, reps: String(reps) }));
           weightsPatch = { [`__setdata__${exerciseName}`]: JSON.stringify(initData) };
+        }
+        // Behåll setstruktur (U/D-set, superset) från den utbytta övningen.
+        const lwOld = (completions[`${plan.week}-${plan.day}`]?.logged_weights || {}) as Record<string, any>;
+        const oldTypes = getSetTypes(lwOld, oldName);
+        const oldSs = getSuperset(lwOld, oldName);
+        if (oldTypes || oldSs) {
+          weightsPatch = { ...(weightsPatch || {}) };
+          if (oldTypes) weightsPatch[SET_TYPE_KEY(exerciseName)] = oldTypes;
+          if (oldSs) weightsPatch[SUPERSET_KEY(exerciseName)] = oldSs;
         }
         startReplace({ planId: plan.id, lineIndex, oldName, entry, weightsPatch });
       }
@@ -5127,6 +5170,7 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
                       onExerciseInfo={(name) => setExerciseInfoState({ name })}
                       allowCreate
                       userId={userId}
+                  suggestions={replaceExerciseTarget?.planId === plan.id ? smartSubstitutes : undefined}
                     />
 
                     {/* Friend comments */}
@@ -8451,7 +8495,18 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
                                         <span className="ml-auto w-5 text-center">✓</span>
                                       </div>
                                     );
-                                     return [v2Header, ...Array.from({ length: setsCountPlan }, (_, si) => {
+                                    // «Förra gången» inline (Hevy/Strong-stil) + ghost-värden per set.
+                                    const prevSets = findLastSetData(partName, { skipWarmups: true });
+                                    const prevSummary = formatPrevSummary(prevSets);
+                                    const lwHere = (completion?.logged_weights as Record<string, any>) || {};
+                                    const typesHere = getSetTypes(lwHere, partName);
+                                    const rpesHere = getRpes(lwHere, partName);
+                                    // Uppvärmningsrampa: bara på passets första tunga basövning, utan befintliga U-set.
+                                    const firstHeavyIdx = parts.findIndex((x) => isHeavyCompound(parseExerciseWeight(x).name));
+                                    const workKgNum = parseNum(planSetData.find((x) => x?.kg)?.kg || defKg || prevSets.find((x) => x.kg)?.kg || "");
+                                    const ramp = !isBodyweight && !isWeightedBw && firstHeavyIdx === i && !typesHere.includes("w") && !setsStrPlan.includes("1") ? warmupRamp(workKgNum) : [];
+                                    const leadIn = <ExerciseLeadIn key="leadin" prevSummary={prevSummary} ramp={ramp} onAddRamp={() => { void addWarmupRamp(plan.id, i, partName, plan.week, plan.day, ramp, setsCountPlan); }} />;
+                                     return [leadIn, v2Header, ...Array.from({ length: setsCountPlan }, (_, si) => {
                                        // Read bw mode per set, fall back to exercise-level for backward compat
                                        const bwModeKeySet = `__bw_mode__${partName}__${si}`;
                                        const bwModeKeyExercise = `__bw_mode__${partName}`;
@@ -8465,11 +8520,14 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
                                        // Vikt förifylls med senast loggade vikt för samma antal reps
                                        const repsForSet = saved?.reps && saved.reps.trim() ? saved.reps : inheritedReps;
                                        const repsMatchedKg = kgForReps(repsForSet);
-                                       const inheritedKg = prevSaved?.kg && prevSaved.kg.trim() ? prevSaved.kg : repsMatchedKg;
+                                       // Ghost-vikt: samma set förra gången (om planen inte anger vikt och setet ovan saknar värde).
+                                       const workIdx = Array.from(typesHere.slice(0, si)).filter((t) => t !== "w").length;
+                                       const prevSameSetKg = !partKg && !circuitDefaultSec && typesHere[si] !== "w" && prevSets[workIdx]?.kg ? prevSets[workIdx].kg : "";
+                                       const inheritedKg = prevSaved?.kg && prevSaved.kg.trim() ? prevSaved.kg : (prevSameSetKg || repsMatchedKg);
                                        const repsPh = circuitDefaultSec ? (findLastReps(partName, si) || inheritedReps || circuitDefaultSec) : (findLastReps(partName, si) || inheritedReps || defReps);
                                        // 1-tryck-set: bocken sparar exakt det som syns som förifyllt.
                                        const tapReps = circuitDefaultSec ? inheritedReps : repsPh;
-                                       const sTypes = getSetTypes(loggedWeights, partName);
+                                       const sTypes = typesHere;
                                        return (
                                          <StrengthSetRowV2
                                            key={si}
@@ -8488,6 +8546,8 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
                                            kgInitial={saved?.kg || ""}
                                            kgPlaceholder={inheritedKg}
                                            onSaveKg={(v) => saveSetFieldData(plan.week, plan.day, partName, si, 'kg', v, setsCountPlan, inheritedKg, tapReps)}
+                                           rpe={rpesHere[si] || null}
+                                           onRpe={(val) => { void updateCompletionWeights(plan.week, plan.day, (existing) => { const next = withRpe(getRpes(existing, partName), si, val); const out = { ...existing }; if (next) out[RPE_KEY(partName)] = next; else delete out[RPE_KEY(partName)]; return out; }); }}
                                            confirmKg={(kgv) => prDoubleWarning(prIndex, partName, kgv)}
                                            bwToggle={isWeightedBw ? { mode: currentBwMode, onToggle: () => { void updateCompletionWeights(plan.week, plan.day, (existing) => ({ ...existing, [bwModeKeySet]: currentBwMode === "add" ? "sub" : "add" })); } } : null}
                                            footer={<>
@@ -8822,6 +8882,7 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
                     onExerciseInfo={(name) => setExerciseInfoState({ name })}
                     allowCreate
                     userId={userId}
+                  suggestions={replaceExerciseTarget?.planId === plan.id ? smartSubstitutes : undefined}
                   />
 
                   {/* Likes from friends */}

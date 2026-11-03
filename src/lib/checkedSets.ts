@@ -1,11 +1,12 @@
 import { isPlausibleSet, parseNum } from "@/lib/inputValidation";
+import { getSetTypes } from "@/lib/setTypes";
 
 /**
  * Single rule for which logged sets count (PR, volume, history, calendar, stats):
  * only checked-off sets (`__sets__<name>` = "1" at that index). Legacy rows that
  * never had check marks count when they carry real values. Implausible values never count.
  */
-export type CheckedSet = { kg: string; reps: string };
+export type CheckedSet = { kg: string; reps: string; warmup?: boolean };
 
 const parseRows = (raw: unknown): any[] => {
   try {
@@ -14,7 +15,12 @@ const parseRows = (raw: unknown): any[] => {
   } catch { return []; }
 };
 
-export function checkedSetsFor(lw: Record<string, any>, name: string): CheckedSet[] {
+/**
+ * Uppvärmningsset (settyp "w") räknas aldrig i volym, PR eller e1RM.
+ * Skicka `includeWarmups: true` för att lista dem (t.ex. historik), då med `warmup: true`.
+ */
+export function checkedSetsFor(lw: Record<string, any>, name: string, opts?: { includeWarmups?: boolean }): CheckedSet[] {
+  const types = getSetTypes(lw, name);
   const rows = parseRows(lw[`__setdata__${name}`]);
   const hasMarks = Object.prototype.hasOwnProperty.call(lw, `__sets__${name}`);
   const marks = String(lw[`__sets__${name}`] ?? "");
@@ -24,7 +30,9 @@ export function checkedSetsFor(lw: Record<string, any>, name: string): CheckedSe
     const reps = String(r?.reps ?? "");
     if (hasMarks ? marks[i] !== "1" : !((parseNum(kg) || 0) > 0 || (parseInt(reps) || 0) > 0)) return;
     if (!isPlausibleSet(kg, reps)) return;
-    out.push({ kg, reps });
+    const warmup = types[i] === "w";
+    if (warmup && !opts?.includeWarmups) return;
+    out.push(warmup ? { kg, reps, warmup } : { kg, reps });
   });
   return out;
 }
@@ -43,6 +51,7 @@ export function allCheckedSets(lw: unknown): Map<string, CheckedSet[]> {
 }
 
 export const setVolumeKg = (s: CheckedSet) => {
+  if (s.warmup) return 0;
   const kg = parseNum(s.kg) || 0;
   const reps = parseInt(s.reps) || 0;
   return kg > 0 && reps > 0 ? kg * reps : 0;

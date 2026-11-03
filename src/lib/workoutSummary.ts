@@ -1,3 +1,4 @@
+import { getSetTypes } from "@/lib/setTypes";
 import { isPlausibleSet, parseNum } from "@/lib/inputValidation";
 import { isPrWeight, type PrIndex } from "@/lib/prBadges";
 import {
@@ -254,6 +255,7 @@ export function summarizeCompletion(
     if (!Array.isArray(rows)) continue;
 
     const doneFlags = doneByExercise.get(name) || "";
+    const typeFlags = getSetTypes(lw, key.substring("__setdata__".length));
     rows.forEach((row, i) => {
       const isDone = doneFlags[i] === "1";
       // Orimliga värden (t.ex. 99999 kg) räknas aldrig i volym, PR eller statistik.
@@ -264,6 +266,8 @@ export function summarizeCompletion(
       if (!isDone) return;
       sets += 1;
       exercises.add(name);
+      // Uppvärmningsset räknas som set men aldrig i volym eller PR.
+      if (typeFlags[i] === "w") return;
       if (isFinite(kg) && kg > 0 && isFinite(reps) && reps > 0) volumeKg += kg * reps;
       if (prIndex && isPrWeight(prIndex, name, kg)) prExercises.add(name);
       const st = (exerciseStats[name] ||= { maxKg: 0, repsAtMax: 0, volumeKg: 0, bestReps: 0, sets: 0 });

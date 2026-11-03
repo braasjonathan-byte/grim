@@ -46,6 +46,8 @@ interface ExercisePickerDialogProps {
   allowCreate?: boolean;
   /** User id for creating custom exercises */
   userId?: string;
+  /** Smarta byten (samma muskel + utrustning) som visas överst. */
+  suggestions?: string[];
 }
 
 const ExercisePickerDialog = ({
@@ -58,6 +60,7 @@ const ExercisePickerDialog = ({
   onExerciseInfo,
   allowCreate = false,
   userId,
+  suggestions,
 }: ExercisePickerDialogProps) => {
   const [search, setSearch] = useState("");
   const [selectedMuscle, setSelectedMuscle] = useState<string | null>(initialMuscleGroup);
@@ -255,6 +258,27 @@ const ExercisePickerDialog = ({
             <X className="w-4 h-4" />
           </button>
         </div>
+
+        {suggestions && suggestions.length > 0 && !search && (
+          <div className="px-4 pb-2">
+            <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mb-1.5">Smarta byten · samma muskel &amp; utrustning</p>
+            <div className="flex flex-wrap gap-1.5">
+              {suggestions.map((name) => {
+                const last = getLastWeight?.(name);
+                return (
+                  <button
+                    key={name}
+                    type="button"
+                    onClick={() => onSelect(name)}
+                    className="text-xs px-2.5 py-1.5 rounded-full bg-primary/10 border border-primary/30 text-foreground hover:bg-primary/20 transition-colors"
+                  >
+                    {name}{last ? <span className="text-muted-foreground ml-1 font-mono text-[10px]">{last.replace(/.*@\s*/, "")}</span> : null}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        )}
 
         {/* Search */}
         <div className="px-4 pb-2">

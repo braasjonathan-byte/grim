@@ -59,7 +59,7 @@ const buildExercises = (details: string, lw: Record<string, any>): HistoryExerci
     const { name, weight } = parseExerciseWeight(line);
     if (!name) continue;
     seen.add(name);
-    const sets = checkedSetsFor(lw, name);
+    const sets = checkedSetsFor(lw, name, { includeWarmups: true });
     out.push({ name, sets, info: sets.length ? null : weight });
   }
   // Exercises that only exist in logged data (e.g. renamed lines)
@@ -67,7 +67,7 @@ const buildExercises = (details: string, lw: Record<string, any>): HistoryExerci
     if (!key.startsWith("__setdata__")) continue;
     const name = key.slice("__setdata__".length);
     if (seen.has(name)) continue;
-    const sets = checkedSetsFor(lw, name);
+    const sets = checkedSetsFor(lw, name, { includeWarmups: true });
     if (sets.length) out.push({ name, sets, info: null });
   }
   return out;

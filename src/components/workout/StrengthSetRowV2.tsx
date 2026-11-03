@@ -1,4 +1,5 @@
-import type { ReactNode } from "react";
+import { memo, useState, type ReactNode } from "react";
+import { RPE_VALUES, rpeToRir } from "@/lib/underPass";
 import SwipeableSetRow from "@/components/SwipeableSetRow";
 import AutoSaveInput from "@/components/AutoSaveInput";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -28,6 +29,9 @@ export interface StrengthSetRowV2Props {
   confirmKg?: (value: number) => string | null;
   bwToggle?: { mode: "add" | "sub"; onToggle: () => void } | null;
   footer?: ReactNode;
+  /** Valfri RPE för setet (visas efter bock, kollapsad som standard). */
+  rpe?: string | null;
+  onRpe?: (value: string | null) => void;
 }
 
 const TYPE_CLS: Record<SetType, string> = {
@@ -41,7 +45,9 @@ const TYPE_TITLE: Record<SetType, string> = {
   d: "Dropset – tryck för vanligt set",
 };
 
-export default function StrengthSetRowV2(p: StrengthSetRowV2Props) {
+function StrengthSetRowV2(p: StrengthSetRowV2Props) {
+  const [rpeOpen, setRpeOpen] = useState(false);
+  const showRpe = !!p.onRpe && p.done && p.setType !== "w";
   const inputCls = "bg-primary/10 text-foreground text-xs px-1 py-0.5 rounded border border-primary/30 text-center font-mono focus:ring-1 focus:ring-primary outline-none placeholder:text-muted-foreground placeholder:opacity-60";
   return (
     <div>
@@ -73,10 +79,39 @@ export default function StrengthSetRowV2(p: StrengthSetRowV2Props) {
               <AutoSaveInput rule="setKg" confirmValue={p.confirmKg} type="number" inputMode="decimal" initialValue={p.kgInitial} onSave={p.onSaveKg} placeholder={p.kgPlaceholder || "—"} className={`w-14 ${inputCls}`} />
             </>
           )}
-          <span className="ml-auto flex items-center"><Checkbox checked={p.done} onCheckedChange={p.onToggle} className="h-5 w-5" aria-label="Klart set (fyller i förifyllda värden)" /></span>
+          {showRpe && (
+            <button
+              type="button"
+              onClick={(e) => { e.stopPropagation(); setRpeOpen((o) => !o); }}
+              className={`ml-auto text-[10px] px-1.5 py-0.5 rounded-full border font-mono ${p.rpe ? "border-primary/40 bg-primary/10 text-primary" : "border-dashed border-muted-foreground/40 text-muted-foreground"}`}
+              aria-label="Ange RPE (ansträngning)"
+              aria-expanded={rpeOpen}
+            >
+              {p.rpe ? `RPE ${p.rpe.replace(".", ",")}` : "RPE"}
+            </button>
+          )}
+          <span className={`${showRpe ? "" : "ml-auto "}flex items-center`}><Checkbox checked={p.done} onCheckedChange={p.onToggle} className="h-5 w-5" aria-label="Klart set (fyller i förifyllda värden)" /></span>
         </div>
       </SwipeableSetRow>
+      {showRpe && rpeOpen && (
+        <div className="flex items-center gap-1 pl-8 pr-1 py-1 flex-wrap" onClick={(e) => e.stopPropagation()}>
+          {RPE_VALUES.map((v) => (
+            <button
+              key={v}
+              type="button"
+              onClick={() => { p.onRpe!(p.rpe === v ? null : v); setRpeOpen(false); }}
+              className={`min-w-[30px] h-7 px-1 rounded-full text-[11px] font-mono border transition-colors ${p.rpe === v ? "bg-primary text-primary-foreground border-primary" : "bg-secondary border-transparent text-foreground hover:border-primary/40"}`}
+              title={`RPE ${v} ≈ ${rpeToRir(v)} reps kvar`}
+            >
+              {v.replace(".", ",")}
+            </button>
+          ))}
+          <span className="text-[9px] text-muted-foreground ml-1">{p.rpe ? `≈ ${rpeToRir(p.rpe)} kvar` : "10 = max"}</span>
+        </div>
+      )}
       {p.footer}
     </div>
   );
 }
+
+export default memo(StrengthSetRowV2);
