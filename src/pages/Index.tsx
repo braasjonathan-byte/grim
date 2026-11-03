@@ -337,7 +337,7 @@ const Index = () => {
   // which previously caused admins/hedersmedlemmar to render as "Medlem".
   const loadUserData = useCallback(async (uid: string) => {
     const requestId = ++loadUserDataSeqRef.current;
-    await logCrashlyticsMessage("loadUserData:start");
+    void logCrashlyticsMessage("loadUserData:start");
 
     try {
       const { data: statusData, error: statusError } = await (supabase as any)
@@ -360,12 +360,12 @@ const Index = () => {
         if (!isThemeLocked()) {
           applyTheme(savedTheme);
         }
-        await logCrashlyticsMessage(`loadUserData:access-status:${status.role || "member"}`);
+        void logCrashlyticsMessage(`loadUserData:access-status:${status.role || "member"}`);
         return;
       }
     } catch (error) {
       console.warn("[loadUserData] access status failed", error);
-      await recordError(error instanceof Error ? error : new Error(String(error)), { step: "loadUserData:accessStatus" });
+      void recordError(error instanceof Error ? error : new Error(String(error)), { step: "loadUserData:accessStatus" });
     }
 
     try {
@@ -392,7 +392,7 @@ const Index = () => {
       }
     } catch (error) {
       console.warn("[loadUserData] profile failed", error);
-      await recordError(error instanceof Error ? error : new Error(String(error)), { step: "loadUserData:profile" });
+      void recordError(error instanceof Error ? error : new Error(String(error)), { step: "loadUserData:profile" });
     }
 
     try {
@@ -408,10 +408,10 @@ const Index = () => {
       if (role === "admin") setIsHonorary(true);
     } catch (error) {
       console.warn("[loadUserData] role failed", error);
-      await recordError(error instanceof Error ? error : new Error(String(error)), { step: "loadUserData:role" });
+      void recordError(error instanceof Error ? error : new Error(String(error)), { step: "loadUserData:role" });
     }
 
-    await logCrashlyticsMessage("loadUserData:done");
+    void logCrashlyticsMessage("loadUserData:done");
   }, []);
 
   // Auto-sync Stripe subscription -> Hedersmedlem on every session start.
