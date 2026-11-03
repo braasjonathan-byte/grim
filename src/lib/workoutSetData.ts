@@ -1,3 +1,4 @@
+import { getSetTypes } from "@/lib/setTypes";
 import { isPlausibleSet } from "@/lib/inputValidation";
 import { normalizeExerciseKey } from "@/lib/workoutDayUtils";
 
@@ -99,7 +100,10 @@ export const collectSetsForExercise = (
       try {
         const parsed = typeof value === "string" ? JSON.parse(value) : value;
         if (!Array.isArray(parsed)) continue;
+        const setTypes = getSetTypes(weights, storedName);
         parsed.forEach((s: any, si: number) => {
+          // Uppvärmningsset räknas inte till rekord/tyngsta set.
+          if (setTypes[si] === "w") return;
           if (!isPlausibleSet(s?.kg, s?.reps)) return;
           const rawKg = parseFloat(String(s?.kg ?? "").replace(",", "."));
           const mode =

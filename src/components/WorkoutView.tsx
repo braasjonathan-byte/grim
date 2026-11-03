@@ -16,9 +16,7 @@ import { queueOfflineUpsert, dequeueOfflineUpsert, getPendingRows, useOfflineSta
 import { readOfflineWorkoutCache, writeOfflineWorkoutCache, patchOfflineWorkoutCache } from "@/lib/offlineWorkoutCache";
 import { countCheckmarks, detectDestructiveWrite, getKnownCheckmarkCount, rememberCheckmarkCount, seedCheckmarkCounts, logDestructiveWrite } from "@/lib/completionGuard";
 import { Check, MessageSquare, ChevronDown, ChevronUp, Dumbbell, Footprints, Moon, Bike, Waves, ChevronLeft, ChevronRight, LogOut, Plus, Trash2, Search, CalendarIcon, X, TrendingUp, Equal, Weight, MessageCircle, XCircle, Timer, Route, Info, Pencil, Share2, Swords, ArrowLeftRight, Send, Settings, ArrowLeft, Flame, Download, Play, Save, Lock, RefreshCw, MapPin, Square, Maximize2, Minimize2, Pause, Heart, HeartOff, Sparkles, GripVertical, MoreHorizontal } from "lucide-react";
-import { DndContext, closestCenter, PointerSensor, TouchSensor, useSensor, useSensors, type DragEndEvent } from "@dnd-kit/core";
-import { SortableContext, useSortable, verticalListSortingStrategy } from "@dnd-kit/sortable";
-import { CSS } from "@dnd-kit/utilities";
+import { ExerciseDndContext, SortableLine } from "@/components/workout/ExerciseDnd";
 import { GPS_FIX_MAX_ACCURACY_M, useGpsTracker } from "@/hooks/useGpsTracker";
 import { useHeartRate } from "@/hooks/useHeartRate";
 import { openAppSettings } from "@/lib/openSettings";
@@ -56,6 +54,9 @@ import ConfirmValueDialog from "@/components/ConfirmValueDialog";
 import ShareWorkoutPromptDialog from "@/components/ShareWorkoutPromptDialog";
 import { loadPrivacySettings, DEFAULT_PRIVACY, type PrivacySettings } from "@/lib/socialPrivacy";
 import WorkoutCompleteOverlay from "@/components/WorkoutCompleteOverlay";
+import { getRestSecondsFor } from "@/lib/restTimer";
+import { getSetType, getSetTypes, withSetType, nextSetType, setLabel, getSuperset, nextSupersetLetter, shouldStartRest, supersetMembers, SET_TYPE_KEY, SUPERSET_KEY } from "@/lib/setTypes";
+import StrengthSetRowV2 from "@/components/workout/StrengthSetRowV2";
 import { touchOngoingWorkout, endOngoingWorkout, cleanupStaleOngoingWorkout } from "@/lib/workoutOngoing";
 import { summarizeCompletion, type WorkoutSummary } from "@/lib/workoutSummary";
 import AutoSaveInput from "@/components/AutoSaveInput";
@@ -87,55 +88,6 @@ import { type LoggedSetInfo, parseExerciseWeight, getExerciseSetDataFromWeights,
 
 const SHOW_STRAVA_INTEGRATION = false;
 
-// Drag & drop för att ändra ordning på övningar i ett pass (ersätter upp/ner-pilarna).
-function ExerciseDndContext({ count, onReorder, children }: { count: number; onReorder: (from: number, to: number) => void; children: React.ReactNode }) {
-  const sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
-    useSensor(TouchSensor, { activationConstraint: { delay: 200, tolerance: 8 } }),
-  );
-  const ids = useMemo(() => Array.from({ length: count }, (_, i) => String(i)), [count]);
-  const handleDragEnd = (event: DragEndEvent) => {
-    const { active, over } = event;
-    if (!over || active.id === over.id) return;
-    onReorder(Number(active.id), Number(over.id));
-  };
-  return (
-    <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-      <SortableContext items={ids} strategy={verticalListSortingStrategy}>{children}</SortableContext>
-    </DndContext>
-  );
-}
-
-interface SortableLineRenderProps {
-  setNodeRef: (node: HTMLElement | null) => void;
-  style: React.CSSProperties;
-  handle: React.ReactNode;
-}
-
-function SortableLine({ id, children }: { id: string; children: (props: SortableLineRenderProps) => React.ReactNode }) {
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id });
-  const style: React.CSSProperties = {
-    transform: CSS.Transform.toString(transform),
-    transition,
-    opacity: isDragging ? 0.5 : 1,
-    zIndex: isDragging ? 50 : undefined,
-    position: "relative",
-  };
-  const handle = (
-    <button
-      type="button"
-      {...attributes}
-      {...listeners}
-      onClick={(e) => e.stopPropagation()}
-      className="p-1 cursor-grab active:cursor-grabbing touch-none text-muted-foreground hover:text-primary transition-colors"
-      aria-label="Dra för att flytta"
-      title="Dra för att flytta"
-    >
-      <GripVertical className="w-4 h-4" />
-    </button>
-  );
-  return <>{children({ setNodeRef, style, handle })}</>;
-}
 
 
 
@@ -484,20 +436,13 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
   // Circuit timer state
   const [circuitTimer, setCircuitTimer] = useState<{ exercises: string[]; workSeconds: number; exerciseSeconds?: number[][]; roundCount: number; restSeconds?: number; weekDayKey: string; headerIndex: number } | null>(null);
 
-  const triggerSetRestTimer = useCallback((wasChecked: boolean, exerciseName?: string) => {
-    const setRestTimerEnabled = localStorage.getItem("grim_set_rest_timer_enabled") !== "false";
-    let perExercise: string | undefined;
-    if (exerciseName) {
-      try { perExercise = JSON.parse(localStorage.getItem("grim_rest_seconds_by_exercise") || "{}")[exerciseName.toLowerCase()]; } catch {}
-    }
-    const setRestTimerSeconds = perExercise || localStorage.getItem("grim_set_rest_timer_seconds") || "90";
+  const triggerSetRestTimer = useCallback((wasChecked: boolean, exerciseName?: string, startRest = true) => {
+    const seconds = startRest ? getRestSecondsFor(exerciseName) : 0;
     if (wasChecked) {
       // Pågående-notis (Android): passet syns på låsskärmen med vilotimerns sluttid.
-      void touchOngoingWorkout({ exercise: exerciseName, restSeconds: setRestTimerEnabled ? Math.max(1, Math.round(Number(setRestTimerSeconds) || 0)) : 0 });
+      void touchOngoingWorkout({ exercise: exerciseName, restSeconds: seconds });
     }
-    if (!wasChecked || !setRestTimerEnabled) return;
-    const seconds = Math.max(1, Math.round(Number(setRestTimerSeconds) || 0));
-    if (!seconds) return;
+    if (!wasChecked || !seconds) return;
     window.dispatchEvent(new CustomEvent("grim:start-rest-timer", { detail: { seconds, label: "Vila", exercise: exerciseName } }));
   }, []);
 
@@ -1721,7 +1666,15 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
     if (arr[setIndex]) {
       playSetDone();
       hapticLight();
-      triggerSetRestTimer(true, exerciseName);
+      const lw = (completions[k]?.logged_weights || {}) as Record<string, any>;
+      const planForOrder = plans.find(p => p.week === week && p.day === day);
+      const order = (planForOrder?.details || "").split(/[;\n]/).map(x => parseExerciseWeight(x.trim()).name).filter(Boolean);
+      const startRest = shouldStartRest({
+        setType: getSetType(lw, exerciseName, setIndex),
+        exercise: exerciseName,
+        supersetOrder: supersetMembers(lw, exerciseName, order),
+      });
+      triggerSetRestTimer(true, exerciseName, startRest);
     }
     const setsStr = arr.map(b => b ? "1" : "0").join("");
 
@@ -8345,6 +8298,10 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
                                     {toTitleCase(partName)}
                                     {partRpe && <span className="text-xs font-normal text-muted-foreground ml-1.5">{partRpe}</span>}
                                   </span>
+                                  {(() => {
+                                    const ss = getSuperset(completion?.logged_weights as Record<string, any> | undefined, partName);
+                                    return ss ? <span className="text-[9px] font-black px-1.5 py-0.5 rounded bg-primary/15 text-primary" title="Superset – vilan startar efter sista övningen i gruppen">SUPERSET {ss}</span> : null;
+                                  })()}
                                   {(
                                     <span className="text-[10px] font-mono text-muted-foreground ml-1">
                                       {setsStrPlan.slice(0, setsCountPlan).split("").filter(c => c === "1").length}/{setsCountPlan}
@@ -8381,6 +8338,26 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
                                         </button>
                                       </DropdownMenuTrigger>
                                        <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
+                                        {(() => {
+                                          const lwS = (completion?.logged_weights || {}) as Record<string, any>;
+                                          const inSs = getSuperset(lwS, partName);
+                                          const nextName = parts.slice(i + 1).map(x => parseExerciseWeight(x).name).find(n => n && !/^vila$/i.test(n.trim()));
+                                          if (!inSs && !nextName) return null;
+                                          return (
+                                            <DropdownMenuItem onClick={() => { void updateCompletionWeights(plan.week, plan.day, (existing) => {
+                                              const out = { ...existing };
+                                              if (inSs) { delete out[SUPERSET_KEY(partName)]; return out; }
+                                              const used = Object.entries(existing).filter(([k2]) => k2.startsWith("__superset__")).map(([, v]) => String(v));
+                                              const letter = getSuperset(existing, nextName!) || nextSupersetLetter(used);
+                                              out[SUPERSET_KEY(partName)] = letter;
+                                              out[SUPERSET_KEY(nextName!)] = letter;
+                                              return out;
+                                            }); }}>
+                                              <Swords className="w-4 h-4 mr-2" />
+                                              {inSs ? "Ta bort från superset" : "Superset med nästa övning"}
+                                            </DropdownMenuItem>
+                                          );
+                                        })()}
                                         <DropdownMenuItem onClick={() => startReplaceExercise(plan.id, i, partName)}>
                                           <ArrowLeftRight className="w-4 h-4 mr-2" />
                                           Byt ut övning
@@ -8488,43 +8465,31 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
                                        const repsForSet = saved?.reps && saved.reps.trim() ? saved.reps : inheritedReps;
                                        const repsMatchedKg = kgForReps(repsForSet);
                                        const inheritedKg = prevSaved?.kg && prevSaved.kg.trim() ? prevSaved.kg : repsMatchedKg;
+                                       const repsPh = circuitDefaultSec ? (findLastReps(partName, si) || inheritedReps || circuitDefaultSec) : (findLastReps(partName, si) || inheritedReps || defReps);
+                                       // 1-tryck-set: bocken sparar exakt det som syns som förifyllt.
+                                       const tapReps = circuitDefaultSec ? inheritedReps : repsPh;
+                                       const sTypes = getSetTypes(loggedWeights, partName);
                                        return (
-                                         <div key={si}>
-                                           <SwipeableSetRow done={isSetDone} isPR={!isBodyweight && isPrWeight(prIndex, partName, saved?.kg)} celebrationKey={`${partName}-${si}-${saved?.kg ?? ""}`} onToggle={() => toggleSetDone(plan.week, plan.day, partName, si, setsCountPlan, inheritedKg, inheritedReps)}>
-                                           <div className={`flex items-center gap-1.5 py-0.5 rounded px-1 ${isSetDone ? ("opacity-50 bg-success/5") : ""}`}>
-                                           
-                                           {<span className="text-xs text-muted-foreground w-7 flex-shrink-0 text-center font-mono">{si + 1}</span>}
-                                           <AutoSaveInput rule={unitRuleOv(partName) ?? (/farmers?\s*walk|yoke\s*walk|sled|bear\s*crawl/i.test(partName) || plan.is_circuit || partIsTimeBased || /^(sido)?planka$|^vila$/i.test(partName.trim()) || customExercises.find(ce => ce.name.toLowerCase() === partName.trim().toLowerCase())?.is_time_based ? "setTimeDist" : "setReps")} type="number" inputMode="numeric" initialValue={circuitDefaultSec ? ((!saved?.reps || saved.reps === partReps || saved.reps === repsStr) ? "" : saved.reps) : (saved?.reps || "")} placeholder={circuitDefaultSec ? (findLastReps(partName, si) || inheritedReps || circuitDefaultSec) : (findLastReps(partName, si) || inheritedReps || defReps)} onSave={(v) => saveSetFieldData(plan.week, plan.day, partName, si, 'reps', v, setsCountPlan, inheritedKg, inheritedReps)} className="w-11 bg-primary/10 text-foreground text-xs px-1 py-0.5 rounded border border-primary/30 text-center font-mono focus:ring-1 focus:ring-primary outline-none placeholder:text-muted-foreground placeholder:opacity-60" />
-                                           
-                                          {!isBodyweight && (
-                                            <>
-                                              {isWeightedBw && (
-                                                <button
-                                                  onClick={async (e) => {
-                                                    e.stopPropagation();
-                                                    const newMode = currentBwMode === "add" ? "sub" : "add";
-                                                     await updateCompletionWeights(plan.week, plan.day, (existing) => ({
-                                                       ...existing,
-                                                       [bwModeKeySet]: newMode,
-                                                    }));
-                                                  }}
-                                                  className={`w-6 h-6 flex items-center justify-center rounded text-xs font-bold border transition-colors ${
-                                                    currentBwMode === "add" 
-                                                      ? "bg-primary/10 border-primary/30 text-primary" 
-                                                      : "bg-primary/5 border-primary/20 text-primary opacity-70"
-                                                  }`}
-                                                  title={currentBwMode === "add" ? "Addera vikt till kroppsvikt" : "Dra av vikt från kroppsvikt"}
-                                                >
-                                                  {currentBwMode === "add" ? "+" : "−"}
-                                                </button>
-                                              )}
-                                              <AutoSaveInput rule="setKg" confirmValue={(kg) => prDoubleWarning(prIndex, partName, kg)} type="number" inputMode="decimal" initialValue={(saved?.kg || "")} onSave={(v) => saveSetFieldData(plan.week, plan.day, partName, si, 'kg', v, setsCountPlan, inheritedKg, inheritedReps)} placeholder={inheritedKg || "—"} className="w-14 bg-primary/10 text-foreground text-xs px-1 py-0.5 rounded border border-primary/30 text-center font-mono focus:ring-1 focus:ring-primary outline-none placeholder:text-muted-foreground placeholder:opacity-60" />
-                                              
-                                            </>
-                                          )}
-                                          {<span className="ml-auto flex items-center"><Checkbox checked={isSetDone} onCheckedChange={() => toggleSetDone(plan.week, plan.day, partName, si, setsCountPlan, inheritedKg, inheritedReps)} className="h-5 w-5" /></span>}
-                                          </div>
-                                          </SwipeableSetRow>
+                                         <StrengthSetRowV2
+                                           key={si}
+                                           label={setLabel(sTypes, si)}
+                                           setType={getSetType(loggedWeights, partName, si)}
+                                           done={isSetDone}
+                                           isPR={!isBodyweight && isPrWeight(prIndex, partName, saved?.kg)}
+                                           celebrationKey={`${partName}-${si}-${saved?.kg ?? ""}`}
+                                           onToggle={() => toggleSetDone(plan.week, plan.day, partName, si, setsCountPlan, inheritedKg, tapReps)}
+                                           onCycleType={() => { void updateCompletionWeights(plan.week, plan.day, (existing) => { const next = withSetType(getSetTypes(existing, partName), si, nextSetType(getSetType(existing, partName, si)), setsCountPlan); const out = { ...existing }; if (next) out[SET_TYPE_KEY(partName)] = next; else delete out[SET_TYPE_KEY(partName)]; return out; }); }}
+                                           repsRule={unitRuleOv(partName) ?? (/farmers?\s*walk|yoke\s*walk|sled|bear\s*crawl/i.test(partName) || plan.is_circuit || partIsTimeBased || /^(sido)?planka$|^vila$/i.test(partName.trim()) || customExercises.find(ce => ce.name.toLowerCase() === partName.trim().toLowerCase())?.is_time_based ? "setTimeDist" : "setReps")}
+                                           repsInitial={circuitDefaultSec ? ((!saved?.reps || saved.reps === partReps || saved.reps === repsStr) ? "" : saved.reps) : (saved?.reps || "")}
+                                           repsPlaceholder={repsPh}
+                                           onSaveReps={(v) => saveSetFieldData(plan.week, plan.day, partName, si, 'reps', v, setsCountPlan, inheritedKg, tapReps)}
+                                           showKg={!isBodyweight}
+                                           kgInitial={saved?.kg || ""}
+                                           kgPlaceholder={inheritedKg}
+                                           onSaveKg={(v) => saveSetFieldData(plan.week, plan.day, partName, si, 'kg', v, setsCountPlan, inheritedKg, tapReps)}
+                                           confirmKg={(kgv) => prDoubleWarning(prIndex, partName, kgv)}
+                                           bwToggle={isWeightedBw ? { mode: currentBwMode, onToggle: () => { void updateCompletionWeights(plan.week, plan.day, (existing) => ({ ...existing, [bwModeKeySet]: currentBwMode === "add" ? "sub" : "add" })); } } : null}
+                                           footer={<>
                                           {!isBodyweight && (() => {
                                             const currentKg = parseNum(saved?.kg || defKg);
                                             if (isWeightedBw && !isNaN(currentKg) && currentKg !== 0) {
@@ -8544,8 +8509,9 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
                                             }
                                             return null;
                                           })()}
-                                        </div>
-                                      );
+                                           </>}
+                                         />
+                                       );
                                     })];
                                   })()}
                                 </div>
