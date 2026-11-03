@@ -2,6 +2,14 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { countTourSteps, startTour, type TourVariant } from "@/lib/tour";
 import { Sparkles, X, Apple } from "lucide-react";
+import { defaultModulesFor, getModules, setGoal, setModules, type Goal, type ModuleKey } from "@/lib/modules";
+
+const GOALS: { key: Goal; label: string; emoji: string }[] = [
+  { key: "strength", label: "Bli starkare", emoji: "🏋️" },
+  { key: "cardio", label: "Bättre kondition", emoji: "🏃" },
+  { key: "weight", label: "Gå ner / gå upp i vikt", emoji: "⚖️" },
+  { key: "general", label: "Må bra och hålla igång", emoji: "✨" },
+];
 
 interface TourPromptProps {
   userId: string;
@@ -14,6 +22,16 @@ type Mode = "welcome" | "nutrition" | null;
 const TourPrompt = ({ userId }: TourPromptProps) => {
   const [mode, setMode] = useState<Mode>(null);
   const [busy, setBusy] = useState(false);
+  const [stage, setStage] = useState<"goal" | "tour">("goal");
+  const [goal, setGoalState] = useState<Goal | null>(null);
+  const [mods, setMods] = useState<Record<ModuleKey, boolean>>(getModules);
+  const finishSetup = () => {
+    if (goal) setGoal(goal);
+    setModules(mods);
+    // Ett flöde: hoppa över den separata träningsguiden när välkomstflödet körts.
+    try { localStorage.setItem("grim_workout_tutorial_seen_v1", "1"); } catch { /* ignore */ }
+    setStage("tour");
+  };
 
   useEffect(() => {
     let cancelled = false;
@@ -79,7 +97,43 @@ const TourPrompt = ({ userId }: TourPromptProps) => {
           <X className="w-4 h-4" />
         </button>
 
-        {mode === "welcome" && (
+        {mode === "welcome" && stage === "goal" && (
+          <>
+            <div className="flex items-center gap-2 mb-2">
+              <Sparkles className="w-5 h-5 text-primary" />
+              <h3 className="text-base font-black font-serif text-foreground">Välkommen till GRIM!</h3>
+            </div>
+            <p className="text-sm text-muted-foreground mb-3">Vad vill du främst uppnå?</p>
+            <div className="grid grid-cols-2 gap-2 mb-3">
+              {GOALS.map((g) => (
+                <button key={g.key} type="button" disabled={busy}
+                  onClick={() => { setGoalState(g.key); setMods(defaultModulesFor(g.key)); }}
+                  className={`text-left text-xs font-semibold px-3 py-2.5 border ${goal === g.key ? "border-primary bg-primary/10" : "border-border bg-secondary"}`}>
+                  <span className="mr-1">{g.emoji}</span>{g.label}
+                </button>
+              ))}
+            </div>
+            {goal && (
+              <div className="space-y-1.5 mb-3">
+                <p className="text-[11px] uppercase tracking-wide text-muted-foreground font-bold">Visa i menyn</p>
+                {([["nutrition", "Kost – logga mat och makron"], ["social", "Socialt – vänner, flöde och hejarop"]] as [ModuleKey, string][]).map(([k, label]) => (
+                  <label key={k} className="flex items-center justify-between text-sm">
+                    <span>{label}</span>
+                    <input type="checkbox" className="w-5 h-5 accent-primary" checked={mods[k]} onChange={(e) => setMods((m) => ({ ...m, [k]: e.target.checked }))} />
+                  </label>
+                ))}
+                <p className="text-[10px] text-muted-foreground">Du kan ändra detta när som helst under Verktyg.</p>
+              </div>
+            )}
+            <button onClick={finishSetup} disabled={busy || !goal}
+              className="w-full bg-primary text-primary-foreground font-bold text-sm px-4 py-2.5 active:scale-95 transition-transform disabled:opacity-50">
+              Fortsätt
+            </button>
+            <button onClick={skip} disabled={busy} className="w-full text-xs text-muted-foreground font-medium py-2">Hoppa över</button>
+          </>
+        )}
+
+        {mode === "welcome" && stage === "tour" && (
           <>
             <div className="flex items-center gap-2 mb-2">
               <Sparkles className="w-5 h-5 text-primary" />

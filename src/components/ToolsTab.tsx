@@ -1,3 +1,4 @@
+import ModuleSettings from "@/components/ModuleSettings";
 import { lazyRetry } from "@/lib/lazyRetry";
 import { useState, useEffect, useMemo, Suspense } from "react";
 import {
@@ -541,6 +542,7 @@ const ToolsTab = ({ userId, isAdmin, isHonorary, userRole, onViewUserPlan, onLog
               <ProfileTab userId={userId} isAdmin={isAdmin} />
               <SettingsPanel userId={userId} isAdmin={isAdmin} isHonorary={isHonorary} onStartPlan={onStartPlan} onViewUserPlan={onViewUserPlan} />
               <NotificationSettings userId={userId} />
+              <div className="rounded-2xl bg-card border border-border/40 p-4"><ModuleSettings /></div>
             </div>
           ) : (
             <div className="space-y-3">

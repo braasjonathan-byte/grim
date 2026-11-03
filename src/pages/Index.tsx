@@ -28,6 +28,7 @@ import WhatsNewDialog from "@/components/WhatsNewDialog";
 import NewsPopup from "@/components/admin/NewsPopup";
 import OnboardingTutorial from "@/components/OnboardingTutorial";
 import TourPrompt from "@/components/TourPrompt";
+import { getModules, MODULES_EVENT } from "@/lib/modules";
 import PageTransition from "@/components/PageTransition";
 import PullToRefresh from "@/components/PullToRefresh";
 import { hapticLight } from "@/lib/haptics";
@@ -134,6 +135,12 @@ const GrimInfoDialog = () => {
 };
 
 const Index = () => {
+  const [modules, setModulesState] = useState(getModules);
+  useEffect(() => {
+    const on = () => setModulesState(getModules());
+    window.addEventListener(MODULES_EVENT, on);
+    return () => window.removeEventListener(MODULES_EVENT, on);
+  }, []);
   const bottomSafeInset = "max(env(safe-area-inset-bottom), 16px)";
   const bottomNavOffset = `calc(5.5rem + ${bottomSafeInset})`;
   const [user, setUser] = useState<User | null>(null);
@@ -880,13 +887,13 @@ const Index = () => {
   const friendActivityCount = friendActivities.length;
 
   const socialBadge = friendActivityCount + unreadChats + unreadPosts + unreadAnnouncements;
-  const tabs: {key: Tab;icon: typeof Dumbbell;label: string;badge?: number;}[] = [
+  const tabs: {key: Tab;icon: typeof Dumbbell;label: string;badge?: number;}[] = ([
   { key: "home", icon: Home, label: "Hem" },
   { key: "workout", icon: Dumbbell, label: "Träning" },
   { key: "nutrition", icon: Apple, label: "Kost" },
   { key: "stats", icon: BarChart3, label: "Statistik" },
   { key: "social", icon: Users, label: "Social", badge: socialBadge > 0 ? socialBadge : undefined },
-  { key: "calc", icon: Calculator, label: "Verktyg" }];
+  { key: "calc", icon: Calculator, label: "Verktyg" }] as {key: Tab;icon: typeof Dumbbell;label: string;badge?: number;}[]).filter((t) => (t.key !== "nutrition" || modules.nutrition) && (t.key !== "social" || modules.social));
 
 
   return (
