@@ -113,3 +113,40 @@ function pickImageWeb(captureEnv: boolean): Promise<PickedImage | null> {
     input.click();
   });
 }
+
+/** Välj flera bilder från galleriet (native: Camera.pickImages, webb: <input multiple>). */
+export async function pickImages(opts?: { quality?: number; limit?: number }): Promise<PickedImage[]> {
+  const quality = opts?.quality ?? 80;
+  const limit = opts?.limit ?? 10;
+  if (Capacitor.isNativePlatform()) {
+    try {
+      const { Camera } = await import("@capacitor/camera");
+      const res = await Camera.pickImages({ quality, limit });
+      const out: PickedImage[] = [];
+      for (const p of res.photos.slice(0, limit)) {
+        const blob = await (await fetch(p.webPath)).blob();
+        const dataUrl = await new Promise<string>((ok, err) => { const r = new FileReader(); r.onload = () => ok(r.result as string); r.onerror = err; r.readAsDataURL(blob); });
+        out.push({ blob, dataUrl, file: new File([blob], `photo.${p.format || "jpeg"}`, { type: blob.type || "image/jpeg" }) });
+      }
+      return out;
+    } catch (e: any) {
+      if (e?.message?.toLowerCase?.().includes("cancel")) return [];
+      console.warn("Native pickImages failed, falling back to web picker", e);
+    }
+  }
+  return new Promise((resolve) => {
+    const input = document.createElement("input");
+    input.type = "file"; input.accept = "image/*"; input.multiple = true; input.style.display = "none";
+    let settled = false;
+    const done = (v: PickedImage[]) => { if (settled) return; settled = true; input.remove(); resolve(v); };
+    input.onchange = async () => {
+      const files = Array.from(input.files ?? []).slice(0, limit);
+      const out = await Promise.all(files.map((file) => new Promise<PickedImage | null>((ok) => {
+        const r = new FileReader(); r.onload = () => ok({ file, blob: file, dataUrl: r.result as string }); r.onerror = () => ok(null); r.readAsDataURL(file);
+      })));
+      done(out.filter(Boolean) as PickedImage[]);
+    };
+    window.addEventListener("focus", () => setTimeout(() => { if (!input.files?.length) done([]); }, 800), { once: true });
+    document.body.appendChild(input); input.click();
+  });
+}
