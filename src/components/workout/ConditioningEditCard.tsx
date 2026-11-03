@@ -1,4 +1,5 @@
 import HeartRateCurve from "@/components/HeartRateCurve";
+import SavedSplits from "@/components/workout/SavedSplits";
 import { useState, useEffect, useRef } from "react";
 import { parseNum, validateCardioEntry, validateNumber } from "@/lib/inputValidation";
 import { toast } from "sonner";
@@ -88,6 +89,7 @@ export const ConditioningEditCard = ({ name, lineIndex, planId, planCondTime, pl
     const r = savedData?.route;
     return Array.isArray(r) ? r as [number, number][] : [];
   });
+  const [splits, setSplits] = useState<number[]>(() => Array.isArray(savedData?.splits) ? (savedData!.splits as number[]) : []);
   const [autoField, setAutoField] = useState<"time" | "tempo" | "distance" | null>(null);
   const [showIntervalRunner, setShowIntervalRunner] = useState(false);
   const isIntervalRun = /intervall/i.test(name);
@@ -217,6 +219,7 @@ export const ConditioningEditCard = ({ name, lineIndex, planId, planCondTime, pl
     if (pulse.trim()) data.pulse = pulse.trim();
     if (showElevation && String(elevation).trim()) data.elev = String(elevation).trim();
     if (route.length > 1) data.route = route;
+    if (splits.length > 0) data.splits = splits;
 
     // Inget tid/distans/tempo manuellt loggat ännu — varna i stället för att
     // tyst spara de planerade (placeholder) värdena som ett riktigt resultat.
@@ -309,6 +312,7 @@ export const ConditioningEditCard = ({ name, lineIndex, planId, planCondTime, pl
         {Array.isArray(savedData?.route) && (savedData!.route as any[]).length > 1 && (
           <RouteMap route={savedData!.route as [number, number][]} height={180} collapsible defaultOpen={false} />
         )}
+        <SavedSplits splits={savedData?.splits} />
       </div>
     );
   }
@@ -437,7 +441,8 @@ export const ConditioningEditCard = ({ name, lineIndex, planId, planCondTime, pl
       )}
 
       {!isSwim && showGps && <GpsTrackerControl
-        onStop={(km, sec, gpsRoute) => {
+        onStop={(km, sec, gpsRoute, gpsSplits) => {
+          if (gpsSplits && gpsSplits.length) setSplits(gpsSplits);
           const totMin = sec / 60;
           const hh = Math.floor(totMin / 60);
           const rem = totMin - hh * 60;

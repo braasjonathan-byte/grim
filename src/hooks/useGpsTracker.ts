@@ -1,3 +1,4 @@
+import { nativeStartGps, nativeStopGps } from "@/lib/grimWorkoutNative";
 import { useEffect, useState } from "react";
 import { Capacitor } from "@capacitor/core";
 import { getGpsVoiceIntervalMin, getGpsVoiceIntervalKm, speakPace } from "@/lib/gpsSettings";
@@ -217,6 +218,8 @@ const cleanup = () => {
   if (wakeLock) { wakeLock.release().catch(() => {}); wakeLock = null; }
   try { window.speechSynthesis?.cancel(); } catch {}
   closeStatusNotification();
+  // Stoppa Android-foreground-servicen (Doze-skydd) när passet avslutas.
+  void nativeStopGps();
 };
 
 const startTracking = async (ownerId?: string): Promise<boolean> => {
@@ -311,6 +314,10 @@ const startTracking = async (ownerId?: string): Promise<boolean> => {
     // @ts-ignore
     wakeLock = await navigator.wakeLock?.request("screen");
   } catch {}
+
+  // Android: foreground service (typ location) + wakelock så inspelningen
+  // fortsätter i Doze / med släckt skärm.
+  void nativeStartGps("Spelar in din rutt");
 
   // Request notification permission and show persistent status notification
   if (typeof window !== "undefined" && "Notification" in window) {

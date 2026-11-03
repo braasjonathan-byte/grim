@@ -1,4 +1,5 @@
 import { Capacitor } from "@capacitor/core";
+import { nativeStartRest, nativeStopRest, NATIVE_REST_MAX_SEC } from "@/lib/grimWorkoutNative";
 
 /**
  * Pågående-notis för styrkepass (Android): visas på låsskärmen när första
@@ -60,6 +61,10 @@ export async function touchOngoingWorkout(opts: { exercise?: string; restSeconds
     }
     const mins = Math.max(0, Math.round((now - state.startedAt) / 60000));
     const restEnd = opts.restSeconds ? now + opts.restSeconds * 1000 : 0;
+    // Native vilotimer (nedräkning på låsskärmen + vibration). Reservnotisen nedan
+    // schemaläggs bara om native saknas eller vilan är längre än shortService-gränsen.
+    const nativeRest = restEnd ? await nativeStartRest(opts.restSeconds!, opts.exercise) : (await nativeStopRest(), false);
+    const needFallback = !!restEnd && (!nativeRest || opts.restSeconds! > NATIVE_REST_MAX_SEC);
     const body = [
       opts.exercise ? `Senast: ${opts.exercise}` : null,
       `${state.sets} set · ${mins} min`,
@@ -70,7 +75,7 @@ export async function touchOngoingWorkout(opts: { exercise?: string; restSeconds
       id: ONGOING_ID, channelId: CHANNEL, title: "🏋️ Styrkepass pågår", body,
       ongoing: true, autoCancel: false, extra: { url: "/?tab=workout" },
     }];
-    if (restEnd) {
+    if (needFallback) {
       notifications.push({
         id: REST_ID, channelId: CHANNEL, title: "⏰ Vilan är slut", body: "Dags för nästa set!",
         schedule: { at: new Date(restEnd), allowWhileIdle: true }, autoCancel: true, extra: { url: "/?tab=workout" },
@@ -82,6 +87,7 @@ export async function touchOngoingWorkout(opts: { exercise?: string; restSeconds
 
 export async function endOngoingWorkout() {
   localStorage.removeItem(STATE_KEY);
+  void nativeStopRest();
   try {
     const p = await ln();
     if (!p) return;

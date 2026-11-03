@@ -14,7 +14,7 @@ import { appendRouteToHistory, loadRouteHistory } from "@/lib/routeHistory";
 const RouteBuilderDialog = lazyRetry(() => import("@/components/RouteBuilderDialog"));
 
 // Inline conditioning editing card (green, open by default)
-export const GpsTrackerControl = ({ onStop, autoStart = false, onCancel, storageKey }: { onStop: (km: number, sec: number, route: [number, number][]) => void; autoStart?: boolean; onCancel?: () => void; storageKey?: string }) => {
+export const GpsTrackerControl = ({ onStop, autoStart = false, onCancel, storageKey }: { onStop: (km: number, sec: number, route: [number, number][], splits?: number[]) => void; autoStart?: boolean; onCancel?: () => void; storageKey?: string }) => {
   const gps = useGpsTracker();
   const hr = useHeartRate();
   const myId = useId();
@@ -257,7 +257,7 @@ export const GpsTrackerControl = ({ onStop, autoStart = false, onCancel, storage
         <div className="flex gap-1.5">
           <button
             type="button"
-            onClick={(e) => { e.stopPropagation(); onStop(summary.km, summary.sec, summary.route); setSummary(null); }}
+            onClick={(e) => { e.stopPropagation(); onStop(summary.km, summary.sec, summary.route, summary.splits); setSummary(null); }}
             className="flex-1 px-3 py-2 bg-primary text-primary-foreground text-xs font-semibold rounded-md"
           >
             Spara pass

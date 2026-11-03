@@ -5270,7 +5270,7 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
                         isAdmin={isAdmin}
                         konditionExercises={konditionExercises}
 
-                        onSave={async (name, km, sec, gpsRoute) => {
+                        onSave={async (name, km, sec, gpsRoute, gpsSplits) => {
                           const totMin = sec / 60;
                           const distRounded = Math.round(km * 100) / 100;
                           const tempoMin = km > 0 ? totMin / km : 0;
@@ -5282,6 +5282,7 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
                             dist: String(distRounded),
                             tempo: tempoStr,
                             route: gpsRoute,
+                            ...(gpsSplits && gpsSplits.length ? { splits: gpsSplits } : {}),
                           };
                           await updateCompletionWeights(plan.week, plan.day, (existing) => {
                             return { ...existing, [`__cond__${name}`]: JSON.stringify(dataObj) };
@@ -9092,7 +9093,7 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
                     <DayGpsRecorder
                       isAdmin={isAdmin}
                       konditionExercises={konditionExercises}
-                      onSave={async (name, km, sec, gpsRoute) => {
+                      onSave={async (name, km, sec, gpsRoute, gpsSplits) => {
                         const totMin = sec / 60;
                         const distRounded = Math.round(km * 100) / 100;
                         const tempoMin = km > 0 ? totMin / km : 0;
@@ -9104,6 +9105,7 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
                           dist: String(distRounded),
                           tempo: tempoStr,
                           route: gpsRoute,
+                          ...(gpsSplits && gpsSplits.length ? { splits: gpsSplits } : {}),
                         };
                         await updateCompletionWeights(plan.week, plan.day, (existing) => {
                           return { ...existing, [`__cond__${name}`]: JSON.stringify(dataObj) };

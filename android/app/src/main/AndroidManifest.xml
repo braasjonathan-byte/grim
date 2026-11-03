@@ -81,6 +81,9 @@
                 android:name="android.support.FILE_PROVIDER_PATHS"
                 android:resource="@xml/file_paths"></meta-data>
         </provider>
+        <!-- GRIM_WORKOUT_SERVICES: vilotimer (shortService) och GPS-pass (location) -->
+        <service android:name="se.grim.app.GrimRestService" android:exported="false" android:foregroundServiceType="shortService" />
+        <service android:name="se.grim.app.GrimGpsService" android:exported="false" android:foregroundServiceType="location" />
         <!-- GRIM_WIDGET: hemskärms-widget (kcal) -->
         <receiver android:name="se.grim.app.GrimKcalWidget" android:exported="false" android:label="Grim kcal">
             <intent-filter>
@@ -99,6 +102,8 @@
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_LOCATION" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <uses-permission android:name="android.permission.VIBRATE" />
+    <uses-permission android:name="android.permission.WAKE_LOCK" />
     <uses-permission android:name="android.permission.BLUETOOTH_SCAN" />
     <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
     <uses-permission android:name="android.permission.BLUETOOTH" />

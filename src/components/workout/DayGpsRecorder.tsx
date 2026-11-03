@@ -12,7 +12,7 @@ import { toast } from "sonner";
 // then starts GPS tracking. On stop, saves directly to the chosen exercise.
 export const DayGpsRecorder = ({ konditionExercises, onSave, storageKey, isAdmin = false }: {
   konditionExercises: { name: string }[];
-  onSave: (name: string, km: number, sec: number, route: [number, number][]) => Promise<void> | void;
+  onSave: (name: string, km: number, sec: number, route: [number, number][], splits?: number[]) => Promise<void> | void;
   /** Stabil nyckel (t.ex. plan-id) så att vyn överlever att kortet remountas vid datauppdatering. */
   storageKey?: string;
   /** Admin får ta bort övningar ur listan. */
@@ -133,10 +133,10 @@ export const DayGpsRecorder = ({ konditionExercises, onSave, storageKey, isAdmin
               storageKey={sessionKey}
               onCancel={() => setSelectedName(null)}
 
-              onStop={async (km, sec, route) => {
+              onStop={async (km, sec, route, splits) => {
                 const name = selectedName;
                 setSelectedName(null);
-                await onSave(name, km, sec, route);
+                await onSave(name, km, sec, route, splits);
               }}
             />
           )}
