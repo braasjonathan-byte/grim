@@ -4,11 +4,15 @@ import { countTourSteps, startTour, type TourVariant } from "@/lib/tour";
 import { Sparkles, X, Apple } from "lucide-react";
 import { defaultModulesFor, getModules, setGoal, setModules, type Goal, type ModuleKey } from "@/lib/modules";
 
-const GOALS: { key: Goal; label: string; emoji: string }[] = [
-  { key: "strength", label: "Bli starkare", emoji: "🏋️" },
-  { key: "cardio", label: "Bättre kondition", emoji: "🏃" },
-  { key: "weight", label: "Gå ner / gå upp i vikt", emoji: "⚖️" },
-  { key: "general", label: "Må bra och hålla igång", emoji: "✨" },
+const GOALS: { key: Goal; label: string; emoji: string; hint: string }[] = [
+  { key: "strength", label: "Bli starkare", emoji: "🏋️", hint: "Progression, RPE och PR" },
+  { key: "cardio", label: "Bättre kondition", emoji: "🏃", hint: "GPS, intervaller och puls" },
+  { key: "weight", label: "Gå ner / gå upp i vikt", emoji: "⚖️", hint: "Kost, vikttrend och adaptivt mål" },
+  { key: "general", label: "Må bra och hålla igång", emoji: "✨", hint: "Enkla pass och vanor" },
+];
+const MODULE_ROWS: [ModuleKey, string, string][] = [
+  ["nutrition", "Kost", "Logga mat, makron och vatten"],
+  ["social", "Socialt", "Vänner, flöde och hejarop"],
 ];
 
 interface TourPromptProps {
@@ -99,35 +103,46 @@ const TourPrompt = ({ userId }: TourPromptProps) => {
 
         {mode === "welcome" && stage === "goal" && (
           <>
-            <div className="flex items-center gap-2 mb-2">
+            <p className="text-[10px] font-bold uppercase tracking-widest text-primary mb-1">Steg 1 av 2</p>
+            <div className="flex items-center gap-2 mb-1">
               <Sparkles className="w-5 h-5 text-primary" />
               <h3 className="text-base font-black font-serif text-foreground">Välkommen till GRIM!</h3>
             </div>
-            <p className="text-sm text-muted-foreground mb-3">Vad vill du främst uppnå?</p>
-            <div className="grid grid-cols-2 gap-2 mb-3">
-              {GOALS.map((g) => (
-                <button key={g.key} type="button" disabled={busy}
-                  onClick={() => { setGoalState(g.key); setMods(defaultModulesFor(g.key)); }}
-                  className={`text-left text-xs font-semibold px-3 py-2.5 border ${goal === g.key ? "border-primary bg-primary/10" : "border-border bg-secondary"}`}>
-                  <span className="mr-1">{g.emoji}</span>{g.label}
-                </button>
-              ))}
+            <p className="text-sm text-muted-foreground mb-3">Vad vill du främst uppnå? Vi anpassar menyn efter det.</p>
+            <div className="grid grid-cols-2 gap-2 mb-3" role="radiogroup" aria-label="Mål">
+              {GOALS.map((g) => {
+                const on = goal === g.key;
+                return (
+                  <button key={g.key} type="button" role="radio" aria-checked={on} disabled={busy}
+                    onClick={() => { setGoalState(g.key); setMods(defaultModulesFor(g.key)); }}
+                    className={`text-left px-3 py-2.5 border transition-colors active:scale-[0.98] ${on ? "border-primary bg-primary/10 ring-1 ring-primary" : "border-border bg-secondary hover:border-primary/40"}`}>
+                    <span className="block text-lg leading-none mb-1">{g.emoji}</span>
+                    <span className="block text-xs font-bold text-foreground">{g.label}</span>
+                    <span className="block text-[10px] text-muted-foreground leading-snug mt-0.5">{g.hint}</span>
+                  </button>
+                );
+              })}
             </div>
             {goal && (
-              <div className="space-y-1.5 mb-3">
-                <p className="text-[11px] uppercase tracking-wide text-muted-foreground font-bold">Visa i menyn</p>
-                {([["nutrition", "Kost – logga mat och makron"], ["social", "Socialt – vänner, flöde och hejarop"]] as [ModuleKey, string][]).map(([k, label]) => (
-                  <label key={k} className="flex items-center justify-between text-sm">
-                    <span>{label}</span>
-                    <input type="checkbox" className="w-5 h-5 accent-primary" checked={mods[k]} onChange={(e) => setMods((m) => ({ ...m, [k]: e.target.checked }))} />
-                  </label>
-                ))}
-                <p className="text-[10px] text-muted-foreground">Du kan ändra detta när som helst under Verktyg.</p>
+              <div className="mb-3 animate-fade-in">
+                <p className="text-[11px] uppercase tracking-wide text-muted-foreground font-bold mb-1.5">Visa i menyn <span className="normal-case font-medium tracking-normal">· förvalt för ditt mål</span></p>
+                <div className="space-y-1.5">
+                  {MODULE_ROWS.map(([k, label, desc]) => (
+                    <label key={k} className={`flex items-center justify-between gap-3 px-3 py-2 border cursor-pointer ${mods[k] ? "border-primary/40 bg-primary/5" : "border-border"}`}>
+                      <span className="min-w-0">
+                        <span className="block text-sm font-semibold">{label}</span>
+                        <span className="block text-[11px] text-muted-foreground">{desc}</span>
+                      </span>
+                      <input type="checkbox" className="w-5 h-5 accent-primary shrink-0" checked={mods[k]} onChange={(e) => setMods((m) => ({ ...m, [k]: e.target.checked }))} />
+                    </label>
+                  ))}
+                </div>
+                <p className="text-[10px] text-muted-foreground mt-1.5">Hem, Träning och Statistik finns alltid. Ändra när som helst under Verktyg.</p>
               </div>
             )}
             <button onClick={finishSetup} disabled={busy || !goal}
               className="w-full bg-primary text-primary-foreground font-bold text-sm px-4 py-2.5 active:scale-95 transition-transform disabled:opacity-50">
-              Fortsätt
+              {goal ? "Fortsätt" : "Välj ett mål"}
             </button>
             <button onClick={skip} disabled={busy} className="w-full text-xs text-muted-foreground font-medium py-2">Hoppa över</button>
           </>
@@ -135,6 +150,7 @@ const TourPrompt = ({ userId }: TourPromptProps) => {
 
         {mode === "welcome" && stage === "tour" && (
           <>
+            <p className="text-[10px] font-bold uppercase tracking-widest text-primary mb-1">Steg 2 av 2</p>
             <div className="flex items-center gap-2 mb-2">
               <Sparkles className="w-5 h-5 text-primary" />
               <h3 className="text-base font-black font-serif text-foreground">Välkommen till GRIM!</h3>
