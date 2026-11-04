@@ -3,7 +3,7 @@ import { safelyParseSets } from "@/components/ExerciseHistoryPanel";
 import { isPlausibleSet } from "@/lib/inputValidation";
 
 describe("ExerciseHistoryPanel uppvärmningsset", () => {
-  const weights = { "__setdata__Knäböj": [{ kg: 40, reps: 8 }, { kg: 100, reps: 5 }], "__settypes__Knäböj": "wwn" };
+  const weights = { "__setdata__Knäböj": [{ kg: 40, reps: 8 }, { kg: 100, reps: 5 }], "__settypes__Knäböj": "wn" };
 
   it("märker uppvärmningsset som warmup, inte som orimliga", () => {
     const sets = safelyParseSets(weights["__setdata__Knäböj"], weights["__settypes__Knäböj"]);
