@@ -164,8 +164,8 @@ const ExerciseHistoryPanel = ({
                 kind: "strength",
                 source,
                 sets,
-                topKg: Math.max(0, ...sets.filter((s) => !s.implausible).map((s) => s.kg)),
-                totalVolume: sets.filter((s) => !s.implausible).reduce((sum, s) => sum + s.kg * s.reps, 0),
+                topKg: Math.max(0, ...sets.filter((s) => !s.implausible && !s.warmup).map((s) => s.kg)),
+                totalVolume: sets.filter((s) => !s.implausible && !s.warmup).reduce((sum, s) => sum + s.kg * s.reps, 0),
                 isPr: false,
               });
             } else if (k.startsWith("__cond__")) {
@@ -190,8 +190,8 @@ const ExerciseHistoryPanel = ({
                 kind: "strength",
                 source,
                 sets,
-                topKg: Math.max(0, ...sets.filter((s) => !s.implausible).map((s) => s.kg)),
-                totalVolume: sets.filter((s) => !s.implausible).reduce((sum, s) => sum + s.kg * s.reps, 0),
+                topKg: Math.max(0, ...sets.filter((s) => !s.implausible && !s.warmup).map((s) => s.kg)),
+                totalVolume: sets.filter((s) => !s.implausible && !s.warmup).reduce((sum, s) => sum + s.kg * s.reps, 0),
                 isPr: false,
               });
             }
@@ -297,16 +297,16 @@ const ExerciseHistoryPanel = ({
         <TrendingUp className="w-3 h-3" /> {visible.length} av {totalFound} loggade pass
       </p>
       {(() => {
-        const strength = sessions.filter((x) => x.kind === "strength" && x.sets.some((st) => !st.implausible && st.reps > 0));
+        const strength = sessions.filter((x) => x.kind === "strength" && x.sets.some((st) => !st.implausible && !st.warmup && st.reps > 0));
         if (strength.length === 0) return null;
         const latest = [...strength].sort((a, b) => b.date.getTime() - a.date.getTime())[0];
-        const clean = latest.sets.filter((st) => !st.implausible);
+        const clean = latest.sets.filter((st) => !st.implausible && !st.warmup);
         const reps = clean.map((st) => st.reps).filter((r) => r > 0);
         const sug = suggestProgression(clean, reps.length ? Math.max(...reps) : undefined);
         return (
           <>
             {sug && <p className="text-[11px] font-semibold text-primary">Nästa pass: {sug.label}</p>}
-            <E1rmChart sessions={strength.map((x) => ({ date: x.date, sets: x.sets.filter((st) => !st.implausible) }))} />
+            <E1rmChart sessions={strength.map((x) => ({ date: x.date, sets: x.sets.filter((st) => !st.implausible && !st.warmup) }))} />
           </>
         );
       })()}
@@ -337,7 +337,7 @@ const ExerciseHistoryPanel = ({
                     className="text-[11px] font-mono px-2 py-0.5 rounded-md bg-card border border-border"
                   >
                     {set.reps > 0 ? `${set.reps} × ` : ""}
-                    {set.kg > 0 ? `${formatDecimal(set.kg)}kg` : "BW"}{set.implausible && <span className="ml-1 text-destructive font-semibold">{IMPLAUSIBLE_LABEL}</span>}
+                    {set.kg > 0 ? `${formatDecimal(set.kg)}kg` : "BW"}{set.warmup && <span className="ml-1 text-[9px] font-bold uppercase text-muted-foreground">U</span>}{set.implausible && !set.warmup && <span className="ml-1 text-destructive font-semibold">{IMPLAUSIBLE_LABEL}</span>}
                   </span>
                 ))}
               </div>
