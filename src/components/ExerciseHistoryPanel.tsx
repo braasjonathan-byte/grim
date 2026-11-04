@@ -11,6 +11,7 @@ import { sv } from "date-fns/locale";
 
 interface StrengthSet {
   implausible?: boolean;
+  warmup?: boolean;
   kg: number;
   reps: number;
 }
@@ -37,8 +38,8 @@ const safelyParseSets = (value: any, types = ""): StrengthSet[] => {
     const parsed = typeof value === "string" ? JSON.parse(value) : value;
     if (!Array.isArray(parsed)) return [];
     return parsed
-      // Uppvärmningsset visas men räknas inte i topp/volym/e1RM (markeras som implausible-exkluderade).
-      .map((s: any, i: number) => ({ kg: parseNum(s?.kg) || 0, reps: parseNum(s?.reps) || 0, implausible: !isPlausibleSet(s?.kg, s?.reps) || types[i] === "w" }))
+      // Uppvärmningsset visas men räknas inte i topp/volym/e1RM (egen flagga, inte "orimligt värde").
+      .map((s: any, i: number) => ({ kg: parseNum(s?.kg) || 0, reps: parseNum(s?.reps) || 0, implausible: !isPlausibleSet(s?.kg, s?.reps), warmup: types[i] === "w" }))
       .filter((s) => s.reps > 0 || s.kg > 0);
   } catch {
     return [];
