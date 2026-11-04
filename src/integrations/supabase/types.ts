@@ -14,12 +14,6 @@ export type Database = {
   }
   public: {
     Tables: {
-      progress_photos: {
-        Row: { created_at: string; id: string; note: string | null; pose: string | null; storage_path: string; taken_on: string; user_id: string }
-        Insert: { created_at?: string; id?: string; note?: string | null; pose?: string | null; storage_path: string; taken_on?: string; user_id: string }
-        Update: { created_at?: string; id?: string; note?: string | null; pose?: string | null; storage_path?: string; taken_on?: string; user_id?: string }
-        Relationships: []
-      }
       announcements: {
         Row: {
           author_id: string
@@ -482,6 +476,7 @@ export type Database = {
           magnesium_mg: number | null
           name: string
           nova_group: number | null
+          nutrition_source: string | null
           potassium_mg: number | null
           protein_g: number
           sodium_mg: number | null
@@ -503,6 +498,7 @@ export type Database = {
           magnesium_mg?: number | null
           name: string
           nova_group?: number | null
+          nutrition_source?: string | null
           potassium_mg?: number | null
           protein_g?: number
           sodium_mg?: number | null
@@ -524,6 +520,7 @@ export type Database = {
           magnesium_mg?: number | null
           name?: string
           nova_group?: number | null
+          nutrition_source?: string | null
           potassium_mg?: number | null
           protein_g?: number
           sodium_mg?: number | null
@@ -910,6 +907,8 @@ export type Database = {
       }
       foods: {
         Row: {
+          barcode: string | null
+          brand: string | null
           calcium_mg: number | null
           carbs_g: number
           created_at: string
@@ -925,6 +924,8 @@ export type Database = {
           magnesium_mg: number | null
           name: string
           nova_group: number | null
+          nutrition_source: string | null
+          off_synced_at: string | null
           potassium_mg: number | null
           protein_g: number
           sodium_mg: number | null
@@ -935,6 +936,8 @@ export type Database = {
           vitamin_d_ug: number | null
         }
         Insert: {
+          barcode?: string | null
+          brand?: string | null
           calcium_mg?: number | null
           carbs_g?: number
           created_at?: string
@@ -950,6 +953,8 @@ export type Database = {
           magnesium_mg?: number | null
           name: string
           nova_group?: number | null
+          nutrition_source?: string | null
+          off_synced_at?: string | null
           potassium_mg?: number | null
           protein_g?: number
           sodium_mg?: number | null
@@ -960,6 +965,8 @@ export type Database = {
           vitamin_d_ug?: number | null
         }
         Update: {
+          barcode?: string | null
+          brand?: string | null
           calcium_mg?: number | null
           carbs_g?: number
           created_at?: string
@@ -975,6 +982,8 @@ export type Database = {
           magnesium_mg?: number | null
           name?: string
           nova_group?: number | null
+          nutrition_source?: string | null
+          off_synced_at?: string | null
           potassium_mg?: number | null
           protein_g?: number
           sodium_mg?: number | null
@@ -1204,6 +1213,7 @@ export type Database = {
           magnesium_mg: number | null
           meal_type: string
           nova_group: number | null
+          nutrition_source: string | null
           potassium_mg: number | null
           protein_g: number
           recipe_id: string | null
@@ -1232,6 +1242,7 @@ export type Database = {
           magnesium_mg?: number | null
           meal_type?: string
           nova_group?: number | null
+          nutrition_source?: string | null
           potassium_mg?: number | null
           protein_g?: number
           recipe_id?: string | null
@@ -1260,6 +1271,7 @@ export type Database = {
           magnesium_mg?: number | null
           meal_type?: string
           nova_group?: number | null
+          nutrition_source?: string | null
           potassium_mg?: number | null
           protein_g?: number
           recipe_id?: string | null
@@ -1348,6 +1360,21 @@ export type Database = {
         }
         Relationships: []
       }
+      nutrition_complete_days: {
+        Row: {
+          log_date: string
+          user_id: string
+        }
+        Insert: {
+          log_date: string
+          user_id: string
+        }
+        Update: {
+          log_date?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       nutrition_goals: {
         Row: {
           activity_level: string
@@ -1423,6 +1450,24 @@ export type Database = {
           vitamin_d_ug?: number | null
           water_goal_ml?: number
           weekly_loss_kg?: number | null
+        }
+        Relationships: []
+      }
+      nutrition_preferences: {
+        Row: {
+          meal_allocation: Json
+          simple_view: boolean
+          user_id: string
+        }
+        Insert: {
+          meal_allocation?: Json
+          simple_view?: boolean
+          user_id: string
+        }
+        Update: {
+          meal_allocation?: Json
+          simple_view?: boolean
+          user_id?: string
         }
         Relationships: []
       }
@@ -1628,6 +1673,7 @@ export type Database = {
           referred_by: string | null
           share_plan_with_friends: boolean
           show_on_leaderboard: boolean
+          smart_push: boolean
           snapchat: string | null
           spotify_anthem_name: string | null
           spotify_anthem_url: string | null
@@ -1668,6 +1714,7 @@ export type Database = {
           referred_by?: string | null
           share_plan_with_friends?: boolean
           show_on_leaderboard?: boolean
+          smart_push?: boolean
           snapchat?: string | null
           spotify_anthem_name?: string | null
           spotify_anthem_url?: string | null
@@ -1708,6 +1755,7 @@ export type Database = {
           referred_by?: string | null
           share_plan_with_friends?: boolean
           show_on_leaderboard?: boolean
+          smart_push?: boolean
           snapchat?: string | null
           spotify_anthem_name?: string | null
           spotify_anthem_url?: string | null
@@ -1719,6 +1767,71 @@ export type Database = {
           training_days_per_week?: number | null
           user_id?: string
           weight_kg?: number | null
+        }
+        Relationships: []
+      }
+      progress_photo_shares: {
+        Row: {
+          created_at: string
+          id: string
+          owner_id: string
+          photo_id: string
+          recipient_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          owner_id: string
+          photo_id: string
+          recipient_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          owner_id?: string
+          photo_id?: string
+          recipient_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "progress_photo_shares_photo_id_fkey"
+            columns: ["photo_id"]
+            isOneToOne: false
+            referencedRelation: "progress_photos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      progress_photos: {
+        Row: {
+          created_at: string
+          id: string
+          note: string | null
+          pose: string | null
+          session_id: string | null
+          storage_path: string
+          taken_on: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          note?: string | null
+          pose?: string | null
+          session_id?: string | null
+          storage_path: string
+          taken_on?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          note?: string | null
+          pose?: string | null
+          session_id?: string | null
+          storage_path?: string
+          taken_on?: string
+          user_id?: string
         }
         Relationships: []
       }
@@ -2915,6 +3028,21 @@ export type Database = {
         Args: { p_food_id: string; p_source: string }
         Returns: undefined
       }
+      cache_off_food: {
+        Args: {
+          p_barcode: string
+          p_brand: string
+          p_carbs: number
+          p_fat: number
+          p_fiber?: number
+          p_kcal: number
+          p_name: string
+          p_nova?: number
+          p_protein: number
+          p_sugar?: number
+        }
+        Returns: string
+      }
       can_view_post: { Args: { _post_id: string }; Returns: boolean }
       count_implausible_sets: { Args: { lw: Json }; Returns: number }
       get_inactive_users_for_nudge: {
@@ -3000,6 +3128,29 @@ export type Database = {
         Returns: boolean
       }
       is_jonne: { Args: never; Returns: boolean }
+      off_food_ok: {
+        Args: {
+          p_c: number
+          p_f: number
+          p_kcal: number
+          p_name: string
+          p_p: number
+        }
+        Returns: boolean
+      }
+      pp_are_friends: { Args: { _a: string; _b: string }; Returns: boolean }
+      pp_owns_photo: {
+        Args: { _photo: string; _uid: string }
+        Returns: boolean
+      }
+      pp_path_shared_with: {
+        Args: { _path: string; _uid: string }
+        Returns: boolean
+      }
+      pp_shared_with: {
+        Args: { _photo: string; _uid: string }
+        Returns: boolean
+      }
       process_referral: {
         Args: { referral_code_input: string }
         Returns: boolean
