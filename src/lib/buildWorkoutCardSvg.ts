@@ -1,6 +1,8 @@
 export interface SvgExercise {
   name: string;
   detail: string;
+  /** Kort höjdpunkt till höger, t.ex. tyngsta setet "85 kg". */
+  highlight?: string;
 }
 
 export interface SvgStats {
@@ -87,7 +89,7 @@ export const CARD_H = 1920;
 
 const MARKER = `'Permanent Marker', cursive`;
 const SANS = `'Space Grotesk', -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif`;
-const FONT_IMPORT = `@import url('https://fonts.googleapis.com/css2?family=Permanent+Marker&family=Space+Grotesk:wght@400;500;600;700&display=swap');`;
+const FONT_IMPORT = `@import url('https://fonts.googleapis.com/css2?family=Permanent+Marker&amp;family=Space+Grotesk:wght@400;500;600;700&amp;display=swap');`;
 
 
 /* ── themes ───────────────────────────────────────── */
@@ -193,7 +195,8 @@ export function buildWorkoutCardSvg(input: SvgCardInput): string {
   const sportVisual = input.sportKey ? SPORT_VISUALS[input.sportKey] : undefined;
   // Sport accent tints light/dark cards; the primary card keeps its white accent
   const t: SvgCardTheme =
-    sportVisual && input.variant !== "primary"
+    // Mörkt tema behåller sin ljusa accent – sportfärgerna har för låg kontrast mot svart.
+    sportVisual && input.variant === "light"
       ? { ...baseTheme, accent: sportVisual.accent }
       : baseTheme;
 
@@ -271,6 +274,10 @@ export function buildWorkoutCardSvg(input: SvgCardInput): string {
       `<g transform="translate(${W - wm - 20} ${y - 90}) scale(${wm / 24})" fill="none" stroke="${t.accent}" stroke-opacity="0.10" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="${sportVisual.path}"/></g>`
     );
   }
+  // «PASS KLART» bredvid sportchipet – tydlig status direkt
+  els.push(
+    `<text x="${P + chipW + 24}" y="${y + 29}" fill="${t.subtext}" font-size="26" font-family="${SANS}" font-weight="700" letter-spacing="3" dy="0.35em">✓ PASS KLART</text>`
+  );
   y += 58 + 40;
 
   /* ── Session title (marker font, branding/heading only) ── */
@@ -291,7 +298,7 @@ export function buildWorkoutCardSvg(input: SvgCardInput): string {
   const stats = input.stats.slice(0, 4);
   if (stats.length > 0) {
     const gap = 20;
-    const perRow = stats.length <= 2 ? stats.length : 2;
+    const perRow = stats.length <= 3 ? stats.length : 2;
     const rows = Math.ceil(stats.length / perRow);
     const cw = (CW - (perRow - 1) * gap) / perRow;
     const ch = rows === 1 ? 220 : 190;
@@ -306,12 +313,12 @@ export function buildWorkoutCardSvg(input: SvgCardInput): string {
       els.push(
         `<rect x="${cx}" y="${cy}" width="${rowW}" height="${ch}" rx="34" fill="${t.panel}" fill-opacity="${t.panelOpacity}" stroke="${t.border}" stroke-opacity="${t.borderOpacity}" stroke-width="2"/>`
       );
-      const valFs = Math.min(84, Math.max(46, Math.floor((rowW - 80) / Math.max(3, s.value.length) * 1.7)));
+      const valFs = Math.min(perRow === 3 ? 72 : 84, Math.max(40, Math.floor((rowW - 80) / Math.max(3, s.value.length) * 1.7)));
       els.push(
         `<text x="${cx + 40}" y="${cy + ch - 78}" fill="${t.text}" font-size="${valFs}" font-family="${SANS}" font-weight="700" letter-spacing="-1">${esc(ellipsize(s.value, valFs, rowW - 80, 0.58))}</text>`
       );
       els.push(
-        `<text x="${cx + 40}" y="${cy + ch - 38}" fill="${t.muted}" font-size="24" font-family="${SANS}" font-weight="600" letter-spacing="3">${esc(s.label.toUpperCase())}</text>`
+        `<text x="${cx + 40}" y="${cy + ch - 38}" fill="${t.subtext}" font-size="24" font-family="${SANS}" font-weight="600" letter-spacing="3">${esc(s.label.toUpperCase())}</text>`
       );
     });
     y += rows * ch + (rows - 1) * gap + 34;
@@ -324,7 +331,7 @@ export function buildWorkoutCardSvg(input: SvgCardInput): string {
   const ip = 44;
   const headH = 96;
   const minRow = 92;
-  const maxRow = 176;
+  const maxRow = 140;
   const avail = panelH - headH - ip;
   const maxRows = Math.max(0, Math.floor(avail / minRow));
   const visible = input.exercises.slice(0, maxRows);
@@ -346,9 +353,15 @@ export function buildWorkoutCardSvg(input: SvgCardInput): string {
 
     visible.forEach((ex, idx) => {
       els.push(`<circle cx="${P + ip + 7}" cy="${ty - 11}" r="7" fill="${t.accent}"/>`);
+      const hlW = ex.highlight ? textWidth(ex.highlight, 30, 0.6) + 24 : 0;
       els.push(
-        `<text x="${P + ip + 34}" y="${ty}" fill="${t.text}" font-size="34" font-family="${SANS}" font-weight="600">${esc(ellipsize(ex.name, 34, CW - 2 * ip - 44, 0.55))}</text>`
+        `<text x="${P + ip + 34}" y="${ty}" fill="${t.text}" font-size="34" font-family="${SANS}" font-weight="600">${esc(ellipsize(ex.name, 34, CW - 2 * ip - 44 - hlW, 0.55))}</text>`
       );
+      if (ex.highlight) {
+        els.push(
+          `<text x="${P + CW - ip}" y="${ty}" fill="${t.accent}" font-size="30" font-family="${SANS}" font-weight="700" text-anchor="end">${esc(ex.highlight)}</text>`
+        );
+      }
       if (ex.detail) {
         els.push(
           `<text x="${P + ip + 34}" y="${ty + 38}" fill="${t.subtext}" font-size="26" font-family="${SANS}" font-weight="500">${esc(ellipsize(ex.detail, 26, CW - 2 * ip - 44, 0.55))}</text>`
@@ -375,10 +388,7 @@ export function buildWorkoutCardSvg(input: SvgCardInput): string {
     `<line x1="${P}" y1="${footerY - 34}" x2="${W - P}" y2="${footerY - 34}" stroke="${t.border}" stroke-opacity="${t.borderOpacity}" stroke-width="2"/>`
   );
   els.push(
-    `<text x="${P}" y="${footerY + 20}" fill="${t.text}" font-size="38" font-family="${MARKER}">Grim</text>`
-  );
-  els.push(
-    `<text x="${W / 2}" y="${footerY + 20}" fill="${t.accent}" font-size="28" font-family="${SANS}" font-weight="700" letter-spacing="2" text-anchor="middle">#BeGrim</text>`
+    `<text x="${P}" y="${footerY + 20}" fill="${t.accent}" font-size="30" font-family="${SANS}" font-weight="700" letter-spacing="2">#BeGrim</text>`
   );
   els.push(
     `<text x="${W - P}" y="${footerY + 18}" fill="${t.muted}" font-size="26" font-family="${SANS}" font-weight="500" text-anchor="end">grim.lovable.app</text>`

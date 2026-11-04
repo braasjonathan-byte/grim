@@ -113,6 +113,7 @@ const WorkoutShareCard = ({
     return d.replace(/_[a-z0-9]+$/i, "");
   };
 
+  const fmtKg = (kg: string) => String(kg).replace(".", ",");
   const formatSets = (sets: { kg: string; reps: string }[]) => {
     if (sets.length === 0) return null;
     const groups: { kg: string; reps: string; count: number }[] = [];
@@ -121,7 +122,12 @@ const WorkoutShareCard = ({
       if (last && last.kg === s.kg && last.reps === s.reps) last.count++;
       else groups.push({ ...s, count: 1 });
     });
-    return groups.map((g) => `${g.count}×${g.reps} @ ${String(g.kg).replace(".", ",")}kg`).join(", ");
+    // Kroppsvikt (0 kg) visas utan vikt: "4×8" i stället för "4×8 @ 0kg".
+    return groups.map((g) => (parseNum(g.kg) ? `${g.count}×${g.reps} · ${fmtKg(g.kg)} kg` : `${g.count}×${g.reps}`)).join("  ·  ");
+  };
+  const topKg = (sets: { kg: string }[]) => {
+    const m = Math.max(0, ...sets.map((s) => parseNum(s.kg) || 0));
+    return m > 0 ? `${fmtKg(String(Math.round(m * 100) / 100))} kg` : undefined;
   };
 
   // Build detailed exercise summaries
@@ -203,7 +209,7 @@ const WorkoutShareCard = ({
     if (totalVolume > 0)
       out.push({
         label: "Volym",
-        value: totalVolume >= 1000 ? `${(totalVolume / 1000).toFixed(1)}k kg` : `${totalVolume} kg`,
+        value: totalVolume >= 1000 ? `${(totalVolume / 1000).toFixed(1).replace(".", ",")} ton` : `${totalVolume} kg`,
       });
     if (out.length < 4 && exercises.length > 0 && !isRunning)
       out.push({ label: "Övningar", value: String(exercises.length) });
@@ -213,6 +219,7 @@ const WorkoutShareCard = ({
   const svgExercises: SvgExercise[] = exerciseSummaries.map((ex) => ({
     name: ex.name,
     detail: ex.type === "cardio" ? ex.info : ex.sets.length > 0 ? formatSets(ex.sets) || "" : ex.info,
+    highlight: ex.type === "strength" && ex.sets.length > 0 ? topKg(ex.sets) : undefined,
   }));
 
   const loadImageAsBase64 = (src: string): Promise<string> =>
