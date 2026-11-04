@@ -33,3 +33,41 @@ export function suggestProgression(last: PSet[], targetReps?: number): { kg: num
   }
   return { kg: topKg, reps: minReps + 1, label: `+1 rep (${String(topKg).replace(".", ",")} kg × ${minReps + 1})` };
 }
+
+/**
+ * RPE/RIR-styrt förslag för nästa pass (konservativt, autoreglering):
+ * - toppsetets RPE ≤ 7 (RIR ≥ 3)   → +2,5 kg (+1,25 kg ≤ 20 kg), samma reps
+ * - RPE 7,5–8,5 (RIR 1,5–2,5)      → samma vikt, +1 rep
+ * - RPE 9 (RIR 1)                  → håll vikt och reps
+ * - RPE ≥ 9,5 (RIR ≤ 0,5)          → −5 % (avrundat till 2,5 kg), samma reps
+ * Kroppsvikt (kg 0): ≤ 8,5 → +1 rep, annars håll.
+ * Returnerar null om RPE saknas för förra passets arbetsset.
+ */
+export function suggestFromRpe(
+  last: PSet[],
+  rpes: (number | null)[],
+): { kg: number; reps: number; label: string; rpe: number } | null {
+  const pairs = last
+    .map((s, i) => ({ ...s, rpe: rpes[i] ?? null }))
+    .filter((s) => s.reps > 0 && s.rpe !== null && (s.rpe as number) >= 5 && (s.rpe as number) <= 10);
+  if (!pairs.length) return null;
+  const topKg = Math.max(...pairs.map((s) => s.kg));
+  const top = pairs.filter((s) => s.kg === topKg);
+  const reps = Math.min(...top.map((s) => s.reps));
+  const rpe = Math.max(...top.map((s) => s.rpe as number));
+  const f = (n: number) => String(Math.round(n * 100) / 100).replace(".", ",");
+  if (topKg <= 0) {
+    return rpe <= 8.5
+      ? { kg: 0, reps: reps + 1, rpe, label: `+1 rep (${reps + 1})` }
+      : { kg: 0, reps, rpe, label: `Håll ${reps} reps` };
+  }
+  if (rpe <= 7) {
+    const inc = topKg <= 20 ? 1.25 : 2.5;
+    const kg = Math.round((topKg + inc) * 100) / 100;
+    return { kg, reps, rpe, label: `+${f(inc)} kg → ${f(kg)} kg × ${reps}` };
+  }
+  if (rpe <= 8.5) return { kg: topKg, reps: reps + 1, rpe, label: `+1 rep → ${f(topKg)} kg × ${reps + 1}` };
+  if (rpe < 9.5) return { kg: topKg, reps, rpe, label: `Håll ${f(topKg)} kg × ${reps}` };
+  const kg = Math.max(0, Math.round((topKg * 0.95) / 2.5) * 2.5);
+  return { kg, reps, rpe, label: `−5 % → ${f(kg)} kg × ${reps}` };
+}

@@ -58,6 +58,7 @@ import { getRestSecondsFor } from "@/lib/restTimer";
 import { getSetType, getSetTypes, withSetType, nextSetType, setLabel, getSuperset, nextSupersetLetter, shouldStartRest, supersetMembers, SET_TYPE_KEY, SUPERSET_KEY } from "@/lib/setTypes";
 import StrengthSetRowV2 from "@/components/workout/StrengthSetRowV2";
 import ExerciseLeadIn from "@/components/workout/ExerciseLeadIn";
+import { suggestFromRpe } from "@/lib/progression";
 import { formatPrevSummary, getRpes, withRpe, RPE_KEY, warmupRamp, isHeavyCompound, prependWarmups, bumpLineSets, suggestSubstitutes } from "@/lib/underPass";
 import { touchOngoingWorkout, endOngoingWorkout, cleanupStaleOngoingWorkout } from "@/lib/workoutOngoing";
 import { summarizeCompletion, type WorkoutSummary } from "@/lib/workoutSummary";
@@ -2781,6 +2782,29 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
 
     candidates.sort((a, b) => a.sort - b.sort);
     return candidates[candidates.length - 1]?.data ?? [];
+  };
+
+  // RPE från samma (senaste) pass som findLastSetData, alignat mot arbetsset (utan uppvärmning).
+  const findLastWorkRpes = (exerciseName: string): (number | null)[] => {
+    const cands: Array<{ sort: number; w: Record<string, any> }> = [];
+    archivedCompletions.forEach((a, index) => {
+      const w = a.logged_weights as Record<string, any> | null;
+      if (w && getExerciseSetDataFromWeights(w, exerciseName, { skipWarmups: true }).length) cands.push({ sort: -1000000 + index, w });
+    });
+    Object.entries(completions).forEach(([key, comp], index) => {
+      if (!comp?.done) return;
+      const w = comp.logged_weights as Record<string, any> | null;
+      if (!w || !getExerciseSetDataFromWeights(w, exerciseName, { skipWarmups: true }).length) return;
+      const [weekRaw, ...dayParts] = key.split("-");
+      cands.push({ sort: getCompletionSortValue(Number(comp.week ?? weekRaw), comp.day ?? dayParts.join("-"), index), w });
+    });
+    if (!cands.length) return [];
+    cands.sort((a, b) => a.sort - b.sort);
+    const w = cands[cands.length - 1].w;
+    const types = getSetTypes(w, exerciseName);
+    return getRpes(w, exerciseName)
+      .filter((_, i) => types[i] !== "w")
+      .map((r) => { const n = parseFloat(String(r).replace(",", ".")); return isNaN(n) ? null : n; });
   };
 
   const findLastWeight = (exerciseName: string, targetReps?: number): string | null => {
@@ -8505,7 +8529,22 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
                                     const firstHeavyIdx = parts.findIndex((x) => isHeavyCompound(parseExerciseWeight(x).name));
                                     const workKgNum = parseNum(planSetData.find((x) => x?.kg)?.kg || defKg || prevSets.find((x) => x.kg)?.kg || "");
                                     const ramp = !isBodyweight && !isWeightedBw && firstHeavyIdx === i && !typesHere.includes("w") && !setsStrPlan.includes("1") ? warmupRamp(workKgNum) : [];
-                                    const leadIn = <ExerciseLeadIn key="leadin" prevSummary={prevSummary} ramp={ramp} onAddRamp={() => { void addWarmupRamp(plan.id, i, partName, plan.week, plan.day, ramp, setsCountPlan); }} />;
+                                    const rpeSug = suggestFromRpe(prevSets.map((x) => ({ kg: parseNum(x.kg || "0") || 0, reps: parseNum(x.reps || "0") || 0 })), findLastWorkRpes(partName));
+                                    const leadIn = <ExerciseLeadIn key="leadin" prevSummary={prevSummary} ramp={ramp} onAddRamp={() => { void addWarmupRamp(plan.id, i, partName, plan.week, plan.day, ramp, setsCountPlan); }}
+                                      rpeSuggestion={rpeSug && !setsStrPlan.includes("1") ? { label: rpeSug.label, rpe: rpeSug.rpe } : null}
+                                      onAcceptRpe={rpeSug ? () => { void updateCompletionWeights(plan.week, plan.day, (existing) => {
+                                        const types = getSetTypes(existing, partName);
+                                        let cur: Array<{ kg: string; reps: string }> = [];
+                                        try { const raw = existing[`__setdata__${partName}`]; cur = typeof raw === "string" ? JSON.parse(raw) : (Array.isArray(raw) ? raw : []); } catch { cur = []; }
+                                        const data = Array.from({ length: setsCountPlan }, (_, k) => {
+                                          const c = cur[k] || { kg: "", reps: "" };
+                                          if (types[k] === "w") return c;
+                                          return { ...c, kg: rpeSug.kg > 0 ? String(rpeSug.kg) : (c.kg || ""), reps: String(rpeSug.reps) };
+                                        });
+                                        const out = { ...existing, [`__setdata__${partName}`]: JSON.stringify(data) };
+                                        delete out[`__copied_ex__${partName}`];
+                                        return out;
+                                      }); toast.success("Förslaget ifyllt – justera fritt"); } : undefined} />;
                                      return [leadIn, v2Header, ...Array.from({ length: setsCountPlan }, (_, si) => {
                                        // Read bw mode per set, fall back to exercise-level for backward compat
                                        const bwModeKeySet = `__bw_mode__${partName}__${si}`;
