@@ -33,7 +33,7 @@ interface HistorySession {
   };
 }
 
-const safelyParseSets = (value: any, types = ""): StrengthSet[] => {
+export const safelyParseSets = (value: any, types = ""): StrengthSet[] => {
   try {
     const parsed = typeof value === "string" ? JSON.parse(value) : value;
     if (!Array.isArray(parsed)) return [];
