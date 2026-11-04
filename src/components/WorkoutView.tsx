@@ -1593,7 +1593,7 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
     // compared to what we know is already stored in the backend.
     const nextCount = countCheckmarks(payload.logged_weights, !!payload.done);
     const destructive = detectDestructiveWrite(getKnownCheckmarkCount(userId, week, day), nextCount);
-    if (destructive) {
+    if (destructive && !(typeof navigator !== "undefined" && navigator.onLine === false)) {
       const { data: serverRow } = await supabase
         .from("workout_completions")
         .select("done, logged_weights")
@@ -1625,10 +1625,13 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
     // Mirror into the offline snapshot so a reload without coverage still shows it
     patchOfflineWorkoutCache(userId, upsertData as any);
 
-    const { error } = await supabase.from("workout_completions").upsert(
-      upsertData as any,
-      { onConflict: "user_id,week,day" }
-    );
+    // Offline: lita på kön (synkas när nät finns) i stället för att vänta på ett anrop som timeoutar.
+    const { error } = (typeof navigator !== "undefined" && navigator.onLine === false)
+      ? { error: { message: "offline" } as any }
+      : await supabase.from("workout_completions").upsert(
+          upsertData as any,
+          { onConflict: "user_id,week,day" }
+        );
 
     // If network save succeeded, remove the queued fallback so it can never be replayed later
     if (!error) {

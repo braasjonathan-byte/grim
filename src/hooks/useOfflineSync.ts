@@ -12,6 +12,9 @@ interface PendingUpsert {
 const QUEUE_KEY = "grim_offline_queue";
 /** Queued writes older than this are considered stale and are discarded. */
 const MAX_AGE_MS = 24 * 60 * 60 * 1000;
+/** Träningsloggar får vänta längre (flera dagar utan täckning) – replay skyddas av isSafeToReplay. */
+const MAX_AGE_WORKOUT_MS = 7 * 24 * 60 * 60 * 1000;
+const maxAgeFor = (table: string) => (table === "workout_completions" ? MAX_AGE_WORKOUT_MS : MAX_AGE_MS);
 
 function getQueue(): PendingUpsert[] {
   try {
@@ -153,16 +156,24 @@ async function isSafeToReplay(item: PendingUpsert): Promise<boolean> {
 /** Dispatched after queued workout_completions rows have been replayed, so open views can refetch instead of showing a pre-flush snapshot. */
 export const OFFLINE_FLUSHED_EVENT = "grim:offline-queue-flushed";
 
+let flushing = false;
 async function flushQueue() {
+  if (flushing) return;
+  if (typeof navigator !== "undefined" && navigator.onLine === false) return;
   const queue = getQueue();
   if (queue.length === 0) return;
+  flushing = true;
+  try { await flushQueueInner(queue); } finally { flushing = false; }
+}
+
+async function flushQueueInner(queue: PendingUpsert[]) {
 
   const now = Date.now();
   const remaining: PendingUpsert[] = [];
   let replayedWorkoutRows = 0;
 
   for (const item of queue) {
-    if (!item.timestamp || now - item.timestamp > MAX_AGE_MS) {
+    if (!item.timestamp || now - item.timestamp > maxAgeFor(item.table)) {
       // Too old to trust — dropping is safer than overwriting newer data.
       console.warn("[Grim][offline-queue] discarding stale queued write", item.table);
       continue;
@@ -191,7 +202,10 @@ async function flushQueue() {
     }
   }
 
-  saveQueue(remaining);
+  // Behåll skrivningar som köades medan flushen pågick (nyare per rad vinner).
+  const added = getQueue().filter((q) => !queue.some((o) => o.timestamp === q.timestamp && o.table === q.table && JSON.stringify(o.data) === JSON.stringify(q.data)));
+  const merged = remaining.filter((r) => !added.some((a) => a.table === "workout_completions" && r.table === a.table && a.data.user_id === r.data.user_id && a.data.week === r.data.week && a.data.day === r.data.day));
+  saveQueue([...merged, ...added]);
 
   // Tell open views that queued rows reached the backend, so they refetch
   // instead of keeping a snapshot that was fetched before the replay landed.
