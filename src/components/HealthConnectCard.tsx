@@ -49,6 +49,7 @@ import {
   type BackgroundSyncState,
 } from "@/lib/healthSync";
 import { isHealthWriteEnabled, setHealthWriteEnabled, syncGrimWorkoutsToHealth } from "@/lib/healthWriteSync";
+import { isNutritionWriteEnabled, setNutritionWriteEnabled, syncNutritionToHealth, requestNutritionWriteAccess } from "@/lib/nutritionHealthWrite";
 import { findImportedHealthWorkouts, healthWorkoutDayKey, importHealthWorkouts, relocateHealthImports, cleanupHealthImportDetails } from "@/lib/healthWorkoutImport";
 
 const WEEKDAYS = ["sön", "mån", "tis", "ons", "tor", "fre", "lör"];
@@ -402,6 +403,29 @@ const HealthConnectCard = () => {
     }
   }, [userId, writeEnabled, writeAccess, reportError]);
 
+  const [nutOn, setNutOn] = useState<boolean>(isNutritionWriteEnabled);
+  const [nutBusy, setNutBusy] = useState(false);
+  const toggleNutrition = useCallback(async () => {
+    if (!userId) return;
+    setNutBusy(true);
+    try {
+      if (nutOn) {
+        setNutritionWriteEnabled(false); setNutOn(false);
+        toast.message("Grim slutar spara kost och vatten i Health Connect.");
+        return;
+      }
+      const ok = await requestNutritionWriteAccess();
+      if (!ok) { toast.error("Behörighet för kost/vatten saknas i Health Connect."); return; }
+      setNutritionWriteEnabled(true); setNutOn(true);
+      const r = await syncNutritionToHealth(userId);
+      toast.success(r.written > 0 ? `${r.written} kost-/vattenposter sparade i Health Connect` : "Kost och vatten sparas nu i Health Connect");
+    } catch (err) {
+      reportError(err, "Kunde inte slå på kost/vatten till Health Connect");
+    } finally {
+      setNutBusy(false);
+    }
+  }, [userId, nutOn, reportError]);
+
   const toggleBackground = useCallback(async () => {
     setBgBusy(true);
     try {
@@ -509,6 +533,16 @@ const HealthConnectCard = () => {
               </span>
               <Button size="sm" variant="outline" className="shrink-0 rounded-full" disabled={writeBusy || !userId} onClick={() => void toggleWrite()}>
                 {writeBusy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : writeEnabled ? "Stäng av" : "Slå på"}
+              </Button>
+            </div>
+          )}
+          {writeSupported && (
+            <div className="flex items-center justify-between gap-2 border-t border-border/40 pt-2 text-xs">
+              <span className={nutOn ? "" : "text-muted-foreground"}>
+                {nutOn ? "Kost och vatten sparas i Health Connect (summa per måltid/dag)." : "Spara kost och vatten i Health Connect (frivilligt)."}
+              </span>
+              <Button size="sm" variant="outline" className="shrink-0 rounded-full" disabled={nutBusy || !userId} onClick={() => void toggleNutrition()}>
+                {nutBusy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : nutOn ? "Stäng av" : "Slå på"}
               </Button>
             </div>
           )}

@@ -169,6 +169,9 @@ const HEALTH_PERMS = [
   "android.permission.health.READ_WEIGHT",
   "android.permission.health.READ_RESTING_HEART_RATE",
   "android.permission.health.READ_HEALTH_DATA_IN_BACKGROUND",
+  // GRIM_HC_NUTRITION: kost och vatten skrivs till Health Connect (frivilligt).
+  "android.permission.health.WRITE_NUTRITION",
+  "android.permission.health.WRITE_HYDRATION",
 ];
 
 

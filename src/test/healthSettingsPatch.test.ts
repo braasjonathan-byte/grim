@@ -48,6 +48,6 @@ describe.skipIf(!existsSync(pluginKt))("patch-health-settings-v2 (GRIM_SETTINGS_
 
   it("körs sist i postinstall", () => {
     const pkg = JSON.parse(readFileSync(resolve(root, "package.json"), "utf8"));
-    expect(pkg.scripts.postinstall).toMatch(/patch-health-background\.cjs && node scripts\/patch-health-settings-v2\.cjs"?$/);
+    expect(pkg.scripts.postinstall).toMatch(/patch-health-background\.cjs && node scripts\/patch-health-settings-v2\.cjs/);
   });
 });

@@ -31,6 +31,7 @@ import {
 
 } from "@/lib/healthSync";
 import { syncGrimWorkoutsToHealth } from "@/lib/healthWriteSync";
+import { syncNutritionToHealth } from "@/lib/nutritionHealthWrite";
 import { ACHIEVEMENTS, calculateAchievementMetrics, getAchievementById } from "@/lib/achievements";
 import { syncAchievements } from "@/lib/achievementSync";
 import { toLocalDateKey } from "@/lib/dateUtils";
@@ -180,6 +181,11 @@ const HomeView = ({ userId, onNavigate, isHonorary = false }: HomeViewProps) => 
           if (w.written + w.deleted + w.failed > 0) healthLog("home write sync", w);
         } catch (err) {
           recordHealthSyncError("home health write", err);
+        }
+        try {
+          await syncNutritionToHealth(userId);
+        } catch (err) {
+          recordHealthSyncError("home nutrition write", err);
         }
       })();
     };
