@@ -2,7 +2,6 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toLocalDateKey } from "@/lib/dateUtils";
 import { TrendingUp, Info, Check } from "lucide-react";
-import { Switch } from "@/components/ui/switch";
 import { toast } from "@/hooks/use-toast";
 import { showUndoToast } from "@/lib/undoToast";
 import {
@@ -14,11 +13,14 @@ interface Props {
   currentKcal: number;
   hasGoals: boolean;
   onApplied: () => void;
+  enabled: boolean;
 }
 
 type Applied = { date: string; from: number; to: number };
 const CHECKIN_KEY = "grim_tdee_checkin_v1";
 export const ADAPTIVE_ENABLED_KEY = "grim_adaptive_tdee_enabled_v1";
+export function readAdaptiveEnabled(): boolean { try { return localStorage.getItem(ADAPTIVE_ENABLED_KEY) !== "0"; } catch { return true; } }
+export function writeAdaptiveEnabled(v: boolean) { try { localStorage.setItem(ADAPTIVE_ENABLED_KEY, v ? "1" : "0"); } catch { /* ignore */ } }
 /** Veckovis incheckning: visas om ≥7 dagar sedan senaste (godkänd eller avböjd). */
 export function checkinDue(lastIso: string | null, now = new Date()): boolean {
   if (!lastIso) return true;
@@ -27,12 +29,10 @@ export function checkinDue(lastIso: string | null, now = new Date()): boolean {
 }
 
 /** Adaptiv TDEE: räknar om kcal-målet från vikttrend + faktiskt intag. */
-export default function AdaptiveTdeeCard({ userId, currentKcal, hasGoals, onApplied }: Props) {
+export default function AdaptiveTdeeCard({ userId, currentKcal, hasGoals, onApplied, enabled }: Props) {
   const [res, setRes] = useState<AdaptiveTdeeResult | null>(null);
   const [goal, setGoal] = useState<{ goal_type: string; weekly_loss_kg: number | null; protein_g: number; fat_g: number } | null>(null);
   const [showInfo, setShowInfo] = useState(false);
-  const [enabled, setEnabled] = useState<boolean>(() => { try { return localStorage.getItem(ADAPTIVE_ENABLED_KEY) !== "0"; } catch { return true; } });
-  const toggleEnabled = (v: boolean) => { try { localStorage.setItem(ADAPTIVE_ENABLED_KEY, v ? "1" : "0"); } catch { /* ignore */ } setEnabled(v); };
   const [lastCheckin, setLastCheckin] = useState<string | null>(() => { try { return localStorage.getItem(CHECKIN_KEY); } catch { return null; } });
   const markCheckin = () => { const v = new Date().toISOString(); try { localStorage.setItem(CHECKIN_KEY, v); } catch { /* ignore */ } setLastCheckin(v); };
   const [applied, setApplied] = useState<Applied | null>(() => {
@@ -91,8 +91,7 @@ export default function AdaptiveTdeeCard({ userId, currentKcal, hasGoals, onAppl
     <div className="rounded-2xl bg-card shadow-soft border border-border/40 p-3 space-y-2">
       <div className="flex items-center gap-2">
         <p className="text-xs font-bold flex items-center gap-1.5"><TrendingUp className="w-3.5 h-3.5 text-primary" /> Adaptiv förbrukning</p>
-        <button onClick={() => setShowInfo((v) => !v)} aria-label="Hur fungerar det?" className="text-muted-foreground"><Info className="w-3.5 h-3.5" /></button>
-        <Switch className="ml-auto" checked={enabled} onCheckedChange={toggleEnabled} aria-label="Adaptiv förbrukning på/av" />
+        <button onClick={() => setShowInfo((v) => !v)} aria-label="Hur fungerar det?" className="ml-auto text-muted-foreground"><Info className="w-3.5 h-3.5" /></button>
       </div>
       {showInfo && (
         <p className="text-[11px] text-muted-foreground leading-snug">
@@ -107,7 +106,7 @@ export default function AdaptiveTdeeCard({ userId, currentKcal, hasGoals, onAppl
         </p>
       )}
       {!enabled || !res ? (
-        <p className="text-[11px] text-muted-foreground">Av – ditt kcal-mål ({currentKcal} kcal) används som det är, utan adaptiv justering.</p>
+        <p className="text-[11px] text-muted-foreground">Av (ändra under Mer) – ditt kcal-mål ({currentKcal} kcal) används som det är, utan adaptiv justering.</p>
       ) : !res.ok ? (
         <p className="text-[11px] text-muted-foreground">{res.reason} – sedan räknar vi ut din verkliga förbrukning.</p>
       ) : (

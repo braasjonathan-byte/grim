@@ -8,13 +8,14 @@ import { loadStoredHealthDays } from "@/lib/healthSync";
 import { firstClick, exclusive } from "@/lib/clickGuard";
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { ChevronLeft, ChevronRight, Plus, Target, Trash2, Pencil, GripVertical, ChefHat, Bookmark, MoreHorizontal, CopyPlus, Zap, BookmarkPlus, ArrowRightLeft, Copy, Sparkles, Flame } from "lucide-react";
+import { ChevronLeft, ChevronRight, Plus, Target, Trash2, Pencil, GripVertical, ChefHat, Bookmark, MoreHorizontal, CopyPlus, Zap, BookmarkPlus, ArrowRightLeft, Copy, Sparkles, Flame, TrendingUp } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 
 import NutritionHero from "./NutritionHero";
 import { syncWidgetNutrition, syncWidgetWeek } from "@/lib/nutritionWidget";
 import FoodPickerDialog, { PickedItem } from "./FoodPickerDialog";
-import AdaptiveTdeeCard from "./AdaptiveTdeeCard";
+import AdaptiveTdeeCard, { readAdaptiveEnabled, writeAdaptiveEnabled } from "./AdaptiveTdeeCard";
+import { Switch } from "@/components/ui/switch";
 import MealSuggestions, { slotForNow } from "./MealSuggestions";
 import RecipeEditor from "./RecipeEditor";
 import NutritionGoalsDialog from "./NutritionGoalsDialog";
@@ -216,6 +217,7 @@ export default function NutritionView({ userId, isHonorary: isHonoraryProp = fal
   const [curatedOpen, setCuratedOpen] = useState(false);
   const [curatedTargetMeal, setCuratedTargetMeal] = useState<string | null>(null);
   const [pendingRecipe, setPendingRecipe] = useState<PickedItem | null>(null);
+  const [adaptiveOn, setAdaptiveOn] = useState<boolean>(readAdaptiveEnabled);
   const [goalsOpen, setGoalsOpen] = useState(false);
   const [addNameOpen, setAddNameOpen] = useState(false);
   const [renameIdx, setRenameIdx] = useState<number | null>(null);
@@ -606,6 +608,11 @@ export default function NutritionView({ userId, isHonorary: isHonoraryProp = fal
             <DropdownMenuItem onClick={() => setTemplatesOpen(true)}><Bookmark className="w-3.5 h-3.5 mr-2" /> Mallar</DropdownMenuItem>
             <DropdownMenuItem onClick={() => { hapticLight(); setPastOpen(true); }}><CopyPlus className="w-3.5 h-3.5 mr-2" /> Kopiera från senaste veckan</DropdownMenuItem>
             <DropdownMenuItem onClick={() => setAddNameOpen(true)}><Plus className="w-3.5 h-3.5 mr-2" /> Lägg till måltid</DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem onSelect={(e) => { e.preventDefault(); const v = !adaptiveOn; writeAdaptiveEnabled(v); setAdaptiveOn(v); }} className="flex items-center gap-2">
+              <TrendingUp className="w-3.5 h-3.5" /> <span className="flex-1">Adaptiv förbrukning</span>
+              <Switch checked={adaptiveOn} aria-label="Adaptiv förbrukning på/av" className="pointer-events-none" />
+            </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
@@ -624,7 +631,7 @@ export default function NutritionView({ userId, isHonorary: isHonoraryProp = fal
           {loaded && !hasGoals && <p className="text-[11px] text-muted-foreground text-center mt-2">Standardmål 2000 kcal – öppna <b>Mer → Mål</b> och fyll i ålder, vikt och längd så räknar vi ut ditt eget behov.</p>}
         </div>
 
-        {loaded && <AdaptiveTdeeCard userId={userId} currentKcal={targets.kcal} hasGoals={hasGoals} onApplied={load} />}
+        {loaded && <AdaptiveTdeeCard userId={userId} currentKcal={targets.kcal} hasGoals={hasGoals} onApplied={load} enabled={adaptiveOn} />}
 
         <FastingWidget userId={userId} />
 
