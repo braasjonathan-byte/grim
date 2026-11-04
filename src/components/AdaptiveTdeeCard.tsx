@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toLocalDateKey } from "@/lib/dateUtils";
 import { TrendingUp, Info, Check } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
 import { toast } from "@/hooks/use-toast";
 import { showUndoToast } from "@/lib/undoToast";
 import {
@@ -17,6 +18,7 @@ interface Props {
 
 type Applied = { date: string; from: number; to: number };
 const CHECKIN_KEY = "grim_tdee_checkin_v1";
+export const ADAPTIVE_ENABLED_KEY = "grim_adaptive_tdee_enabled_v1";
 /** Veckovis incheckning: visas om ≥7 dagar sedan senaste (godkänd eller avböjd). */
 export function checkinDue(lastIso: string | null, now = new Date()): boolean {
   if (!lastIso) return true;
@@ -29,6 +31,8 @@ export default function AdaptiveTdeeCard({ userId, currentKcal, hasGoals, onAppl
   const [res, setRes] = useState<AdaptiveTdeeResult | null>(null);
   const [goal, setGoal] = useState<{ goal_type: string; weekly_loss_kg: number | null; protein_g: number; fat_g: number } | null>(null);
   const [showInfo, setShowInfo] = useState(false);
+  const [enabled, setEnabled] = useState<boolean>(() => { try { return localStorage.getItem(ADAPTIVE_ENABLED_KEY) !== "0"; } catch { return true; } });
+  const toggleEnabled = (v: boolean) => { try { localStorage.setItem(ADAPTIVE_ENABLED_KEY, v ? "1" : "0"); } catch { /* ignore */ } setEnabled(v); };
   const [lastCheckin, setLastCheckin] = useState<string | null>(() => { try { return localStorage.getItem(CHECKIN_KEY); } catch { return null; } });
   const markCheckin = () => { const v = new Date().toISOString(); try { localStorage.setItem(CHECKIN_KEY, v); } catch { /* ignore */ } setLastCheckin(v); };
   const [applied, setApplied] = useState<Applied | null>(() => {
@@ -37,6 +41,7 @@ export default function AdaptiveTdeeCard({ userId, currentKcal, hasGoals, onAppl
 
   useEffect(() => {
     let cancelled = false;
+    if (!enabled) return;
     (async () => {
       const since = new Date(); since.setDate(since.getDate() - ADAPTIVE_WINDOW_DAYS);
       const sinceKey = toLocalDateKey(since);
@@ -53,9 +58,9 @@ export default function AdaptiveTdeeCard({ userId, currentKcal, hasGoals, onAppl
       setGoal(g.data as any);
     })();
     return () => { cancelled = true; };
-  }, [userId, currentKcal]);
+  }, [userId, currentKcal, enabled]);
 
-  if (!res || !hasGoals) return null;
+  if (!hasGoals || (enabled && !res)) return null;
 
   const suggested = res.ok && res.tdee ? adaptiveTarget(res.tdee, goal?.goal_type || "maintain", goal?.weekly_loss_kg) : null;
   const diff = suggested != null ? suggested - currentKcal : 0;
@@ -84,9 +89,10 @@ export default function AdaptiveTdeeCard({ userId, currentKcal, hasGoals, onAppl
 
   return (
     <div className="rounded-2xl bg-card shadow-soft border border-border/40 p-3 space-y-2">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center gap-2">
         <p className="text-xs font-bold flex items-center gap-1.5"><TrendingUp className="w-3.5 h-3.5 text-primary" /> Adaptiv förbrukning</p>
         <button onClick={() => setShowInfo((v) => !v)} aria-label="Hur fungerar det?" className="text-muted-foreground"><Info className="w-3.5 h-3.5" /></button>
+        <Switch className="ml-auto" checked={enabled} onCheckedChange={toggleEnabled} aria-label="Adaptiv förbrukning på/av" />
       </div>
       {showInfo && (
         <p className="text-[11px] text-muted-foreground leading-snug">
@@ -95,7 +101,14 @@ export default function AdaptiveTdeeCard({ userId, currentKcal, hasGoals, onAppl
           Dagar under 800 kcal räknas som ofullständigt loggade och hoppas över. Ju mer du loggar och väger dig, desto säkrare.
         </p>
       )}
-      {!res.ok ? (
+      {showInfo && (
+        <p className="text-[11px] text-muted-foreground leading-snug">
+          <b>På:</b> vi räknar ut din verkliga förbrukning och föreslår veckovis justering av kcal-målet (du godkänner alltid själv). <b>Av:</b> ditt kcal-mål ligger fast som du satt det – inga beräkningar eller förslag.
+        </p>
+      )}
+      {!enabled || !res ? (
+        <p className="text-[11px] text-muted-foreground">Av – ditt kcal-mål ({currentKcal} kcal) används som det är, utan adaptiv justering.</p>
+      ) : !res.ok ? (
         <p className="text-[11px] text-muted-foreground">{res.reason} – sedan räknar vi ut din verkliga förbrukning.</p>
       ) : (
         <>
