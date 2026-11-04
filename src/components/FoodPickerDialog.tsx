@@ -36,6 +36,7 @@ import { MICRO_SELECT, microsFromOFF, pickMicros, scaleMicros, type Micros } fro
 import { usageKey, type UsageMap } from "@/lib/foodRanking";
 import { searchFoods } from "@/lib/foodSearch";
 import { saveProductFood } from "@/lib/saveProductFood";
+import { hapticLight } from "@/lib/haptics";
 
 // Livsmedelsbanken (~2,5k rader) laddas en gång och söks lokalt med ordbaserad matchning.
 let foodsCache: Promise<any[]> | null = null;
@@ -134,6 +135,7 @@ export default function FoodPickerDialog({ open, onOpenChange, onPick, userId, h
 
   const [usage, setUsage] = useState<UsageMap>(new Map());
   const [personal, setPersonal] = useState<FoodRow[]>([]);
+  const [frequentKeys, setFrequentKeys] = useState<Set<string>>(new Set());
 
   // Load personal usage stats + build "Dina vanliga" list
   useEffect(() => {
@@ -167,6 +169,8 @@ export default function FoodPickerDialog({ open, onOpenChange, onPick, userId, h
       for (const c of (cR.data || []) as any[]) byKey.set(usageKey("custom_food", c.id), { ...c, source: "custom_food" });
       for (const r of (rR.data || []) as any[]) byKey.set(usageKey("recipe", r.id), recipeRow(r));
       setPersonal(picks.map((p) => byKey.get(usageKey(p.food_source, p.food_id))).filter(Boolean) as FoodRow[]);
+      // «Frekventa» = mest använda (≥ 2 gånger), oavsett om de även är nyligen använda.
+      setFrequentKeys(new Set([...data].sort((a, b) => b.use_count - a.use_count).filter((u) => u.use_count >= 2).slice(0, 8).map((u) => usageKey(u.food_source, u.food_id))));
     })();
     return () => { cancelled = true; };
   }, [open, userId, hideRecipes]);
@@ -432,6 +436,57 @@ export default function FoodPickerDialog({ open, onOpenChange, onPick, userId, h
     sonnerToast.success("Livsmedlet raderat");
   }
 
+  /** 1-tryck: lägg till med senast använda mängd utan att öppna mängdsteget (inte OFF-träffar). */
+  const quickAmountFor = (r: FoodRow): { amount: string; unit: string } | null => {
+    if (r.source === "off") return null;
+    if (r.source === "recipe") return { amount: "1", unit: "portion" };
+    const last = readLastAmounts()[`${r.source}:${r.name.toLowerCase()}`];
+    return last && parseDecimal(last.amount) > 0 ? last : null;
+  };
+  const quickAdd = (r: FoodRow) => {
+    const q = quickAmountFor(r);
+    if (!q) { pick(r); return; }
+    const a = parseDecimal(q.amount);
+    const factor = r.source === "recipe" ? a : gramsForFood(a, q.unit, r.name, r.piece_g, r.density_g_per_dl) / 100;
+    if (!(factor > 0)) { pick(r); return; }
+    hapticLight();
+    onPick({
+      source: r.source as PickedItem["source"], id: r.id, name: r.name, amount: a,
+      unit: r.source === "recipe" ? "portion" : q.unit,
+      kcal: r.kcal * factor, protein_g: r.protein_g * factor, fat_g: r.fat_g * factor, carbs_g: r.carbs_g * factor,
+      fiber_g: (Number(r.fiber_g) || 0) * factor, micros: scaleMicros(pickMicros(r), factor),
+      nova_group: (r as any).nova_group ?? null, sugar_g: r.sugar_g != null ? Number(r.sugar_g) * factor : null,
+    }, { keepOpen: true });
+    setAddedCount((c) => c + 1); setLastAdded(r.name);
+    const key = usageKey(r.source, r.id);
+    setUsage((m) => { const n = new Map(m); n.set(key, { count: (m.get(key)?.count || 0) + 1, last: Date.now() }); return n; });
+    supabase.rpc("bump_food_usage", { p_source: r.source, p_food_id: r.id }).then(({ error }) => { if (error) console.error("bump_food_usage failed", error); });
+  };
+
+  const renderPersonalRow = (r: FoodRow) => {
+    if (deletedIds.has(r.id)) return null;
+    const q = quickAmountFor(r);
+    const count = usage.get(usageKey(r.source, r.id))?.count || 0;
+    return (
+      <li key={`p-${r.source}-${r.id}`} className="flex items-center gap-2">
+        <button onClick={() => pick(r)} className="flex-1 min-w-0 text-left py-2.5 px-1 hover:bg-accent rounded-lg">
+          <p className="text-sm font-medium truncate">{r.name}</p>
+          <p className="text-[11px] text-muted-foreground tabular-nums">
+            {Math.round(r.kcal)} kcal / {r.source === "recipe" ? "portion" : "100 g"}{count > 1 ? ` · ${count}×` : ""}
+          </p>
+        </button>
+        {q ? (
+          <button onClick={() => quickAdd(r)} aria-label={`Lägg till ${q.amount} ${q.unit} ${r.name}`}
+            className="shrink-0 inline-flex items-center gap-1 rounded-full bg-primary/15 text-primary px-3 py-1.5 text-xs font-semibold tabular-nums active:scale-95 transition-transform">
+            <Plus className="w-3.5 h-3.5" /> {q.amount} {q.unit === "portion" ? "port." : q.unit}
+          </button>
+        ) : (
+          <button onClick={() => pick(r)} aria-label={`Välj ${r.name}`} className="shrink-0 p-2 text-primary"><Plus className="w-4 h-4" /></button>
+        )}
+      </li>
+    );
+  };
+
   const renderRow = (r: FoodRow) => deletedIds.has(r.id) ? null : (
     <li key={`${r.source}-${r.id}`} className="flex items-stretch">
       <button onClick={() => pick(r)} className="flex-1 text-left py-2.5 px-1 hover:bg-accent flex items-start justify-between gap-2 min-w-0">
@@ -522,8 +577,14 @@ export default function FoodPickerDialog({ open, onOpenChange, onPick, userId, h
               )}
               {showPersonal && (
                 <>
-                  <p className="text-[11px] font-bold uppercase tracking-wide text-muted-foreground pt-1 pb-1">Senaste & dina vanliga</p>
-                  <ul className="divide-y divide-border mb-3">{personal.map(renderRow)}</ul>
+                  {personal.some((r) => frequentKeys.has(usageKey(r.source, r.id))) && (<>
+                    <p className="text-[11px] font-bold uppercase tracking-wide text-primary pt-1 pb-1">Frekventa · 1 tryck</p>
+                    <ul className="divide-y divide-border mb-3">{personal.filter((r) => frequentKeys.has(usageKey(r.source, r.id))).map(renderPersonalRow)}</ul>
+                  </>)}
+                  {personal.some((r) => !frequentKeys.has(usageKey(r.source, r.id))) && (<>
+                    <p className="text-[11px] font-bold uppercase tracking-wide text-muted-foreground pt-1 pb-1">Senaste</p>
+                    <ul className="divide-y divide-border mb-3">{personal.filter((r) => !frequentKeys.has(usageKey(r.source, r.id))).map(renderPersonalRow)}</ul>
+                  </>)}
                   <p className="text-[11px] font-bold uppercase tracking-wide text-muted-foreground pb-1">Alla livsmedel</p>
                 </>
               )}
