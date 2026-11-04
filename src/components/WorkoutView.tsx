@@ -59,6 +59,7 @@ import { getSetType, getSetTypes, withSetType, nextSetType, setLabel, getSuperse
 import StrengthSetRowV2 from "@/components/workout/StrengthSetRowV2";
 import ExerciseLeadIn from "@/components/workout/ExerciseLeadIn";
 import { suggestFromRpe } from "@/lib/progression";
+import { useExerciseFormState, useConditioningDialogState } from "@/components/workout/useWorkoutDialogState";
 import { formatPrevSummary, getRpes, withRpe, RPE_KEY, warmupRamp, isHeavyCompound, prependWarmups, bumpLineSets, suggestSubstitutes } from "@/lib/underPass";
 import { touchOngoingWorkout, endOngoingWorkout, cleanupStaleOngoingWorkout } from "@/lib/workoutOngoing";
 import { summarizeCompletion, type WorkoutSummary } from "@/lib/workoutSummary";
@@ -200,6 +201,8 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
   const [exerciseSearch, setExerciseSearch] = useState("");
   const [selectedMuscle, setSelectedMuscle] = useState<string | null>(null);
   const [customExercises, setCustomExercises] = useState<CustomExercise[]>([]);
+  const { weightDialog, setWeightDialog, weightInput, setWeightInput, repsInput, setRepsInput, repsUnit, setRepsUnit, setsInput, setSetsInput, showAddCustomExercise, setShowAddCustomExercise, newExName, setNewExName, newExCategory, setNewExCategory, newExMuscle, setNewExMuscle } = useExerciseFormState();
+  const { conditioningDialog, setConditioningDialog, condTempoInput, setCondTempoInput, condTimeHours, setCondTimeHours, condTimeMinutes, setCondTimeMinutes, condTimeSeconds, setCondTimeSeconds, condDistanceInput, setCondDistanceInput, condAutoField, setCondAutoField, condMode, setCondMode, condEditName, setCondEditName } = useConditioningDialogState();
   const unitOv = useUnitOverrides();
   const unitRuleOv = (n: string): "setTimeDist" | "setReps" | undefined => {
     const u = unitOv.get(n.trim().toLowerCase())?.unit;
@@ -209,35 +212,17 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
     const u = unitOv.get(n.trim().toLowerCase())?.unit;
     return u === "seconds" ? "sek" : u === "meters" ? "m" : u === "reps" ? "reps" : undefined;
   };
-  const [showAddCustomExercise, setShowAddCustomExercise] = useState(false);
-  const [newExName, setNewExName] = useState("");
-  const [newExCategory, setNewExCategory] = useState("styrka");
-  const [newExMuscle, setNewExMuscle] = useState("Helkropp");
   const [stravaSyncing, setStravaSyncing] = useState(false);
 
   // Weight/reps/sets selection for exercises
-  const [weightDialog, setWeightDialog] = useState<{planId: string;exerciseName: string;lastWeight: string | null;} | null>(null);
-  const [weightInput, setWeightInput] = useState("");
-  const [repsInput, setRepsInput] = useState("10");
-  const [repsUnit, setRepsUnit] = useState<"reps" | "sek">("reps");
-  const [setsInput, setSetsInput] = useState("3");
 
   // Inline editing of existing exercise
   const [editingExercise, setEditingExercise] = useState<{planId: string;lineIndex: number;name: string;originalName: string;sets: string;reps: string;weight: string;perSet?: SetRow[];} | null>(null);
   const [editingCondLine, setEditingCondLine] = useState<{ planId: string; lineIndex: number; name: string } | null>(null);
 
   // Conditioning exercise dialog
-  const [conditioningDialog, setConditioningDialog] = useState<{planId: string;exerciseName: string;} | null>(null);
-  const [condTempoInput, setCondTempoInput] = useState("");
-  const [condTimeHours, setCondTimeHours] = useState("");
-  const [condTimeMinutes, setCondTimeMinutes] = useState("");
-  const [condTimeSeconds, setCondTimeSeconds] = useState("");
-  const [condDistanceInput, setCondDistanceInput] = useState("");
-  const [condAutoField, setCondAutoField] = useState<"time" | "tempo" | "distance" | null>(null);
   // Vald tempoenhet för konditionsdialogen (delas med redigeringskortet via localStorage)
-  const [condMode, setCondMode] = useState<CardioMode>("minkm");
   // Namn på övningen som redigeras (redigeringskortet nedanför passet)
-  const [condEditName, setCondEditName] = useState("");
   const condActiveName = conditioningDialog?.exerciseName || condEditName;
   const condDistUnit = getCardioDistUnit(condActiveName) ?? "km";
   const condDistToKm = (v: string) => {
