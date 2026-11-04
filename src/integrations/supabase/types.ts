@@ -1378,6 +1378,7 @@ export type Database = {
       nutrition_goals: {
         Row: {
           activity_level: string
+          adaptive_tdee_enabled: boolean
           calcium_mg: number | null
           carbs_g: number
           created_at: string
@@ -1403,6 +1404,7 @@ export type Database = {
         }
         Insert: {
           activity_level?: string
+          adaptive_tdee_enabled?: boolean
           calcium_mg?: number | null
           carbs_g?: number
           created_at?: string
@@ -1428,6 +1430,7 @@ export type Database = {
         }
         Update: {
           activity_level?: string
+          adaptive_tdee_enabled?: boolean
           calcium_mg?: number | null
           carbs_g?: number
           created_at?: string

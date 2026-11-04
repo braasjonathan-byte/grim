@@ -373,6 +373,9 @@ export default function NutritionView({ userId, isHonorary: isHonoraryProp = fal
       setWaterGoal(goalsR.data.water_goal_ml ?? 2000);
       const ms = (goalsR.data as any).meal_slots as string[] | null;
       if (ms && ms.length) setSlots(ms);
+      // Molnet styr adaptiv-växeln (följer med mellan enheter); localStorage är offline-fallback.
+      const cloudAdaptive = (goalsR.data as any).adaptive_tdee_enabled;
+      if (typeof cloudAdaptive === "boolean") { writeAdaptiveEnabled(cloudAdaptive); setAdaptiveOn(cloudAdaptive); }
     }
     setHasGoals(!!goalsR.data);
     setLoaded(true);
@@ -609,7 +612,7 @@ export default function NutritionView({ userId, isHonorary: isHonoraryProp = fal
             <DropdownMenuItem onClick={() => { hapticLight(); setPastOpen(true); }}><CopyPlus className="w-3.5 h-3.5 mr-2" /> Kopiera från senaste veckan</DropdownMenuItem>
             <DropdownMenuItem onClick={() => setAddNameOpen(true)}><Plus className="w-3.5 h-3.5 mr-2" /> Lägg till måltid</DropdownMenuItem>
             <DropdownMenuSeparator />
-            <DropdownMenuItem onSelect={(e) => { e.preventDefault(); const v = !adaptiveOn; writeAdaptiveEnabled(v); setAdaptiveOn(v); }} className="flex items-center gap-2">
+            <DropdownMenuItem onSelect={(e) => { e.preventDefault(); const v = !adaptiveOn; writeAdaptiveEnabled(v); setAdaptiveOn(v); if (hasGoals) void supabase.from("nutrition_goals").update({ adaptive_tdee_enabled: v } as any).eq("user_id", userId).then(({ error }) => { if (error) console.warn("[Grim] adaptiv-växel sparades bara lokalt", error.message); }); }} className="flex items-center gap-2">
               <TrendingUp className="w-3.5 h-3.5" /> <span className="flex-1">Adaptiv förbrukning</span>
               <Switch checked={adaptiveOn} aria-label="Adaptiv förbrukning på/av" className="pointer-events-none" />
             </DropdownMenuItem>
