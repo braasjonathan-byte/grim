@@ -71,7 +71,7 @@ async function sendWeb(sub: { endpoint: string; p256dh: string; auth: string }, 
   try {
     const authz = await vapidJwt(sub.endpoint, pub, priv);
     const body = await encrypt(payload, b64UrlDecode(sub.p256dh), b64UrlDecode(sub.auth));
-    const r = await fetch(sub.endpoint, { method: "POST", headers: { "Content-Type": "application/octet-stream", "Content-Encoding": "aes128gcm", "Authorization": authz, "TTL": "86400" }, body });
+    const r = await fetch(sub.endpoint, { method: "POST", headers: { "Content-Type": "application/octet-stream", "Content-Encoding": "aes128gcm", "Authorization": authz, "TTL": "86400" }, body: body as unknown as BodyInit });
     return r.ok || r.status === 201;
   } catch { return false; }
 }
