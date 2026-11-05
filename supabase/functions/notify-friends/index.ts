@@ -110,7 +110,7 @@ async function sendWebPush(
     const response = await fetch(subscription.endpoint, {
       method: "POST",
       headers: { "Content-Type": "application/octet-stream", "Content-Encoding": "aes128gcm", "Authorization": authorization, "TTL": "86400" },
-      body,
+      body: body as unknown as BodyInit,
     });
 
     if (!response.ok && response.status !== 201) {

@@ -210,7 +210,7 @@ async function sendWebPush(
         "Authorization": authorization,
         "TTL": "86400",
       },
-      body,
+      body: body as unknown as BodyInit,
     });
 
     if (!response.ok && response.status !== 201) {

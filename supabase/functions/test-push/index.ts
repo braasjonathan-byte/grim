@@ -157,7 +157,7 @@ serve(async (req) => {
             "Authorization": authorization,
             "TTL": "86400",
           },
-          body,
+          body: body as unknown as BodyInit,
         });
 
         const responseText = await response.text();
