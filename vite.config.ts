@@ -3,7 +3,6 @@ import react from "@vitejs/plugin-react-swc";
 import path from "path";
 import { componentTagger } from "lovable-tagger";
 import { VitePWA } from "vite-plugin-pwa";
-import { mcpPlugin } from "@lovable.dev/mcp-js/stacks/supabase/vite";
 import legacy from "@vitejs/plugin-legacy";
 
 // https://vitejs.dev/config/
@@ -50,7 +49,8 @@ export default defineConfig(({ mode }) => ({
     react(),
     mode === "development" && componentTagger(),
     versionJsonPlugin(),
-    mcpPlugin(),
+    // The MCP edge function is maintained directly; codegen refuses to
+    // overwrite it and would strip its required Deno type annotations.
     // Generate a legacy bundle (ES5 + polyfills) for older phones
     // Covers iOS 11+, Android 5+ Chrome, Samsung Internet 7+, etc.
     legacy({
