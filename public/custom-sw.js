@@ -10,15 +10,13 @@ clientsClaim();
 // Clean up old caches from previous versions
 cleanupOutdatedCaches();
 
-// On activate, clear ALL caches (including old precache) to force fresh content
+// On activate: rensa bara navigations-cachen (gammal index.html). Tidigare
+// raderades ALLA cacher här – inklusive den nya precachen som just
+// installerats – vilket efter en Publish gav blandning av gammal HTML och
+// saknade chunks (404) => lazy-import misslyckades => appen fastnade.
+// Gamla precache-versioner städas redan av cleanupOutdatedCaches().
 self.addEventListener("activate", (event) => {
-  event.waitUntil(
-    caches.keys().then((cacheNames) => {
-      return Promise.all(
-        cacheNames.map((name) => caches.delete(name))
-      );
-    })
-  );
+  event.waitUntil(caches.delete("navigations").catch(() => undefined));
 });
 
 // Serve navigation requests (HTML) with Network First strategy

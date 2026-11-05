@@ -11,6 +11,15 @@ import { InAppBrowserDialog } from "@/components/InAppBrowserDialog";
 import RouteNavigationHost from "@/components/RouteNavigationHost";
 import HeartRateWidget from "@/components/HeartRateWidget";
 import { startWakeLockManager } from "@/lib/wakeLock";
+import AppErrorBoundary from "@/components/AppErrorBoundary";
+
+// Synlig laddning i stället för null: en tom Suspense-fallback gav en helt
+// tom skärm (bara temabakgrunden) medan/om sidchunken inte laddade.
+const RouteFallback = () => (
+  <div className="min-h-screen bg-background flex items-center justify-center">
+    <div className="w-10 h-10 rounded-full border-2 border-muted border-t-foreground animate-spin" />
+  </div>
+);
 
 const Index = lazyRetry(() => import("./pages/Index"));
 const NotFound = lazyRetry(() => import("./pages/NotFound"));
@@ -24,6 +33,7 @@ const queryClient = new QueryClient();
 startWakeLockManager();
 
 const App = () => (
+  <AppErrorBoundary>
   <QueryClientProvider client={queryClient}>
     <HelmetProvider>
       <TooltipProvider>
@@ -35,21 +45,22 @@ const App = () => (
           <HeartRateWidget />
           <BrowserRouter>
             <Routes>
-              <Route path="/" element={<Suspense fallback={null}><Index /></Suspense>} />
-              <Route path="/index" element={<Suspense fallback={null}><Index /></Suspense>} />
-              <Route path="/install" element={<Suspense fallback={null}><Install /></Suspense>} />
-              <Route path="/privacy" element={<Suspense fallback={null}><Privacy /></Suspense>} />
-              <Route path="/integritetspolicy" element={<Suspense fallback={null}><Privacy /></Suspense>} />
-              <Route path="/delete-account" element={<Suspense fallback={null}><DeleteAccount /></Suspense>} />
-              <Route path="/radera-konto" element={<Suspense fallback={null}><DeleteAccount /></Suspense>} />
-              <Route path="/.lovable/oauth/consent" element={<Suspense fallback={null}><OAuthConsent /></Suspense>} />
-              <Route path="*" element={<Suspense fallback={null}><NotFound /></Suspense>} />
+              <Route path="/" element={<Suspense fallback={<RouteFallback />}><Index /></Suspense>} />
+              <Route path="/index" element={<Suspense fallback={<RouteFallback />}><Index /></Suspense>} />
+              <Route path="/install" element={<Suspense fallback={<RouteFallback />}><Install /></Suspense>} />
+              <Route path="/privacy" element={<Suspense fallback={<RouteFallback />}><Privacy /></Suspense>} />
+              <Route path="/integritetspolicy" element={<Suspense fallback={<RouteFallback />}><Privacy /></Suspense>} />
+              <Route path="/delete-account" element={<Suspense fallback={<RouteFallback />}><DeleteAccount /></Suspense>} />
+              <Route path="/radera-konto" element={<Suspense fallback={<RouteFallback />}><DeleteAccount /></Suspense>} />
+              <Route path="/.lovable/oauth/consent" element={<Suspense fallback={<RouteFallback />}><OAuthConsent /></Suspense>} />
+              <Route path="*" element={<Suspense fallback={<RouteFallback />}><NotFound /></Suspense>} />
             </Routes>
           </BrowserRouter>
         </SaveIndicatorProvider>
       </TooltipProvider>
     </HelmetProvider>
   </QueryClientProvider>
+  </AppErrorBoundary>
 );
 
 export default App;
