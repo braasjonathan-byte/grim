@@ -62,7 +62,7 @@ export default function AdaptiveTdeeCard({ userId, currentKcal, hasGoals, onAppl
 
   if (!hasGoals || (enabled && !res)) return null;
 
-  const suggested = res.ok && res.tdee ? adaptiveTarget(res.tdee, goal?.goal_type || "maintain", goal?.weekly_loss_kg) : null;
+  const suggested = enabled && res?.ok && res.tdee ? adaptiveTarget(res.tdee, goal?.goal_type || "maintain", goal?.weekly_loss_kg) : null;
   const diff = suggested != null ? suggested - currentKcal : 0;
   const worthIt = suggested != null && Math.abs(diff) >= 100;
 
