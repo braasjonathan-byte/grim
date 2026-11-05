@@ -2746,8 +2746,14 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
     return week * 10 + (dayIndex >= 0 ? dayIndex : fallbackIndex / 1000);
   };
 
+  const lastSetDataCache = useMemo(() => new Map<string, LoggedSetInfo[]>(), [archivedCompletions, completions, planStartDate]);
   const findLastSetData = (exerciseName: string, opts?: { skipWarmups?: boolean }): LoggedSetInfo[] => {
-    return findLastSetDataImpl(exerciseName, opts);
+    const k = `${opts?.skipWarmups ? 1 : 0}|${exerciseName}`;
+    const hit = lastSetDataCache.get(k);
+    if (hit) return hit;
+    const v = findLastSetDataImpl(exerciseName, opts);
+    lastSetDataCache.set(k, v);
+    return v;
   };
   findLastSetDataRef.current = findLastSetData;
   const findLastSetDataImpl = (exerciseName: string, opts?: { skipWarmups?: boolean }): LoggedSetInfo[] => {
@@ -2773,7 +2779,17 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
   };
 
   // RPE från samma (senaste) pass som findLastSetData, alignat mot arbetsset (utan uppvärmning).
+  // Cache per render-dataset: anropas per övning i render (timer tickar varje sekund) – utan cache
+  // skannades hela arkivet för varje övning varje sekund och UI:t frös under passet.
+  const lastWorkRpesCache = useMemo(() => new Map<string, (number | null)[]>(), [archivedCompletions, completions]);
   const findLastWorkRpes = (exerciseName: string): (number | null)[] => {
+    const hit = lastWorkRpesCache.get(exerciseName);
+    if (hit) return hit;
+    const v = computeLastWorkRpes(exerciseName);
+    lastWorkRpesCache.set(exerciseName, v);
+    return v;
+  };
+  const computeLastWorkRpes = (exerciseName: string): (number | null)[] => {
     const cands: Array<{ sort: number; w: Record<string, any> }> = [];
     archivedCompletions.forEach((a, index) => {
       const w = a.logged_weights as Record<string, any> | null;
