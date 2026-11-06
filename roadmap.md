@@ -1,5 +1,9 @@
 # Roadmap
 
+## Teman november 2026
+- [x] Lägg till Tema 1–3 med användarens godkända kulörer.
+- [x] Verifiera läsbar text i kostens Mallar-knapp i Tema 1–3, även vid pekning; kontrast minst 5,55:1 och bygget godkänt.
+
 ## Testrapport 17 okt 2026 (punkt 1–4)
 - [x] 1. Offlinesynk: omspelning körs nu var 15:e sekund, vid "online" och när appen blir synlig; vyn laddar om när kön spelats upp (grim:offline-queue-flushed) och cachen sparar server+köade rader så inget försvinner vid omladdning.
 - [x] 2. Livsmedels-RLS verifierad: alla inloggade läser, bara skaparen ändrar/raderar (avsiktligt).
