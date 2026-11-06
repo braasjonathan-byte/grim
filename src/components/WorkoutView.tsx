@@ -4698,13 +4698,13 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
                                   <button
                                     onClick={(e) => { e.stopPropagation(); modifySetCount(plan.id, i, -1, 0, plan.day); }}
                                     disabled={setsCountSingle <= 1}
-                                    className="text-[10px] px-2 py-0.5 rounded bg-secondary text-muted-foreground hover:text-destructive disabled:opacity-30 transition-colors"
+                                    className="text-[10px] px-2 py-0.5 rounded bg-secondary text-secondary-foreground hover:bg-muted hover:text-foreground disabled:opacity-30 transition-colors"
                                     title="Ta bort set">
                                     − Set
                                   </button>
                                   <button
                                     onClick={(e) => { e.stopPropagation(); modifySetCount(plan.id, i, 1, 0, plan.day); }}
-                                    className="text-[10px] px-2 py-0.5 rounded bg-secondary text-muted-foreground hover:text-primary transition-colors"
+                                    className="text-[10px] px-2 py-0.5 rounded bg-secondary text-secondary-foreground hover:bg-muted hover:text-foreground transition-colors"
                                     title="Lägg till set">
                                     + Set
                                   </button>
@@ -8623,13 +8623,13 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
                                   <button
                                     onClick={(e) => { e.stopPropagation(); modifySetCount(plan.id, i, -1, plan.week, plan.day); }}
                                     disabled={setsCountPlan <= 1}
-                                    className="text-[10px] px-2 py-0.5 rounded bg-secondary text-muted-foreground hover:text-destructive disabled:opacity-30 transition-colors"
+                                    className="text-[10px] px-2 py-0.5 rounded bg-secondary text-secondary-foreground hover:bg-muted hover:text-foreground disabled:opacity-30 transition-colors"
                                     title="Ta bort set">
                                     − Set
                                   </button>
                                   <button
                                     onClick={(e) => { e.stopPropagation(); modifySetCount(plan.id, i, 1, plan.week, plan.day); }}
-                                    className="text-[10px] px-2 py-0.5 rounded bg-secondary text-muted-foreground hover:text-primary transition-colors"
+                                    className="text-[10px] px-2 py-0.5 rounded bg-secondary text-secondary-foreground hover:bg-muted hover:text-foreground transition-colors"
                                     title="Lägg till set">
                                     + Set
                                   </button>
