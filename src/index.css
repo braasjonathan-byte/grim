@@ -478,7 +478,7 @@ button:not([data-no-press]),
     @apply pill-btn bg-primary text-primary-foreground shadow-soft hover:opacity-90;
   }
   .pill-btn-ghost {
-    @apply pill-btn bg-secondary text-foreground hover:bg-muted;
+    @apply pill-btn bg-secondary text-secondary-foreground hover:bg-muted hover:text-foreground;
   }
   .pill-btn-soft {
     @apply pill-btn bg-primary/10 text-primary hover:bg-primary/20;
