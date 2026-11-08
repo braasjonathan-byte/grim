@@ -17,6 +17,7 @@ const config: CapacitorConfig = {
       '@capacitor/screen-orientation',
       '@capacitor/geolocation',
       '@capacitor/push-notifications',
+      '@capacitor/local-notifications',
       '@capacitor/status-bar',
       '@capacitor/camera',
       '@capacitor-mlkit/barcode-scanning',
@@ -37,6 +38,10 @@ const config: CapacitorConfig = {
   plugins: {
     CapacitorHttp: {
       enabled: true,
+    },
+    LocalNotifications: {
+      smallIcon: 'ic_stat_grim',
+      iconColor: '#6B8E5A',
     },
     ScreenOrientation: {
       lockOrientation: 'portrait',

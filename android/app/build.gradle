@@ -53,3 +53,18 @@ try {
     logger.info("google-services.json not found, google-services plugin not applied. Push Notifications won't work")
 }
 apply plugin: 'com.google.firebase.crashlytics'
+
+// GRIM_NATIVE_SYMBOLS_START
+// https://developer.android.com/build/include-native-symbols
+// Already-stripped third-party binaries cannot have their debug info restored.
+android {
+    ndkVersion '27.0.12077973'
+    buildTypes {
+        release {
+            ndk {
+                debugSymbolLevel 'FULL'
+            }
+        }
+    }
+}
+// GRIM_NATIVE_SYMBOLS_END

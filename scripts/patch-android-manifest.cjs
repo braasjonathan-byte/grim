@@ -102,6 +102,18 @@ if (!xml.includes(FCM_CHANNEL_META)) {
   console.log("[patch-android-manifest] Added FCM default notification channel meta-data");
 }
 
+// FCM falls back to the launcher icon without this metadata, producing a white
+// rectangle because launcher icons contain an opaque background.
+for (const [name, resource] of [
+  ["com.google.firebase.messaging.default_notification_icon", "@drawable/ic_stat_grim"],
+  ["com.google.firebase.messaging.default_notification_color", "@color/grim_notification_color"],
+]) {
+  const tag = `<meta-data android:name="${name}" android:resource="${resource}" />`;
+  const existing = new RegExp(`<meta-data\\b[^>]*android:name="${name.replace(/\./g, "\\.")}"[^>]*\\/?>`);
+  const next = existing.test(xml) ? xml.replace(existing, tag) : xml.replace(/<application([^>]*)>/, `<application$1>\n        ${tag}`);
+  if (next !== xml) { xml = next; changed = true; }
+}
+
 // Android 11+ package visibility: required so the TextToSpeech plugin can
 // bind to the installed TTS engine. Without this <queries> block,
 // tts.speak() silently fails on real devices (no voice output).

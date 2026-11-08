@@ -21,6 +21,8 @@ if (!fs.existsSync(path.join(root, "android", "app", "src", "main", "AndroidMani
 }
 const steps = [
   "patch-android-firebase.cjs",
+  "patch-android-native-symbols.cjs",
+  "patch-android-icons.cjs",
   "patch-android-manifest.cjs",
   "patch-android-system-insets.cjs",
   "verify-android-plugins.cjs",

@@ -72,7 +72,18 @@ fs.writeFileSync(
 `
 );
 
-// 4. Remove any default vector foreground that Capacitor/Studio installed.
+// 4. Notification small icon: monochrome alpha, NOT the opaque launcher bitmap.
+ensureDir(path.join(RES, "drawable"));
+copy(path.join(SRC, "ic_stat_grim.xml"), path.join(RES, "drawable", "ic_stat_grim.xml"));
+fs.writeFileSync(path.join(valuesDir, "grim_notification_color.xml"), `<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="grim_notification_color">#6B8E5A</color>
+    <!-- Compatibility with the icon name in already-deployed FCM payloads. -->
+    <item type="drawable" name="ic_notification">@drawable/ic_stat_grim</item>
+</resources>
+`);
+
+// 5. Remove any default vector foreground that Capacitor/Studio installed.
 const stale = [
   path.join(RES, "drawable", "ic_launcher_background.xml"),
   path.join(RES, "drawable-v24", "ic_launcher_foreground.xml"),

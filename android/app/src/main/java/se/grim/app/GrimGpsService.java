@@ -33,7 +33,7 @@ public class GrimGpsService extends Service {
         Intent open = new Intent(this, MainActivity.class).setFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP | Intent.FLAG_ACTIVITY_CLEAR_TOP);
         PendingIntent pi = PendingIntent.getActivity(this, 1, open, PendingIntent.FLAG_IMMUTABLE | PendingIntent.FLAG_UPDATE_CURRENT);
         Notification.Builder b = Build.VERSION.SDK_INT >= 26 ? new Notification.Builder(this, CH) : new Notification.Builder(this);
-        Notification n = b.setSmallIcon(android.R.drawable.ic_menu_mylocation)
+        Notification n = b.setSmallIcon(R.drawable.ic_stat_grim).setColor(getColor(R.color.grim_notification_color))
                 .setContentTitle("📍 GPS-pass pågår")
                 .setContentText(text)
                 .setOngoing(true).setOnlyAlertOnce(true)

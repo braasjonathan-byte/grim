@@ -64,7 +64,7 @@ public class GrimRestService extends Service {
         String exercise = intent.getStringExtra("exercise");
         long end = System.currentTimeMillis() + seconds * 1000L;
         Notification.Builder b = Build.VERSION.SDK_INT >= 26 ? new Notification.Builder(this, CH_TICK) : new Notification.Builder(this);
-        b.setSmallIcon(android.R.drawable.ic_lock_idle_alarm)
+        b.setSmallIcon(R.drawable.ic_stat_grim).setColor(getColor(R.color.grim_notification_color))
                 .setContentTitle("⏱️ Vila")
                 .setContentText(exercise != null && !exercise.isEmpty() ? "Nästa set: " + exercise : "Nästa set snart")
                 .setWhen(end).setShowWhen(true).setUsesChronometer(true)
@@ -93,7 +93,7 @@ public class GrimRestService extends Service {
         if (alert) {
             NotificationManager nm = getSystemService(NotificationManager.class);
             Notification.Builder b = Build.VERSION.SDK_INT >= 26 ? new Notification.Builder(this, CH_DONE) : new Notification.Builder(this);
-            b.setSmallIcon(android.R.drawable.ic_lock_idle_alarm)
+            b.setSmallIcon(R.drawable.ic_stat_grim).setColor(getColor(R.color.grim_notification_color))
                     .setContentTitle("⏰ Vilan är slut")
                     .setContentText("Dags för nästa set!")
                     .setAutoCancel(true)

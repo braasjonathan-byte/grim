@@ -81,13 +81,6 @@ if (/minifyEnabled\s+false/.test(s)) {
   );
 }
 
-// ---- 3. Native debug symbols (FULL) so Play has symbol files for crashes ----
-if (!/debugSymbolLevel/.test(s)) {
-  s = s.replace(
-    /(defaultConfig\s*\{)/,
-    `$1\n        ndk {\n            debugSymbolLevel 'FULL'\n        }`
-  );
-}
-
 fs.writeFileSync(path, s);
+require("./patch-android-native-symbols.cjs").patchNativeSymbolsFile(path);
 console.log("Patched android/app/build.gradle: signing + R8 + native debug symbols.");

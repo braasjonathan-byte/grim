@@ -72,12 +72,12 @@ export async function touchOngoingWorkout(opts: { exercise?: string; restSeconds
     ].filter(Boolean).join(" · ");
     await p.cancel({ notifications: [{ id: REST_ID }] }).catch(() => {});
     const notifications: any[] = [{
-      id: ONGOING_ID, channelId: CHANNEL, title: "🏋️ Styrkepass pågår", body,
+      id: ONGOING_ID, smallIcon: "ic_stat_grim", iconColor: "#6B8E5A", channelId: CHANNEL, title: "🏋️ Styrkepass pågår", body,
       ongoing: true, autoCancel: false, extra: { url: "/?tab=workout" },
     }];
     if (needFallback) {
       notifications.push({
-        id: REST_ID, channelId: CHANNEL, title: "⏰ Vilan är slut", body: "Dags för nästa set!",
+        id: REST_ID, smallIcon: "ic_stat_grim", iconColor: "#6B8E5A", channelId: CHANNEL, title: "⏰ Vilan är slut", body: "Dags för nästa set!",
         schedule: { at: new Date(restEnd), allowWhileIdle: true }, autoCancel: true, extra: { url: "/?tab=workout" },
       });
     }
