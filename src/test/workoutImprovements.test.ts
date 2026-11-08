@@ -33,6 +33,7 @@ const compare = (current: Record<string, string>, previous: Record<string, strin
 beforeEach(() => {
   localStorage.clear();
   vi.restoreAllMocks();
+  vi.spyOn(Math, "random").mockReturnValue(0);
 });
 
 describe("passanpassad pepp", () => {
@@ -87,9 +88,11 @@ describe("passanpassad pepp", () => {
   });
 
   it("kan visa högre passvolym för samma övningar", async () => {
+    // Select the valid template beginning with capitalized "Snittet".
+    vi.spyOn(Math, "random").mockReturnValue(0.85);
     const result = await compare(strength("Knäböj", 80, 5, 5), Array.from({ length: 3 }, () => strength("Knäböj", 80, 5, 2)));
     expect(result).toHaveLength(2);
-    expect(result.some((r) => r.text.includes("snitt"))).toBe(true);
+    expect(result.some((r) => /snitt/i.test(r.text))).toBe(true);
   });
 
   it("hittar snabbare cykling men inte jämförelser mot löpning", async () => {

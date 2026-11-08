@@ -1,3 +1,9 @@
+import { SingleWorkoutForm } from "@/components/workout/SingleWorkoutForm";
+import { DeleteExercisePrompt, ExerciseRepsPrompt, ExercisePropagationPrompt, ReplaceExercisePrompt, type PendingReplace } from "@/components/workout/WorkoutExercisePrompts";
+import { WorkoutImportPicker, WorkoutImportConflictPrompts } from "@/components/workout/WorkoutImportDialogs";
+import { WorkoutNamePrompt, UncheckedSetsPrompt, BodyWeightPrompt } from "@/components/workout/WorkoutCompletionPrompts";
+import { SaveWorkoutDialog, WorkoutSessionSettingsDialog, ShareWorkoutChatDialog } from "@/components/workout/WorkoutSessionDialogs";
+import { ChangeWorkoutDayDialog, CopyWorkoutDateDialog, AddWorkoutWeekDialog } from "@/components/workout/WorkoutScheduleDialogs";
 import { getProgramWeekPlans, getWorkoutDisplayDay, isWorkoutDayDone } from "@/lib/healthProgramVisibility";
 import { useUnitOverrides } from "@/lib/exerciseUnits";
 import { formatDecimal, isPlausibleSet, validateNumber } from "@/lib/inputValidation";
@@ -3634,7 +3640,6 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
   };
 
   // Byt ut övning: fråga först, behåll loggade set, erbjud Ångra.
-  type PendingReplace = { planId: string; lineIndex: number; oldName: string; entry: string; weightsPatch?: Record<string, any> };
   const [replaceAsk, setReplaceAsk] = useState<PendingReplace | null>(null);
   const hasLoggedSets = (lw: Record<string, any> | null | undefined, name: string) => {
     const v = lw?.[`__sets__${name}`];
@@ -5391,143 +5396,27 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
         </div>
 
         {/* Add single workout form */}
-        {showAddSingle ?
-        <div className="bg-card border border-primary/30 rounded-lg p-4 space-y-3 animate-fade-in">
-            <h3 className="text-sm font-semibold">Nytt pass</h3>
-
-            {/* Copy from previous session */}
-            {(() => {
-            const uniqueSessions = new Map<string, PlanDay>();
-            const singlePlans2 = plans.filter((p) => p.week === 0);
-            // Get latest version of each session name
-            for (const p of singlePlans2) {
-              const existing = uniqueSessions.get(p.session_name);
-              if (!existing || p.day > existing.day) {
-                uniqueSessions.set(p.session_name, p);
-              }
-            }
-            const previousSessions = Array.from(uniqueSessions.values());
-
-            if (previousSessions.length > 0) {
-              return (
-                <div className="space-y-2">
-                    <button
-                    onClick={() => setShowCopyPicker(!showCopyPicker)}
-                    className="w-full py-2 border border-dashed border-primary/40 rounded-md text-xs text-primary hover:bg-primary/5 transition-colors flex items-center justify-center gap-1">
-
-                      <TrendingUp className="w-3 h-3" /> Kopiera tidigare pass
-                    </button>
-                    <p className="text-[10px] text-muted-foreground text-center">Övningar, vikter och reps kopieras — justera själv för progression</p>
-                    {showCopyPicker &&
-                  <div className="space-y-1 max-h-40 overflow-y-auto animate-fade-in">
-                        {previousSessions.map((p) =>
-                    <button
-                      key={p.id}
-                      onClick={() => addSingleWorkout(p)}
-                      className="w-full text-left p-2.5 bg-secondary rounded-md text-xs hover:bg-primary/10 transition-colors">
-
-                            <span className="font-semibold block">{p.session_name}</span>
-                            {p.details &&
-                      <span className="text-[10px] text-muted-foreground block mt-0.5 truncate">
-                                {p.details.split("\n").slice(0, 2).join(", ")}
-                              </span>
-                      }
-                          </button>
-                    )}
-                      </div>
-                  }
-                  </div>);
-
-            }
-            return null;
-          })()}
-
-            {/* Import ready workout */}
-            <button
-              onClick={() => {
-                // Find a matching ready workout and create single workout
-                setImportWorkoutTarget({ planId: "__single__", week: 0, day: "" });
-              }}
-              data-tour="import-workout"
-              className="w-full py-2 border border-dashed border-warning/40 rounded-md text-xs text-warning hover:border-warning transition-colors flex items-center justify-center gap-1"
-            >
-              <Download className="w-3 h-3" /> Importera färdigt pass
-            </button>
-
-            {/* Date picker */}
-            <div>
-              <label className="text-xs text-muted-foreground mb-1 block">Datum</label>
-              <Popover>
-                <PopoverTrigger asChild>
-                  <button
-                  className={cn(
-                    "w-full flex items-center gap-2 bg-secondary text-foreground text-sm p-2 rounded-md text-left",
-                    !singleDate && "text-muted-foreground"
-                  )}>
-
-                    <CalendarIcon className="w-4 h-4 text-muted-foreground" />
-                    {singleDate ? format(singleDate, "d MMMM yyyy", { locale: sv }) : "Välj datum"}
-                  </button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0 z-[80]" align="start">
-                  <Calendar
-                  mode="single"
-                  selected={singleDate}
-                  onSelect={(date) => date && setSingleDate(date)}
-                  initialFocus
-                  className={cn("p-3 pointer-events-auto")} />
-
-                </PopoverContent>
-              </Popover>
-            </div>
-
-            <input
-            type="text"
-            value={singleName}
-            onChange={(e) => setSingleName(e.target.value)}
-            placeholder="Passnamn (t.ex. Styrka överkropp)"
-            className="w-full bg-secondary text-foreground text-sm p-2 rounded-md border-none outline-none focus:ring-1 focus:ring-primary placeholder:text-muted-foreground"
-            autoFocus />
-
-            <p className="text-[10px] text-muted-foreground">
-              Lägg till övningar efter att passet skapats
-            </p>
-            <label className="flex items-center gap-2 cursor-pointer">
-              <input type="checkbox" checked={singleIsCircuit} onChange={(e) => setSingleIsCircuit(e.target.checked)} className="accent-primary w-4 h-4" />
-              <span className="text-xs text-foreground">Cirkelpass (visar Starta-knapp)</span>
-            </label>
-            {singleIsCircuit && (
-              <div className="space-y-2">
-                <div className="flex items-center gap-2">
-                  <label className="text-xs text-muted-foreground whitespace-nowrap">Sek/övning:</label>
-                  <input type="text" inputMode="numeric" min="5" max="300" value={singleCircuitSeconds} onChange={(e) => setSingleCircuitSeconds(e.target.value)} className="w-16 bg-secondary text-foreground text-sm px-2 py-1 rounded-md border-none outline-none focus:ring-1 focus:ring-primary text-center font-mono" />
-                  <label className="text-xs text-muted-foreground whitespace-nowrap ml-2">Rundor:</label>
-                  <input type="text" inputMode="numeric" min="1" max="20" value={singleCircuitRounds} onChange={(e) => setSingleCircuitRounds(e.target.value)} className="w-16 bg-secondary text-foreground text-sm px-2 py-1 rounded-md border-none outline-none focus:ring-1 focus:ring-primary text-center font-mono" />
-                </div>
-                <div className="flex items-center gap-2">
-                  <label className="text-xs text-muted-foreground whitespace-nowrap">Vila mellan rundor:</label>
-                  <input type="text" inputMode="numeric" min="0" max="300" value={singleCircuitRest} onChange={(e) => setSingleCircuitRest(e.target.value)} className="w-16 bg-secondary text-foreground text-sm px-2 py-1 rounded-md border-none outline-none focus:ring-1 focus:ring-primary text-center font-mono" />
-                  <span className="text-xs text-muted-foreground">sek</span>
-                </div>
-              </div>
-            )}
-            <div className="flex gap-2">
-              <button onClick={() => addSingleWorkout()} disabled={!singleName.trim()} className="flex-1 py-2 bg-primary text-primary-foreground font-semibold rounded-md text-sm disabled:opacity-40">
-                Skapa pass
-              </button>
-              <button onClick={() => {setShowAddSingle(false);setShowCopyPicker(false);}} className="px-4 py-2 bg-secondary text-muted-foreground rounded-md text-sm">
-                Avbryt
-              </button>
-            </div>
-          </div> :
-
-        <button
-          onClick={() => setShowAddSingle(true)}
-          className="w-full py-3 border border-dashed border-border rounded-lg text-sm text-muted-foreground hover:text-foreground hover:border-primary transition-colors flex items-center justify-center gap-2">
-
-            <Plus className="w-4 h-4" /> Lägg till pass
-          </button>
-        }
+        <SingleWorkoutForm
+      showAddSingle={showAddSingle}
+      plans={plans}
+      setShowCopyPicker={setShowCopyPicker}
+      showCopyPicker={showCopyPicker}
+      addSingleWorkout={addSingleWorkout}
+      setImportWorkoutTarget={setImportWorkoutTarget}
+      singleDate={singleDate}
+      setSingleDate={setSingleDate}
+      singleName={singleName}
+      setSingleName={setSingleName}
+      singleIsCircuit={singleIsCircuit}
+      setSingleIsCircuit={setSingleIsCircuit}
+      singleCircuitSeconds={singleCircuitSeconds}
+      setSingleCircuitSeconds={setSingleCircuitSeconds}
+      singleCircuitRounds={singleCircuitRounds}
+      setSingleCircuitRounds={setSingleCircuitRounds}
+      singleCircuitRest={singleCircuitRest}
+      setSingleCircuitRest={setSingleCircuitRest}
+      setShowAddSingle={setShowAddSingle}
+    />
       </div>
       <AiWorkoutScanDialog
         open={showAiScan}
@@ -5550,124 +5439,24 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
           onCategoryChanged={() => supabase.from("custom_exercises").select("*").order("name").then(({ data }) => { registerCustomCardioConfigs(data as any); if (data) setCustomExercises(data); })}
         />
       )}
-      {deleteExerciseConfirm && (
-        <div className="fixed inset-0 z-[80] flex items-center justify-center">
-          <div className="absolute inset-0 bg-black/60" onClick={() => setDeleteExerciseConfirm(null)} />
-          <div className="relative bg-card border border-border rounded-2xl p-5 max-w-sm w-full mx-4 space-y-4 animate-fade-in">
-            <h3 className="font-bold text-sm">Ta bort övning?</h3>
-            <p className="text-sm text-muted-foreground">
-              Är du säker på att du vill ta bort <span className="font-semibold text-foreground">{deleteExerciseConfirm.name}</span>?
-            </p>
-            <div className="flex gap-2">
-              <button onClick={() => setDeleteExerciseConfirm(null)} className="flex-1 py-2.5 bg-secondary text-muted-foreground font-semibold rounded-lg hover:bg-muted transition-colors text-sm">
-                Avbryt
-              </button>
-              <button onClick={executeDeleteExercise} className="flex-1 py-2.5 bg-destructive text-destructive-foreground font-bold rounded-lg hover:opacity-90 transition-opacity text-sm">
-                Ta bort
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <DeleteExercisePrompt
+      deleteExerciseConfirm={deleteExerciseConfirm}
+      setDeleteExerciseConfirm={setDeleteExerciseConfirm}
+      executeDeleteExercise={executeDeleteExercise}
+    />
       {/* Import workout dialog (single mode) */}
-      {importWorkoutTarget && (
-        <div className="fixed inset-0 z-[80] flex items-end sm:items-center justify-center">
-          <div className="absolute inset-0 bg-black/60" onClick={() => setImportWorkoutTarget(null)} />
-          <div className="relative bg-card rounded-t-xl sm:rounded-xl w-full max-w-md max-h-[80vh] overflow-y-auto p-4 space-y-3 z-10">
-            <div className="flex items-center justify-between">
-              <h3 className="font-bold text-sm">Importera färdigt pass</h3>
-              <button onClick={() => setImportWorkoutTarget(null)} className="p-1 text-muted-foreground hover:text-foreground"><X className="w-4 h-4" /></button>
-            </div>
-            {(isHonorary || isAdmin) && (
-              <button
-                onClick={() => setShowAiScan(true)}
-                className="w-full py-2 rounded-lg bg-primary/10 text-primary text-xs font-semibold hover:bg-primary/20 transition-colors flex items-center justify-center gap-1.5"
-              >
-                <Sparkles className="w-3.5 h-3.5" /> AI: läs av skärmdump från annan app
-              </button>
-            )}
-            <button
-              onClick={() => setShowFileImport(true)}
-              className="w-full py-2 rounded-lg bg-secondary text-foreground text-xs font-semibold hover:bg-muted transition-colors flex items-center justify-center gap-1.5"
-            >
-              <Download className="w-3.5 h-3.5" /> Importera fil (.gpx / .tcx / .fit)
-            </button>
-
-
-            {/* User's own saved workouts */}
-            {(() => {
-              const myWorkouts = savedWorkouts.filter(sw => sw.user_id === userId);
-              if (myWorkouts.length === 0) return null;
-              return (
-                <div className="space-y-1.5">
-                  <p className="text-xs font-bold text-muted-foreground">⭐ Mina sparade pass</p>
-                  {myWorkouts.map((sw) => (
-                    <button
-                      key={sw.id}
-                      onClick={() => handleImportWorkout({ name: sw.name, details: sw.details, tempo: sw.tempo })}
-                      className="w-full text-left bg-secondary/50 hover:bg-secondary rounded-lg px-3 py-2 transition-colors"
-                    >
-                      <p className="text-xs font-semibold text-foreground">{sw.name}</p>
-                      <p className="text-[10px] text-muted-foreground line-clamp-1">{sw.details.replace(/\n/g, " · ")}</p>
-                    </button>
-                  ))}
-                </div>
-              );
-            })()}
-            {/* Public saved workouts from other users */}
-            {(() => {
-              const publicWorkouts = savedWorkouts.filter(sw => sw.visibility === "public" && sw.user_id !== userId);
-              if (publicWorkouts.length === 0) return null;
-              return (
-                <div className="space-y-1.5">
-                  <p className="text-xs font-bold text-muted-foreground">👥 Skapat av användare</p>
-                  {publicWorkouts.map((sw) => (
-                    <button
-                      key={sw.id}
-                      onClick={() => handleImportWorkout({ name: sw.name, details: sw.details, tempo: sw.tempo })}
-                      className="w-full text-left bg-secondary/50 hover:bg-secondary rounded-lg px-3 py-2 transition-colors"
-                    >
-                      <p className="text-xs font-semibold text-foreground">{sw.name}</p>
-                      <p className="text-[10px] text-muted-foreground line-clamp-1">{sw.details.replace(/\n/g, " · ")}</p>
-                    </button>
-                  ))}
-                </div>
-              );
-            })()}
-            {readyWorkoutCategories.map((cat, ci) => (
-              <div key={ci} className="space-y-1.5">
-                <p className="text-xs font-bold text-muted-foreground">{cat.emoji} {cat.label}</p>
-                {cat.workouts.map((w, wi) => {
-                  const isLocked = wi > 0 && !isHonorary && !isAdmin;
-                  return (
-                  <button
-                    key={wi}
-                    disabled={isLocked}
-                    onClick={() => {
-                      if (isLocked) return;
-                      handleImportWorkout({ name: w.name, details: w.details, tempo: w.tempo });
-                    }}
-                    className={`w-full text-left bg-secondary/50 rounded-lg px-3 py-2 transition-colors flex items-center justify-between ${isLocked ? "opacity-50 cursor-not-allowed" : "hover:bg-secondary"}`}
-                  >
-                    <div className="min-w-0 flex-1">
-                      <p className="text-xs font-semibold text-foreground">{w.name}</p>
-                      {isLocked ? <p className="text-[10px] text-warning">🔒 Exklusivt för hedersmedlemmar</p> : <p className="text-[10px] text-muted-foreground line-clamp-1">{w.details.replace(/\n/g, " · ")}</p>}
-                    </div>
-                    {isLocked && <Lock className="w-3.5 h-3.5 text-warning flex-shrink-0 ml-2" />}
-                  </button>
-                  );
-                })}
-              </div>
-            ))}
-            {!isHonorary && !isAdmin && (
-              <div className="text-center pt-2 space-y-1">
-                <p className="text-[10px] text-muted-foreground">🔒 Exklusivt för hedersmedlemmar</p>
-                <p className="text-[10px] text-muted-foreground">Som vanlig medlem kan du välja 1 pass per kategori.</p>
-              </div>
-            )}
-          </div>
-        </div>
-      )}
+      <WorkoutImportPicker
+      importWorkoutTarget={importWorkoutTarget}
+      setImportWorkoutTarget={setImportWorkoutTarget}
+      isHonorary={isHonorary}
+      isAdmin={isAdmin}
+      setShowAiScan={setShowAiScan}
+      setShowFileImport={setShowFileImport}
+      savedWorkouts={savedWorkouts}
+      userId={userId}
+      handleImportWorkout={handleImportWorkout}
+      readyWorkoutCategories={readyWorkoutCategories}
+    />
       {/* Circuit timer dialog (single mode) */}
       {circuitTimer && (
         <CircuitTimerDialog
@@ -5805,75 +5594,19 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
           setSharePromptDialog(null);
         }}
       />
-      {namePromptDialog && (
-        <div className="fixed inset-0 z-[90] flex items-center justify-center">
-          <div className="absolute inset-0 bg-black/60" onClick={() => setNamePromptDialog(null)} />
-          <div className="relative bg-card rounded-2xl shadow-lg p-5 max-w-sm w-full mx-4 space-y-4 animate-fade-in">
-            <div>
-              <h3 className="font-bold text-base">Vad heter passet?</h3>
-              <p className="text-sm text-muted-foreground mt-1">Passet saknar namn – här är ett förslag som du kan ändra.</p>
-            </div>
-            <input
-              autoFocus
-              value={namePromptInput}
-              onChange={(e) => setNamePromptInput(e.target.value)}
-              placeholder={namePromptDialog.suggestion}
-              className="w-full bg-background text-foreground text-sm px-3 py-2.5 rounded-xl border border-border outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-colors"
-            />
-            <div className="flex gap-2">
-              <button
-                onClick={() => setNamePromptDialog(null)}
-                className="flex-1 py-2.5 bg-secondary text-secondary-foreground text-sm font-semibold rounded-xl hover:opacity-80 transition-opacity"
-              >
-                Avbryt
-              </button>
-              <button
-                onClick={async () => {
-                  const d = namePromptDialog;
-                  const name = (namePromptInput.trim() || d.suggestion).trim();
-                  setNamePromptDialog(null);
-                  await supabase.from("workout_plans").update({ session_name: name }).eq("id", d.planId);
-                  setPlans((prev) => prev.map((p) => (p.id === d.planId ? { ...p, session_name: name } : p)));
-                  await toggleDone(d.week, d.day, true);
-                }}
-                className="flex-1 py-2.5 bg-primary text-primary-foreground text-sm font-bold rounded-xl"
-              >
-                Spara & klarmarkera
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-      {uncheckedSetsDialog && (
-
-        <div className="fixed inset-0 z-[80] flex items-center justify-center">
-          <div className="absolute inset-0 bg-black/60" onClick={() => setUncheckedSetsDialog(null)} />
-          <div className="relative bg-card border border-border rounded-2xl p-5 max-w-sm w-full mx-4 space-y-4 animate-fade-in">
-            <h3 className="font-bold text-base">Obockade set</h3>
-            <p className="text-sm text-muted-foreground">
-              Du har gjort {uncheckedSetsDialog.doneCount} av {uncheckedSetsDialog.totalCount} set. Obockade sparas som ej gjorda.
-            </p>
-            <div className="flex gap-2">
-              <button
-                onClick={() => setUncheckedSetsDialog(null)}
-                className="flex-1 py-2 bg-secondary text-secondary-foreground text-sm font-semibold rounded-lg hover:opacity-80 transition-opacity"
-              >
-                Avbryt
-              </button>
-              <button
-                onClick={async () => {
-                  const { week, day } = uncheckedSetsDialog;
-                  setUncheckedSetsDialog(null);
-                  await performToggleDone(week, day);
-                }}
-                className="flex-1 py-2 bg-primary text-primary-foreground text-sm font-semibold rounded-lg hover:opacity-80 transition-opacity"
-              >
-                Klarmarkera
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <WorkoutNamePrompt
+      namePromptDialog={namePromptDialog}
+      setNamePromptDialog={setNamePromptDialog}
+      namePromptInput={namePromptInput}
+      setNamePromptInput={setNamePromptInput}
+      setPlans={setPlans}
+      toggleDone={toggleDone}
+    />
+      <UncheckedSetsPrompt
+      uncheckedSetsDialog={uncheckedSetsDialog}
+      setUncheckedSetsDialog={setUncheckedSetsDialog}
+      performToggleDone={performToggleDone}
+    />
       </>);
 
   }
@@ -9581,295 +9314,46 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
     />
 
     {/* Import workout dialog */}
-    {importWorkoutTarget && (
-      <div className="fixed inset-0 z-[80] flex items-end sm:items-center justify-center">
-        <div className="absolute inset-0 bg-black/60" onClick={() => setImportWorkoutTarget(null)} />
-        <div className="relative bg-card rounded-t-xl sm:rounded-xl w-full max-w-md max-h-[80vh] overflow-y-auto p-4 space-y-3 z-10">
-          <div className="flex items-center justify-between">
-            <h3 className="font-bold text-sm">Importera färdigt pass</h3>
-            <button onClick={() => setImportWorkoutTarget(null)} className="p-1 text-muted-foreground hover:text-foreground"><X className="w-4 h-4" /></button>
-          </div>
-          {(isHonorary || isAdmin) && (
-            <button
-              onClick={() => setShowAiScan(true)}
-              className="w-full py-2 rounded-lg bg-primary/10 text-primary text-xs font-semibold hover:bg-primary/20 transition-colors flex items-center justify-center gap-1.5"
-            >
-              <Sparkles className="w-3.5 h-3.5" /> AI: läs av skärmdump från annan app
-            </button>
-          )}
-          <button
-            onClick={() => setShowFileImport(true)}
-            className="w-full py-2 rounded-lg bg-secondary text-foreground text-xs font-semibold hover:bg-muted transition-colors flex items-center justify-center gap-1.5"
-          >
-            <Download className="w-3.5 h-3.5" /> Importera fil (.gpx / .tcx / .fit)
-          </button>
-
-
-          {/* User's own saved workouts */}
-          {(() => {
-            const myWorkouts = savedWorkouts.filter(sw => sw.user_id === userId);
-            if (myWorkouts.length === 0) return null;
-            return (
-              <div className="space-y-1.5">
-                <p className="text-xs font-bold text-muted-foreground">⭐ Mina sparade pass</p>
-                {myWorkouts.map((sw) => (
-                  <button
-                    key={sw.id}
-                    onClick={() => handleImportWorkout({ name: sw.name, details: sw.details, tempo: sw.tempo })}
-                    className="w-full text-left bg-secondary/50 hover:bg-secondary rounded-lg px-3 py-2 transition-colors"
-                  >
-                    <p className="text-xs font-semibold text-foreground">{sw.name}</p>
-                    <p className="text-[10px] text-muted-foreground line-clamp-1">{sw.details.replace(/\n/g, " · ")}</p>
-                  </button>
-                ))}
-              </div>
-            );
-          })()}
-          {/* Public saved workouts from other users */}
-          {(() => {
-            const publicWorkouts = savedWorkouts.filter(sw => sw.visibility === "public" && sw.user_id !== userId);
-            if (publicWorkouts.length === 0) return null;
-            return (
-              <div className="space-y-1.5">
-                <p className="text-xs font-bold text-muted-foreground">👥 Skapat av användare</p>
-                {publicWorkouts.map((sw) => (
-                  <button
-                    key={sw.id}
-                    onClick={() => handleImportWorkout({ name: sw.name, details: sw.details, tempo: sw.tempo })}
-                    className="w-full text-left bg-secondary/50 hover:bg-secondary rounded-lg px-3 py-2 transition-colors"
-                  >
-                    <p className="text-xs font-semibold text-foreground">{sw.name}</p>
-                    <p className="text-[10px] text-muted-foreground line-clamp-1">{sw.details.replace(/\n/g, " · ")}</p>
-                  </button>
-                ))}
-              </div>
-            );
-          })()}
-          {readyWorkoutCategories.map((cat, ci) => (
-            <div key={ci} className="space-y-1.5">
-              <p className="text-xs font-bold text-muted-foreground">{cat.emoji} {cat.label}</p>
-              {cat.workouts.map((w, wi) => {
-                const isLocked = wi > 0 && !isHonorary && !isAdmin;
-                return (
-                <button
-                  key={wi}
-                  disabled={isLocked}
-                  onClick={() => {
-                    if (isLocked) return;
-                    handleImportWorkout({ name: w.name, details: w.details, tempo: w.tempo });
-                  }}
-                  className={`w-full text-left bg-secondary/50 rounded-lg px-3 py-2 transition-colors flex items-center justify-between ${isLocked ? "opacity-50 cursor-not-allowed" : "hover:bg-secondary"}`}
-                >
-                  <div className="min-w-0 flex-1">
-                    <p className="text-xs font-semibold text-foreground">{w.name}</p>
-                    {isLocked ? <p className="text-[10px] text-warning">🔒 Exklusivt för hedersmedlemmar</p> : <p className="text-[10px] text-muted-foreground line-clamp-1">{w.details.replace(/\n/g, " · ")}</p>}
-                  </div>
-                  {isLocked && <Lock className="w-3.5 h-3.5 text-warning flex-shrink-0 ml-2" />}
-                </button>
-                );
-              })}
-            </div>
-          ))}
-          {!isHonorary && !isAdmin && (
-            <div className="text-center pt-2 space-y-1">
-              <p className="text-[10px] text-muted-foreground">🔒 Exklusivt för hedersmedlemmar</p>
-              <p className="text-[10px] text-muted-foreground">Som vanlig medlem kan du välja 1 pass per kategori.</p>
-            </div>
-          )}
-        </div>
-      </div>
-    )}
+    <WorkoutImportPicker
+      importWorkoutTarget={importWorkoutTarget}
+      setImportWorkoutTarget={setImportWorkoutTarget}
+      isHonorary={isHonorary}
+      isAdmin={isAdmin}
+      setShowAiScan={setShowAiScan}
+      setShowFileImport={setShowFileImport}
+      savedWorkouts={savedWorkouts}
+      userId={userId}
+      handleImportWorkout={handleImportWorkout}
+      readyWorkoutCategories={readyWorkoutCategories}
+    />
     {/* Pending import: ask Replace vs Append, then propagation */}
-    {pendingImport && pendingImport.step === "conflict" && (
-      <div className="fixed inset-0 z-[90] flex items-center justify-center">
-        <div className="absolute inset-0 bg-black/60" onClick={() => setPendingImport(null)} />
-        <div className="relative bg-card border border-border rounded-2xl p-5 max-w-sm w-full mx-4 space-y-4 animate-fade-in">
-          <h3 className="font-bold text-base">Detta pass har redan övningar</h3>
-          <p className="text-sm text-muted-foreground">
-            Vill du <span className="font-semibold text-foreground">ersätta</span> de befintliga övningarna med "{pendingImport.workout.name}", eller <span className="font-semibold text-foreground">lägga till</span> övningarna efter de befintliga?
-          </p>
-          <div className="flex flex-col gap-2">
-            <button
-              onClick={() => {
-                const next = { ...pendingImport, mode: "replace" as const };
-                if (pendingImport.target.week > 0) {
-                  setPendingImport({ ...next, step: "propagate" });
-                } else {
-                  void executeImport(pendingImport.target, pendingImport.workout, "replace", false);
-                }
-              }}
-              className="w-full py-2.5 bg-primary text-primary-foreground font-bold rounded-lg hover:opacity-90 transition-opacity text-sm"
-            >
-              Ersätt befintliga övningar
-            </button>
-            <button
-              onClick={() => {
-                const next = { ...pendingImport, mode: "append" as const };
-                if (pendingImport.target.week > 0) {
-                  setPendingImport({ ...next, step: "propagate" });
-                } else {
-                  void executeImport(pendingImport.target, pendingImport.workout, "append", false);
-                }
-              }}
-              className="w-full py-2.5 bg-secondary text-secondary-foreground font-semibold rounded-lg hover:bg-muted transition-colors text-sm"
-            >
-              Lägg till efter befintliga
-            </button>
-            <button
-              onClick={() => setPendingImport(null)}
-              className="w-full py-2 text-muted-foreground text-xs hover:text-foreground"
-            >
-              Avbryt
-            </button>
-          </div>
-        </div>
-      </div>
-    )}
-    {pendingImport && pendingImport.step === "propagate" && pendingImport.mode && (
-      <div className="fixed inset-0 z-[90] flex items-center justify-center">
-        <div className="absolute inset-0 bg-black/60" onClick={() => setPendingImport(null)} />
-        <div className="relative bg-card border border-border rounded-2xl p-5 max-w-sm w-full mx-4 space-y-4 animate-fade-in">
-          <h3 className="font-bold text-base">Tillämpa på alla {pendingImport.target.day}-pass?</h3>
-          <p className="text-sm text-muted-foreground">
-            Vill du tillämpa denna ändring på alla framtida {pendingImport.target.day}-pass i planen, eller bara på det aktuella passet?
-          </p>
-          <div className="flex flex-col gap-2">
-            <button
-              onClick={() => void executeImport(pendingImport.target, pendingImport.workout, pendingImport.mode!, true)}
-              className="w-full py-2.5 bg-primary text-primary-foreground font-bold rounded-lg hover:opacity-90 transition-opacity text-sm"
-            >
-              Alla framtida {pendingImport.target.day}-pass
-            </button>
-            <button
-              onClick={() => void executeImport(pendingImport.target, pendingImport.workout, pendingImport.mode!, false)}
-              className="w-full py-2.5 bg-secondary text-secondary-foreground font-semibold rounded-lg hover:bg-muted transition-colors text-sm"
-            >
-              Bara denna vecka
-            </button>
-            <button
-              onClick={() => setPendingImport(null)}
-              className="w-full py-2 text-muted-foreground text-xs hover:text-foreground"
-            >
-              Avbryt
-            </button>
-          </div>
-        </div>
-      </div>
-    )}
-    {showWeightPrompt && (
-      <div className="fixed inset-0 z-[80] flex items-center justify-center">
-        <div className="absolute inset-0 bg-black/60" onClick={() => setShowWeightPrompt(false)} />
-        <div className="relative bg-card border border-border rounded-2xl p-5 max-w-sm w-full mx-4 space-y-4 animate-fade-in">
-          <h3 className="font-bold text-base">Ange din kroppsvikt</h3>
-          <p className="text-sm text-muted-foreground">
-            Din kroppsvikt behövs för att beräkna effektiv vikt på kroppsviktsövningar.
-          </p>
-          <div className="flex items-center gap-2">
-            <input
-              type="text"
-              inputMode="decimal"
-              value={weightPromptValue}
-              onChange={(e) => setWeightPromptValue(e.target.value)}
-              placeholder="kg"
-              className="flex-1 bg-secondary text-foreground text-sm px-3 py-2.5 rounded-lg border border-border outline-none focus:ring-2 focus:ring-primary placeholder:text-muted-foreground"
-              autoFocus
-            />
-            <span className="text-sm text-muted-foreground">kg</span>
-          </div>
-          <div className="flex gap-2">
-            <button
-              onClick={() => setShowWeightPrompt(false)}
-              className="flex-1 py-2.5 bg-secondary text-muted-foreground text-sm font-semibold rounded-lg"
-            >
-              Avbryt
-            </button>
-            <button
-              onClick={async () => {
-                const w = parseNum(weightPromptValue);
-                if (isNaN(w) || w <= 0) return;
-                await supabase.from("profiles").update({ weight_kg: w }).eq("user_id", userId);
-                setProfileWeight(w);
-                setShowWeightPrompt(false);
-                setWeightPromptValue("");
-              }}
-              disabled={!weightPromptValue || isNaN(parseNum(weightPromptValue)) || parseNum(weightPromptValue) <= 0}
-              className="flex-1 py-2.5 bg-primary text-primary-foreground text-sm font-bold rounded-lg disabled:opacity-40"
-            >
-              Spara
-            </button>
-          </div>
-        </div>
-      </div>
-    )}
-    {namePromptDialog && (
-      <div className="fixed inset-0 z-[90] flex items-center justify-center">
-        <div className="absolute inset-0 bg-black/60" onClick={() => setNamePromptDialog(null)} />
-        <div className="relative bg-card rounded-2xl shadow-lg p-5 max-w-sm w-full mx-4 space-y-4 animate-fade-in">
-          <div>
-            <h3 className="font-bold text-base">Vad heter passet?</h3>
-            <p className="text-sm text-muted-foreground mt-1">Passet saknar namn – här är ett förslag som du kan ändra.</p>
-          </div>
-          <input
-            autoFocus
-            value={namePromptInput}
-            onChange={(e) => setNamePromptInput(e.target.value)}
-            placeholder={namePromptDialog.suggestion}
-            className="w-full bg-background text-foreground text-sm px-3 py-2.5 rounded-xl border border-border outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-colors"
-          />
-          <div className="flex gap-2">
-            <button
-              onClick={() => setNamePromptDialog(null)}
-              className="flex-1 py-2.5 bg-secondary text-secondary-foreground text-sm font-semibold rounded-xl hover:opacity-80 transition-opacity"
-            >
-              Avbryt
-            </button>
-            <button
-              onClick={async () => {
-                const d = namePromptDialog;
-                const name = (namePromptInput.trim() || d.suggestion).trim();
-                setNamePromptDialog(null);
-                await supabase.from("workout_plans").update({ session_name: name }).eq("id", d.planId);
-                setPlans((prev) => prev.map((p) => (p.id === d.planId ? { ...p, session_name: name } : p)));
-                await toggleDone(d.week, d.day, true);
-              }}
-              className="flex-1 py-2.5 bg-primary text-primary-foreground text-sm font-bold rounded-xl"
-            >
-              Spara & klarmarkera
-            </button>
-          </div>
-        </div>
-      </div>
-    )}
-    {uncheckedSetsDialog && (
+    <WorkoutImportConflictPrompts
+      pendingImport={pendingImport}
+      setPendingImport={setPendingImport}
+      executeImport={executeImport}
+    />
 
-      <div className="fixed inset-0 z-[80] flex items-center justify-center">
-        <div className="absolute inset-0 bg-black/60" onClick={() => setUncheckedSetsDialog(null)} />
-        <div className="relative bg-card border border-border rounded-2xl p-5 max-w-sm w-full mx-4 space-y-4 animate-fade-in">
-          <h3 className="font-bold text-base">Obockade set</h3>
-          <p className="text-sm text-muted-foreground">
-            Du har gjort {uncheckedSetsDialog.doneCount} av {uncheckedSetsDialog.totalCount} set. Obockade sparas som ej gjorda.
-          </p>
-          <div className="flex gap-2">
-            <button
-              onClick={() => setUncheckedSetsDialog(null)}
-              className="flex-1 py-2 bg-secondary text-secondary-foreground text-sm font-semibold rounded-lg hover:opacity-80 transition-opacity"
-            >
-              Avbryt
-            </button>
-            <button
-              onClick={async () => {
-                const { week, day } = uncheckedSetsDialog;
-                setUncheckedSetsDialog(null);
-                await performToggleDone(week, day);
-              }}
-              className="flex-1 py-2 bg-primary text-primary-foreground text-sm font-semibold rounded-lg hover:opacity-80 transition-opacity"
-            >
-              Klarmarkera
-            </button>
-          </div>
-        </div>
-      </div>
-    )}
+    <BodyWeightPrompt
+      showWeightPrompt={showWeightPrompt}
+      setShowWeightPrompt={setShowWeightPrompt}
+      weightPromptValue={weightPromptValue}
+      setWeightPromptValue={setWeightPromptValue}
+      userId={userId}
+      setProfileWeight={setProfileWeight}
+    />
+    <WorkoutNamePrompt
+      namePromptDialog={namePromptDialog}
+      setNamePromptDialog={setNamePromptDialog}
+      namePromptInput={namePromptInput}
+      setNamePromptInput={setNamePromptInput}
+      setPlans={setPlans}
+      toggleDone={toggleDone}
+    />
+    <UncheckedSetsPrompt
+      uncheckedSetsDialog={uncheckedSetsDialog}
+      setUncheckedSetsDialog={setUncheckedSetsDialog}
+      performToggleDone={performToggleDone}
+    />
     <WorkoutCompleteOverlay
       open={!!completeCelebration}
       title={completeCelebration?.title}
@@ -9916,98 +9400,27 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
         setSharePromptDialog(null);
       }}
     />
-    {deleteExerciseConfirm && (
-      <div className="fixed inset-0 z-[80] flex items-center justify-center">
-        <div className="absolute inset-0 bg-black/60" onClick={() => setDeleteExerciseConfirm(null)} />
-        <div className="relative bg-card border border-border rounded-2xl p-5 max-w-sm w-full mx-4 space-y-4 animate-fade-in">
-          <h3 className="font-bold text-sm">Ta bort övning?</h3>
-          <p className="text-sm text-muted-foreground">
-            Är du säker på att du vill ta bort <span className="font-semibold text-foreground">{deleteExerciseConfirm.name}</span>?
-          </p>
-          <div className="flex gap-2">
-            <button onClick={() => setDeleteExerciseConfirm(null)} className="flex-1 py-2.5 bg-secondary text-muted-foreground font-semibold rounded-lg hover:bg-muted transition-colors text-sm">
-              Avbryt
-            </button>
-            <button onClick={executeDeleteExercise} className="flex-1 py-2.5 bg-destructive text-destructive-foreground font-bold rounded-lg hover:opacity-90 transition-opacity text-sm">
-              Ta bort
-            </button>
-          </div>
-        </div>
-      </div>
-    )}
-    {repsEditor && (
-      <div className="fixed inset-0 z-[80] flex items-center justify-center">
-        <div className="absolute inset-0 bg-black/60" onClick={() => setRepsEditor(null)} />
-        <div className="relative bg-card border border-border rounded-2xl p-5 max-w-sm w-full mx-4 space-y-4 animate-fade-in">
-          <h3 className="font-bold text-sm">Ändra {repsEditor.timeBased ? "sekunder" : "reps"}</h3>
-          <p className="text-sm text-muted-foreground">
-            <span className="font-semibold text-foreground">{toTitleCase(repsEditor.name)}</span>
-          </p>
-          <input
-            type="text"
-            inputMode="numeric"
-            autoFocus={false}
-            value={repsEditor.reps}
-            onChange={(e) => setRepsEditor(prev => prev ? { ...prev, reps: e.target.value.replace(/\D/g, "") } : prev)}
-            className="w-full bg-secondary text-foreground text-sm px-3 py-2 rounded-lg border border-border text-center font-mono outline-none focus:ring-1 focus:ring-primary"
-          />
-          <p className="text-[11px] text-muted-foreground">
-            Välj "Alla kommande pass" för att sätta samma förvalda {repsEditor.timeBased ? "sekunder" : "reps"} på övningen i resten av planen.
-          </p>
-          <div className="flex gap-2">
-            <button disabled={repsEditorSaving} onClick={() => applyRepsEdit(false)} className="flex-1 py-2.5 bg-secondary text-muted-foreground font-semibold rounded-lg hover:bg-muted transition-colors text-sm disabled:opacity-50">
-              Bara detta pass
-            </button>
-            <button disabled={repsEditorSaving} onClick={() => applyRepsEdit(true)} className="flex-1 py-2.5 bg-primary text-primary-foreground font-bold rounded-lg hover:opacity-90 transition-opacity text-sm disabled:opacity-50">
-              Alla kommande pass
-            </button>
-          </div>
-        </div>
-      </div>
-    )}
-    {propagateDialog && (
-      <div className="fixed inset-0 z-[80] flex items-center justify-center">
-        <div className="absolute inset-0 bg-black/60" onClick={() => setPropagateDialog(null)} />
-        <div className="relative bg-card border border-border rounded-2xl p-5 max-w-sm w-full mx-4 space-y-4 animate-fade-in">
-          <h3 className="font-bold text-sm">Tillämpa på framtida veckor?</h3>
-          <p className="text-sm text-muted-foreground">
-            Vill du tillämpa ändringen på alla <span className="font-semibold text-foreground">{propagateDialog.plan.day}</span>-pass i efterföljande veckor? Vikten ökas progressivt.
-          </p>
-          <div className="flex gap-2">
-            <button onClick={() => handlePropagate(false)} className="flex-1 py-2.5 bg-secondary text-muted-foreground font-semibold rounded-lg hover:bg-muted transition-colors text-sm">
-              Bara denna vecka
-            </button>
-            <button onClick={() => handlePropagate(true)} className="flex-1 py-2.5 bg-primary text-primary-foreground font-bold rounded-lg hover:opacity-90 transition-opacity text-sm">
-              Alla framtida
-            </button>
-          </div>
-        </div>
-      </div>
-    )}
-    {replaceAsk && (
-      <div className="fixed inset-0 z-[80] flex items-center justify-center">
-        <div className="absolute inset-0 bg-black/60" onClick={() => setReplaceAsk(null)} />
-        <div className="relative bg-card border border-border rounded-2xl p-5 max-w-sm w-full mx-4 space-y-4 animate-fade-in">
-          <h3 className="font-bold text-sm">Byt ut i hela schemat?</h3>
-          <p className="text-sm text-muted-foreground">
-            Vill du byta ut <span className="font-semibold text-foreground">{replaceAsk.oldName}</span> bara i detta pass eller i alla veckor?
-          </p>
-          <div className="flex flex-col gap-2">
-            <div className="flex gap-2">
-              <button onClick={() => { const r = replaceAsk; setReplaceAsk(null); applyReplace(r, false); }} className="flex-1 py-2.5 bg-secondary text-foreground font-semibold rounded-lg hover:bg-muted transition-colors text-sm">
-                Bara detta pass
-              </button>
-              <button onClick={() => { const r = replaceAsk; setReplaceAsk(null); applyReplace(r, true); }} className="flex-1 py-2.5 bg-primary text-primary-foreground font-bold rounded-lg hover:opacity-90 transition-opacity text-sm">
-                Hela schemat
-              </button>
-            </div>
-            <button onClick={() => setReplaceAsk(null)} className="w-full py-2 text-muted-foreground font-semibold rounded-lg hover:bg-muted transition-colors text-sm">
-              Avbryt
-            </button>
-          </div>
-        </div>
-      </div>
-    )}
+    <DeleteExercisePrompt
+      deleteExerciseConfirm={deleteExerciseConfirm}
+      setDeleteExerciseConfirm={setDeleteExerciseConfirm}
+      executeDeleteExercise={executeDeleteExercise}
+    />
+    <ExerciseRepsPrompt
+      repsEditor={repsEditor}
+      setRepsEditor={setRepsEditor}
+      repsEditorSaving={repsEditorSaving}
+      applyRepsEdit={applyRepsEdit}
+    />
+    <ExercisePropagationPrompt
+      propagateDialog={propagateDialog}
+      setPropagateDialog={setPropagateDialog}
+      handlePropagate={handlePropagate}
+    />
+    <ReplaceExercisePrompt
+      replaceAsk={replaceAsk}
+      setReplaceAsk={setReplaceAsk}
+      applyReplace={applyReplace}
+    />
     {shareTarget && (
       <WorkoutShareCard
         sessionName={shareTarget.plan.session_name}
@@ -10059,463 +9472,79 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
     )}
 
     {/* Save workout dialog */}
-    {saveWorkoutSource && (
-      <div className="fixed inset-0 z-[80] flex items-center justify-center">
-        <div className="absolute inset-0 bg-black/60" onClick={() => setSaveWorkoutSource(null)} />
-        <div className="relative bg-card border border-border rounded-2xl p-5 max-w-sm w-full mx-4 space-y-4 animate-fade-in">
-          <div className="flex items-center justify-between">
-            <h3 className="font-bold text-sm flex items-center gap-2">
-              <Save className="w-4 h-4 text-primary" />
-              Spara pass
-            </h3>
-            <button onClick={() => setSaveWorkoutSource(null)} className="p-1 text-muted-foreground hover:text-foreground">
-              <X className="w-4 h-4" />
-            </button>
-          </div>
-          <div className="space-y-3">
-            <div>
-              <label className="text-xs font-semibold text-muted-foreground mb-1 block">Namn på passet</label>
-              <input
-                type="text"
-                value={saveWorkoutName}
-                onChange={(e) => setSaveWorkoutName(e.target.value)}
-                placeholder="T.ex. Mitt favoritpass"
-                className="w-full bg-secondary text-foreground text-sm px-3 py-2.5 rounded-lg border border-border outline-none focus:ring-2 focus:ring-primary placeholder:text-muted-foreground"
-                autoFocus
-              />
-            </div>
-            <div>
-              <label className="text-xs font-semibold text-muted-foreground mb-2 block">Synlighet</label>
-              <div className="flex gap-2">
-                <button
-                  onClick={() => setSaveWorkoutVisibility("private")}
-                  className={`flex-1 py-2 px-3 rounded-lg text-xs font-semibold transition-colors ${saveWorkoutVisibility === "private" ? "bg-primary text-primary-foreground" : "bg-secondary text-muted-foreground"}`}
-                >
-                  🔒 Bara jag
-                </button>
-                <button
-                  onClick={() => setSaveWorkoutVisibility("public")}
-                  className={`flex-1 py-2 px-3 rounded-lg text-xs font-semibold transition-colors ${saveWorkoutVisibility === "public" ? "bg-primary text-primary-foreground" : "bg-secondary text-muted-foreground"}`}
-                >
-                  🌍 Alla användare
-                </button>
-              </div>
-              {saveWorkoutVisibility === "public" && (
-                <p className="text-[10px] text-muted-foreground mt-1">Passet visas under "Skapat av användare" för alla.</p>
-              )}
-            </div>
-            <div>
-              <label className="flex items-center gap-2 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={saveWorkoutIsCircuit}
-                  onChange={(e) => setSaveWorkoutIsCircuit(e.target.checked)}
-                  className="accent-primary w-4 h-4"
-                />
-                <span className="text-xs text-foreground">Cirkelpass (visar Starta-knapp)</span>
-              </label>
-              <p className="text-[10px] text-muted-foreground mt-1 ml-6">Avmarkera om det är ett vanligt styrkepass.</p>
-            </div>
-          </div>
-          <button
-            onClick={async () => {
-              if (!saveWorkoutName.trim()) return;
-              setSaveWorkoutSaving(true);
-              const tempoToSave = saveWorkoutIsCircuit
-                ? (saveWorkoutSource.tempo && saveWorkoutSource.tempo.startsWith("circuit:") ? saveWorkoutSource.tempo : "circuit:40:3:0")
-                : null;
-              const { data, error } = await supabase.from("saved_workouts").insert({
-                user_id: userId,
-                name: saveWorkoutName.trim(),
-                details: saveWorkoutSource.details,
-                tempo: tempoToSave,
-                visibility: saveWorkoutVisibility,
-              } as any).select().single();
-              setSaveWorkoutSaving(false);
-              if (error) {
-                toast.error("Kunde inte spara passet");
-              } else {
-                setSavedWorkouts(prev => [...prev, data as any]);
-                toast.success(`"${saveWorkoutName.trim()}" sparat!`);
-                setSaveWorkoutSource(null);
-              }
-            }}
-            disabled={saveWorkoutSaving || !saveWorkoutName.trim()}
-            className="w-full py-3 bg-primary text-primary-foreground font-bold rounded-lg hover:opacity-90 transition-opacity text-sm disabled:opacity-50"
-          >
-            {saveWorkoutSaving ? "Sparar..." : "Spara"}
-          </button>
-        </div>
-      </div>
-    )}
+    <SaveWorkoutDialog
+      saveWorkoutSource={saveWorkoutSource}
+      setSaveWorkoutSource={setSaveWorkoutSource}
+      saveWorkoutName={saveWorkoutName}
+      setSaveWorkoutName={setSaveWorkoutName}
+      setSaveWorkoutVisibility={setSaveWorkoutVisibility}
+      saveWorkoutVisibility={saveWorkoutVisibility}
+      saveWorkoutIsCircuit={saveWorkoutIsCircuit}
+      setSaveWorkoutIsCircuit={setSaveWorkoutIsCircuit}
+      setSaveWorkoutSaving={setSaveWorkoutSaving}
+      userId={userId}
+      setSavedWorkouts={setSavedWorkouts}
+      saveWorkoutSaving={saveWorkoutSaving}
+    />
 
-    {changeDayDialog && (
-      <div className="fixed inset-0 z-[80] flex items-center justify-center">
-        <div className="absolute inset-0 bg-black/60" onClick={() => setChangeDayDialog(null)} />
-        <div className="relative bg-card border border-border rounded-2xl p-5 max-w-sm w-full mx-4 space-y-4 animate-fade-in">
-          <div className="flex items-center justify-between">
-            <h3 className="font-bold text-sm flex items-center gap-2">
-              <ArrowLeftRight className="w-4 h-4 text-primary" />
-              Byt veckodag
-            </h3>
-            <button onClick={() => setChangeDayDialog(null)} className="p-1 text-muted-foreground hover:text-foreground">
-              <X className="w-4 h-4" />
-            </button>
-          </div>
-          <p className="text-xs text-muted-foreground">
-            <span className="font-semibold text-foreground">{changeDayDialog.sessionName}</span> — nuvarande dag: <span className="font-mono font-semibold text-foreground">{getBaseDay(changeDayDialog.currentDay)}</span>
-          </p>
-          <div className="grid grid-cols-4 gap-2">
-            {DAYS.map((d) => {
-              const isCurrentDay = sameWorkoutDay(d, changeDayDialog.currentDay);
-              const isOccupied = !isCurrentDay && plans.some(p => p.week === changeDayDialog.week && sameWorkoutDay(p.day, d));
-              return (
-                <button
-                  key={d}
-                  onClick={async () => {
-                    if (!isCurrentDay) {
-                      if (isOccupied) {
-                        // Swap: move target to current day and current to target day
-                        const targetPlan = plans.find(p => p.week === changeDayDialog.week && sameWorkoutDay(p.day, d));
-                        if (targetPlan) {
-                          const week = changeDayDialog.week;
-                          const oldDay = changeDayDialog.currentDay;
-                          const newDay = d;
-
-                          // Get completions for both days
-                          const compOld = completions[`${week}-${oldDay}`];
-                          const compNew = completions[`${week}-${newDay}`];
-
-                          // Strip challenge lines from both plans before swapping
-                          const cleanDetailsCurrent = stripChallengeLines(
-                            plans.find(p => p.id === changeDayDialog.planId)?.details || ""
-                          );
-                          const cleanDetailsTarget = stripChallengeLines(targetPlan.details || "");
-
-                          // Swap plan days using a temp value to avoid unique constraint conflict
-                          const tempDay = `__swap_${Date.now()}`;
-                          await supabase.from("workout_plans").update({ day: tempDay, details: cleanDetailsCurrent }).eq("id", changeDayDialog.planId);
-                          await supabase.from("workout_plans").update({ day: oldDay, details: cleanDetailsTarget }).eq("id", targetPlan.id);
-                          await supabase.from("workout_plans").update({ day: newDay }).eq("id", changeDayDialog.planId);
-
-                          // Delete both completions first, then re-insert swapped
-                          await supabase.from("workout_completions").delete()
-                            .eq("user_id", userId).eq("week", week).in("day", [oldDay, newDay]);
-
-                          const upserts: any[] = [];
-                          if (compOld) {
-                            upserts.push({
-                              user_id: userId, week, day: newDay, done: compOld.done, skipped: compOld.skipped,
-                              user_comment: compOld.user_comment || "",
-                              logged_tempo: compOld.logged_tempo, logged_pulse: compOld.logged_pulse,
-                              logged_distance_km: compOld.logged_distance_km, logged_weights: compOld.logged_weights as any,
-                            });
-                          }
-                          if (compNew) {
-                            upserts.push({
-                              user_id: userId, week, day: oldDay, done: compNew.done, skipped: compNew.skipped,
-                              user_comment: compNew.user_comment || "",
-                              logged_tempo: compNew.logged_tempo, logged_pulse: compNew.logged_pulse,
-                              logged_distance_km: compNew.logged_distance_km, logged_weights: compNew.logged_weights as any,
-                            });
-                          }
-                          if (upserts.length > 0) {
-                            await supabase.from("workout_completions").upsert(upserts, { onConflict: "user_id,week,day" });
-                          }
-
-                          setChangeDayDialog(null);
-                          fetchData();
-                        }
-                      } else {
-                        changeWorkoutDay(changeDayDialog.planId, d, changeDayDialog.week);
-                      }
-                    }
-                  }}
-                  disabled={isCurrentDay}
-                  className={`py-2.5 rounded-lg text-xs font-semibold transition-all ${
-                    isCurrentDay 
-                      ? "bg-primary text-primary-foreground" 
-                      : isOccupied 
-                        ? "bg-secondary text-muted-foreground cursor-pointer border border-border hover:border-primary"
-                        : "bg-secondary text-foreground hover:bg-primary hover:text-primary-foreground"
-                  }`}
-                  title={isOccupied ? `Byt plats med ${plans.find(p => p.week === changeDayDialog.week && sameWorkoutDay(p.day, d))?.session_name}` : undefined}
-                >
-                  {d}
-                  {isOccupied && <span className="block text-[8px] text-muted-foreground/70 mt-0.5">upptagen</span>}
-                </button>
-              );
-            })}
-          </div>
-          <p className="text-[10px] text-muted-foreground">Tryck på en upptagen dag för att byta plats mellan passen.</p>
-        </div>
-      </div>
-    )}
+    <ChangeWorkoutDayDialog
+      changeDayDialog={changeDayDialog}
+      setChangeDayDialog={setChangeDayDialog}
+      plans={plans}
+      completions={completions}
+      stripChallengeLines={stripChallengeLines}
+      userId={userId}
+      fetchData={fetchData}
+      changeWorkoutDay={changeWorkoutDay}
+    />
 
     {/* Session settings dialog */}
-    {renameDialog && (
-      <div className="fixed inset-0 z-[80] flex items-center justify-center">
-        <div className="absolute inset-0 bg-black/60" onClick={() => setRenameDialog(null)} />
-        <div className="relative bg-card border border-border rounded-2xl p-5 max-w-sm w-full mx-4 space-y-4 animate-fade-in">
-          <div className="flex items-center justify-between">
-            <h3 className="font-bold text-sm flex items-center gap-2">
-              <Settings className="w-4 h-4 text-primary" />
-              Passinställningar
-            </h3>
-            <button onClick={() => setRenameDialog(null)} className="p-1 text-muted-foreground hover:text-foreground">
-              <X className="w-4 h-4" />
-            </button>
-          </div>
-
-          {/* Rename section */}
-          <div className="space-y-2">
-            <label className="text-xs font-semibold text-muted-foreground">Byt namn</label>
-            <input
-              type="text"
-              value={renameInput}
-              onChange={(e) => setRenameInput(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && renameSession(renameDialog.planId, renameInput)}
-              placeholder="Nytt namn..."
-              className="w-full bg-secondary text-foreground text-sm p-2.5 border-none outline-none focus:ring-2 focus:ring-primary placeholder:text-muted-foreground"
-              autoFocus
-            />
-            <button
-              onClick={() => renameSession(renameDialog.planId, renameInput)}
-              disabled={!renameInput.trim() || renameInput.trim() === renameDialog.currentName}
-              className="w-full py-2 bg-primary text-primary-foreground text-sm font-semibold disabled:opacity-40 hover:opacity-90 transition-opacity"
-            >
-              Spara namn
-            </button>
-          </div>
-
-          {/* Divider */}
-          <div className="border-t border-border" />
-
-          {renameDialog.week > 0 && (
-            <div className="space-y-2">
-              <label className="text-xs font-semibold text-muted-foreground">Aktuell träningsdag</label>
-              <button
-                onClick={setWorkoutAsCurrentDay}
-                disabled={settingCurrentDay}
-                className="w-full py-2.5 bg-primary/10 text-primary text-sm font-semibold hover:bg-primary/20 transition-colors flex items-center justify-center gap-2 disabled:opacity-40"
-              >
-                <CalendarIcon className="w-4 h-4" />
-                {settingCurrentDay ? "Uppdaterar..." : "Gör detta pass till dagens pass"}
-              </button>
-              <p className="text-[10px] text-muted-foreground leading-snug">
-                Justerar schemats startdatum så att vecka {renameDialog.week}, {getBaseDay(renameDialog.day)} matchar idag.
-              </p>
-            </div>
-          )}
-
-          <div className="border-t border-border" />
-
-          {/* Skip/miss section */}
-          <div className="space-y-2">
-            <label className="text-xs font-semibold text-muted-foreground">Markera pass</label>
-            <button
-              onClick={() => {
-                if (renameDialog.week === 0) {
-                  const { week, day } = renameDialog;
-                  setRenameDialog(null);
-                  void toggleSkipped(week, day);
-                  return;
-                }
-                setReplacementTarget({
-                  planId: renameDialog.planId,
-                  sessionName: renameDialog.sessionName,
-                  week: renameDialog.week,
-                  day: renameDialog.day
-                });
-                setRenameDialog(null);
-              }}
-              className="w-full py-2.5 bg-destructive/10 text-destructive text-sm font-semibold hover:bg-destructive/20 transition-colors flex items-center justify-center gap-2"
-            >
-              <XCircle className="w-4 h-4" />
-              {renameDialog.week === 0 ? "Markera som missat" : "Markera som missat"}
-            </button>
-          </div>
-
-          <button
-            onClick={() => setRenameDialog(null)}
-            className="w-full py-2.5 bg-secondary text-muted-foreground text-sm hover:text-foreground transition-colors"
-          >
-            Stäng
-          </button>
-        </div>
-      </div>
-    )}
+    <WorkoutSessionSettingsDialog
+      renameDialog={renameDialog}
+      setRenameDialog={setRenameDialog}
+      renameInput={renameInput}
+      setRenameInput={setRenameInput}
+      renameSession={renameSession}
+      setWorkoutAsCurrentDay={setWorkoutAsCurrentDay}
+      settingCurrentDay={settingCurrentDay}
+      toggleSkipped={toggleSkipped}
+      setReplacementTarget={setReplacementTarget}
+    />
 
     {/* Share to chat dialog */}
-    {chatShareTarget && chatFriends.length > 0 && (
-      <>
-        <div className="fixed inset-0 bg-black/60 z-[80]" onClick={() => setChatShareTarget(null)} />
-        <div className="fixed inset-x-4 top-1/2 -translate-y-1/2 z-[90] max-w-sm mx-auto bg-card border border-border rounded-2xl shadow-2xl overflow-hidden animate-fade-in">
-          <div className="p-4 border-b border-border">
-            <div className="flex items-center justify-between">
-              <h3 className="text-sm font-bold flex items-center gap-2">
-                <Send className="w-4 h-4 text-primary" />
-                Dela pass via chatt
-              </h3>
-              <button onClick={() => setChatShareTarget(null)} className="p-1 text-muted-foreground hover:text-foreground">
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-            <p className="text-xs text-muted-foreground mt-1">
-              {chatShareTarget.session_name} – {chatShareTarget.details.split(/[;\n]/).filter(Boolean).length} övningar
-            </p>
-          </div>
-          <div className="max-h-64 overflow-y-auto p-2">
-            {chatFriends.map(friend => (
-              <button
-                key={friend.user_id}
-                disabled={chatShareSending}
-                onClick={async () => {
-                  setChatShareSending(true);
-                  await supabase.from("chat_messages").insert({
-                    sender_id: userId,
-                    receiver_id: friend.user_id,
-                    message: `Delade passet "${chatShareTarget.session_name}"`,
-                    message_type: "workout",
-                    shared_workout: {
-                      session_name: chatShareTarget.session_name,
-                      details: chatShareTarget.details,
-                      tempo: chatShareTarget.tempo,
-                      week: chatShareTarget.week,
-                    },
-                  });
-                  setChatShareSending(false);
-                  setChatShareTarget(null);
-                  triggerSave();
-                }}
-                className="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-muted/50 transition-colors text-left"
-              >
-                <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
-                  <span className="text-xs font-bold text-primary">{friend.nickname.charAt(0).toUpperCase()}</span>
-                </div>
-                <span className="text-sm font-medium">{friend.nickname}</span>
-              </button>
-            ))}
-          </div>
-        </div>
-      </>
-    )}
+    <ShareWorkoutChatDialog
+      chatShareTarget={chatShareTarget}
+      chatFriends={chatFriends}
+      setChatShareTarget={setChatShareTarget}
+      chatShareSending={chatShareSending}
+      setChatShareSending={setChatShareSending}
+      userId={userId}
+      triggerSave={triggerSave}
+    />
 
     {/* Copy to date dialog */}
-    {copyToDateSource && (
-      <>
-        <div className="fixed inset-0 bg-black/60 z-[80]" onClick={() => setCopyToDateSource(null)} />
-        <div className="fixed inset-x-4 top-1/2 -translate-y-1/2 z-[90] max-w-sm mx-auto bg-card border border-border rounded-2xl shadow-2xl overflow-hidden animate-fade-in">
-          <div className="p-4 border-b border-border">
-            <div className="flex items-center justify-between">
-              <h3 className="text-sm font-bold flex items-center gap-2">
-                <CalendarIcon className="w-4 h-4 text-primary" />
-                Kopiera till datum
-              </h3>
-              <button onClick={() => setCopyToDateSource(null)} className="text-muted-foreground hover:text-foreground">
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-            <p className="text-xs text-muted-foreground mt-1">
-              {copyToDateSource.session_name}
-            </p>
-          </div>
-
-          {copyToDateConflict === "ask" ? (
-            <div className="p-4 space-y-3">
-              <p className="text-sm text-muted-foreground">
-                Det finns redan övningar på <span className="font-semibold text-foreground">{format(copyToDateSelected, "d MMMM yyyy", { locale: sv })}</span>. Vad vill du göra?
-              </p>
-              <button
-                onClick={async () => {
-                  setCopyToDateConflict("replace");
-                  await executeCopyToDate("replace");
-                }}
-                disabled={copyToDateSaving}
-                className="w-full py-2.5 bg-primary text-primary-foreground font-semibold rounded-lg text-sm disabled:opacity-50"
-              >
-                Ersätt befintliga övningar
-              </button>
-              <button
-                onClick={async () => {
-                  setCopyToDateConflict("add");
-                  await executeCopyToDate("add");
-                }}
-                disabled={copyToDateSaving}
-                className="w-full py-2.5 bg-secondary text-secondary-foreground font-semibold rounded-lg text-sm disabled:opacity-50"
-              >
-                Lägg till efter befintliga
-              </button>
-            </div>
-          ) : (
-            <div className="p-4 space-y-3">
-              <div className="flex justify-center">
-                <Calendar
-                  mode="single"
-                  selected={copyToDateSelected}
-                  onSelect={(d) => d && setCopyToDateSelected(d)}
-                  locale={sv}
-                  className="p-3 pointer-events-auto bg-card border border-border rounded-lg"
-                />
-              </div>
-              <div className="bg-secondary/50 border border-border rounded-lg p-2.5 text-center">
-                <p className="text-xs font-medium">
-                  Kopiera till: <span className="text-primary">{format(copyToDateSelected, "EEEE d MMMM yyyy", { locale: sv })}</span>
-                </p>
-              </div>
-              <button
-                onClick={handleCopyToDateConfirm}
-                disabled={copyToDateSaving}
-                className="w-full py-2.5 bg-primary text-primary-foreground font-bold rounded-lg text-sm disabled:opacity-50"
-              >
-                {copyToDateSaving ? "Kopierar..." : "Kopiera"}
-              </button>
-            </div>
-          )}
-        </div>
-      </>
-    )}
+    <CopyWorkoutDateDialog
+      copyToDateSource={copyToDateSource}
+      setCopyToDateSource={setCopyToDateSource}
+      copyToDateConflict={copyToDateConflict}
+      copyToDateSelected={copyToDateSelected}
+      setCopyToDateConflict={setCopyToDateConflict}
+      executeCopyToDate={executeCopyToDate}
+      copyToDateSaving={copyToDateSaving}
+      setCopyToDateSelected={setCopyToDateSelected}
+      handleCopyToDateConfirm={handleCopyToDateConfirm}
+    />
     {/* Add week dialog */}
-    {showAddWeekDialog && (
-      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60" onClick={() => setShowAddWeekDialog(false)}>
-        <div className="bg-card rounded-xl border border-border p-5 w-[90%] max-w-sm space-y-4 animate-fade-in" onClick={e => e.stopPropagation()}>
-          <div className="flex items-center justify-between">
-            <h3 className="font-bold text-sm">Lägg till vecka</h3>
-            <button onClick={() => setShowAddWeekDialog(false)} className="text-muted-foreground hover:text-foreground">
-              <X className="w-4 h-4" />
-            </button>
-          </div>
-          <p className="text-xs text-muted-foreground">Välj vilken vecka du vill kopiera till den nya veckan:</p>
-          <div className="grid grid-cols-4 gap-2 max-h-48 overflow-y-auto">
-            {weeks.filter(w => w > 0).map(w => (
-              <button
-                key={w}
-                onClick={() => setAddWeekSourceWeek(w)}
-                className={`px-3 py-2 rounded-md text-sm font-medium transition-all ${
-                  addWeekSourceWeek === w
-                    ? "bg-primary text-primary-foreground"
-                    : "bg-secondary text-muted-foreground hover:text-foreground"
-                }`}
-              >
-                V{w}
-              </button>
-            ))}
-          </div>
-          {addWeekSourceWeek && (
-            <p className="text-xs text-muted-foreground text-center">
-              Kopierar {plans.filter(p => p.week === addWeekSourceWeek).length} pass från vecka {addWeekSourceWeek}
-            </p>
-          )}
-          <button
-            onClick={() => addWeekSourceWeek && addWeekByCopy(addWeekSourceWeek)}
-            disabled={!addWeekSourceWeek || addWeekSaving}
-            className="w-full py-2.5 bg-primary text-primary-foreground font-bold rounded-lg text-sm disabled:opacity-50"
-          >
-            {addWeekSaving ? "Skapar..." : `Skapa vecka ${(weeks.filter(w => w > 0).length > 0 ? Math.max(...weeks.filter(w => w > 0)) + 1 : 1)}`}
-          </button>
-        </div>
-      </div>
-    )}
+    <AddWorkoutWeekDialog
+      showAddWeekDialog={showAddWeekDialog}
+      setShowAddWeekDialog={setShowAddWeekDialog}
+      weeks={weeks}
+      setAddWeekSourceWeek={setAddWeekSourceWeek}
+      addWeekSourceWeek={addWeekSourceWeek}
+      plans={plans}
+      addWeekByCopy={addWeekByCopy}
+      addWeekSaving={addWeekSaving}
+    />
     {achievementToast && (
       <div className="fixed inset-0 z-[90] flex items-center justify-center bg-background/80 p-4" onClick={() => setAchievementToast(null)}>
         <div className="w-full max-w-sm border border-border bg-card p-5 text-center animate-fade-in" onClick={(e) => e.stopPropagation()}>
