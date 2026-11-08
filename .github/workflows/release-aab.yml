@@ -31,6 +31,8 @@ jobs:
 
       - name: Setup Android SDK command-line tools
         uses: android-actions/setup-android@v3
+        with:
+          packages: ''
 
       - name: Install pinned NDK for native symbol extraction
         run: |
