@@ -115,13 +115,20 @@ const HealthWorkoutPrompt = ({ userId, preview = false }: { userId: string; prev
     setSaving(true);
     try {
       const res = await importHealthWorkouts(userId, pending);
-      toast.success(
-        res.imported === 1 ? "Passet registrerat i Grim" : `${res.imported} pass registrerade i Grim`,
-      );
-      const dismissed = loadDismissed();
-      pending.forEach((w) => dismissed.add(healthWorkoutDayKey(w)));
-      saveDismissed(dismissed);
-      setOpen(false);
+      const succeeded = new Set(res.successfulKeys);
+      if (succeeded.size > 0) {
+        toast.success(succeeded.size === 1 ? "Passet registrerat i Grim" : `${succeeded.size} pass registrerade i Grim`);
+        const dismissed = loadDismissed();
+        succeeded.forEach((key) => dismissed.add(key));
+        saveDismissed(dismissed);
+      }
+      const remaining = pending.filter((w) => !succeeded.has(healthWorkoutDayKey(w)));
+      setPending(remaining);
+      if (remaining.length > 0) {
+        toast.error(`${remaining.length} pass kunde inte registreras – försök igen.`);
+      } else {
+        setOpen(false);
+      }
     } catch (err: any) {
       toast.error(err?.message || "Kunde inte registrera passet");
     } finally {

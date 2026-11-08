@@ -1,3 +1,4 @@
+import { getProgramWeekPlans, getWorkoutDisplayDay, isWorkoutDayDone } from "@/lib/healthProgramVisibility";
 import { useUnitOverrides } from "@/lib/exerciseUnits";
 import { formatDecimal, isPlausibleSet, validateNumber } from "@/lib/inputValidation";
 import { validateCardioEntry } from "@/lib/inputValidation";
@@ -957,8 +958,7 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
     prevWeekRef.current = currentWeek;
 
     const planStartDateObjForDay = parseDateKey(planStartDate);
-    const weekPlans = plans
-      .filter((p) => p.week === currentWeek)
+    const weekPlans = getProgramWeekPlans(plans, currentWeek, activePlanWeek, toLocalDateKey(new Date()))
       .filter((p) => {
         // Mirror the visible-day filter used in render: hide plan days that fall
         // before plan_start_date, so activeDayIndex aligns with mobileDayTabs.
@@ -968,10 +968,10 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
         return pd.getTime() >= planStartDateObjForDay.getTime();
       });
     const currentWeekDays = DAYS
-      .map((dayName) => weekPlans.find((p) => sameWorkoutDay(p.day, dayName)))
+      .map((dayName) => weekPlans.find((p) => sameWorkoutDay(getWorkoutDisplayDay(p), dayName)))
       .filter(Boolean) as PlanDay[];
 
-    const { index, matchedToday } = resolveTodayDayIndex(currentWeekDays, currentWeek, planStartDate);
+    const { index, matchedToday } = resolveTodayDayIndex(currentWeekDays.map((p) => ({ ...p, day: getWorkoutDisplayDay(p) })), currentWeek, planStartDate);
 
     if (isInitialPick) {
       didInitialDayPickRef.current = true;
@@ -982,7 +982,7 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
 
     setActiveDayIndex(index);
     setExpandedDay(null);
-  }, [currentWeek, plans, planStartDate, hasOpenModalUi]);
+  }, [currentWeek, activePlanWeek, plans, planStartDate, hasOpenModalUi]);
 
 
 
@@ -5880,8 +5880,7 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
 
   // Plan mode (existing)
   const planStartDateObj = parseDateKey(planStartDate);
-  const weekDays = plans.
-  filter((p) => p.week === currentWeek).
+  const weekDays = getProgramWeekPlans(plans, currentWeek, activePlanWeek, toLocalDateKey(new Date())).
   filter((p) => {
     // Hide plan days that fall before the user's actual plan start date
     // (e.g. Monday workouts in week 1 when the plan started later in the week)
@@ -5890,14 +5889,14 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
     if (!planDate) return true;
     return planDate.getTime() >= planStartDateObj.getTime();
   }).
-  sort((a, b) => getDayIndex(a.day) - getDayIndex(b.day));
+  sort((a, b) => getDayIndex(getWorkoutDisplayDay(a)) - getDayIndex(getWorkoutDisplayDay(b)));
 
   const mobileDayTabs = DAYS
-    .map((dayName) => weekDays.find((p) => sameWorkoutDay(p.day, dayName)))
+    .map((dayName) => weekDays.find((p) => sameWorkoutDay(getWorkoutDisplayDay(p), dayName)))
     .filter(Boolean) as PlanDay[];
   const activeMobileDay = mobileDayTabs[Math.min(activeDayIndex, Math.max(0, mobileDayTabs.length - 1))];
   const visibleWeekDays = isMobile && weekDays.length > 1 && activeMobileDay
-    ? weekDays.filter((p) => sameWorkoutDay(p.day, activeMobileDay.day))
+    ? weekDays.filter((p) => sameWorkoutDay(getWorkoutDisplayDay(p), getWorkoutDisplayDay(activeMobileDay)))
     : weekDays;
 
   const weekIdx = weeks.indexOf(currentWeek);
@@ -6024,7 +6023,7 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
           {/* Day tabs — letter + status indicator (today / done / upcoming) */}
           <div className="grid grid-cols-7 gap-1 pb-1">
             {DAYS.map((dayName) => {
-              const planIdx = mobileDayTabs.findIndex((p) => sameWorkoutDay(p.day, dayName));
+              const planIdx = mobileDayTabs.findIndex((p) => sameWorkoutDay(getWorkoutDisplayDay(p), dayName));
               const isRest = planIdx === -1;
               const isToday = dayName === todayName && currentWeek === activePlanWeek;
               const dayDate = getPlanDayDateValue(planStartDate, currentWeek, dayName);
@@ -6067,8 +6066,8 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
               const plan = mobileDayTabs[planIdx];
               const k = `${plan.week}-${plan.day}`;
               const comp = completions[k];
-              const done = comp?.done || false;
-              const skipped = comp?.skipped || false;
+              const done = isWorkoutDayDone(weekDays, completions, dayName);
+              const skipped = !done && (comp?.skipped || false);
               const isActive = planIdx === activeDayIndex;
               return (
                 <button
@@ -6093,7 +6092,7 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
                   }`}
                   title={done ? "Genomfört" : skipped ? "Överhoppat" : isToday ? "Idag" : "Kommande pass"}
                 >
-                  <span className="text-[11px] leading-none">{getBaseDay(plan.day)}</span>
+                  <span className="text-[11px] leading-none">{getWorkoutDisplayDay(plan)}</span>
                   {done ? (
                     <Check className={`h-2.5 w-2.5 ${isActive ? "text-success-foreground" : "text-success"}`} strokeWidth={4} />
                   ) : skipped ? (
@@ -6152,10 +6151,10 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
           const colorClass = !isRest && baseColor === "text-muted-foreground" ? "text-primary" : baseColor;
 
           const cardTodayNames = ["Sön", "Mån", "Tis", "Ons", "Tors", "Fre", "Lör"];
-          const isCardToday = sameWorkoutDay(plan.day, cardTodayNames[new Date().getDay()]) && plan.week === activePlanWeek;
+          const isCardToday = sameWorkoutDay(getWorkoutDisplayDay(plan), cardTodayNames[new Date().getDay()]) && currentWeek === activePlanWeek;
 
           return (
-            <div key={key + "-wrap"} className="w-full" style={{ order: getDayIndex(plan.day) * 2 + 1 }}>
+            <div key={key + "-wrap"} className="w-full" style={{ order: getDayIndex(getWorkoutDisplayDay(plan)) * 2 + 1 }}>
             <div
               className={`relative w-full rounded-lg border transition-colors bg-card text-card-foreground ${isDone ? "workout-done opacity-80" : ""} ${isSkipped ? "opacity-60" : ""} ${isRest ? "workout-rest" : ""}`}>
               <div className="flex items-center gap-3 px-4 pt-4 pb-2 cursor-pointer" onClick={(e) => { if ((e.target as HTMLElement).closest('button')) return; if (expanded) { const sameDayPlans = plans.filter(p2 => p2.week === plan.week && p2.day === plan.day); if (sameDayPlans.length <= 1) return; } setExpandedDay(expanded ? null : key); }}>

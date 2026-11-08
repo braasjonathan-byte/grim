@@ -303,7 +303,7 @@ const HealthConnectCard = () => {
     setLoadingWorkouts(true);
     try {
       const res = await importHealthWorkouts(userId, pending);
-      setImportedKeys(await findImportedHealthWorkouts(userId, workouts));
+      setImportedKeys((prev) => new Set([...prev, ...res.successfulKeys]));
       if (res.failed > 0) {
         toast.warning(`${res.imported} pass importerade – ${res.failed} misslyckades, försök igen.`);
       } else {

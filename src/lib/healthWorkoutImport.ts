@@ -5,7 +5,7 @@
 import { supabase } from "@/integrations/supabase/client";
 import { buildWorkoutFromAiExercises } from "@/lib/aiWorkoutImport";
 import { healthLog, withTimeout, type HealthWorkout } from "@/lib/healthSync";
-import { DAYS, daysBetweenCalendarDates, getMonday, parseDateKey, toLocalDateKey } from "@/lib/workoutDayUtils";
+import { DAYS, daysBetweenCalendarDates, getMonday, getPlanDayDateValue, parseDateKey, toLocalDateKey, toUtcDateKey } from "@/lib/workoutDayUtils";
 import { notifyWorkoutsChanged } from "@/lib/workoutHistory";
 
 /** Ingen nätverksförfrågan får hänga och låsa knappen i laddningsläge. */
@@ -74,22 +74,32 @@ async function loadPlanContext(userId: string): Promise<PlanContext> {
 export async function findImportedHealthWorkouts(
   userId: string,
   workouts: HealthWorkout[],
+  knownPlan?: PlanContext,
 ): Promise<Set<string>> {
   if (workouts.length === 0) return new Set();
   healthLog("looking up imported workouts", workouts.length);
   // Pass kan ligga i vecka 0 (fristående) eller i en programvecka – leta på suffixet.
-  const { data } = await withTimeout(
-    Promise.resolve(
+  const [{ data, error }, { data: completions, error: completionError }] = await withTimeout(
+    Promise.all([Promise.resolve(
       supabase
         .from("workout_plans")
-        .select("day,details")
-        .eq("user_id", userId)
-        .like("day", "%\\_hc%"),
-    ),
+        .select("id,week,day,details")
+        .eq("user_id", userId),
+    ), Promise.resolve(
+      supabase.from("workout_completions").select("week,day,done").eq("user_id", userId),
+    )]),
     DB_TIMEOUT_MS,
     "Ingen kontakt med servern – försök igen.",
   );
-  return importedKeysFromRows((data ?? []) as any[], workouts);
+  if (error || completionError) throw error || completionError;
+  const doneKeys = new Set((completions ?? []).filter((c) => c.done).map((c) => `${c.week}-${c.day}`));
+  // A plan row alone is not a successful import: completion may have failed.
+  const imported = importedKeysFromRows((data ?? []).filter((p) => p.day.includes("_hc") && doneKeys.has(`${p.week}-${p.day}`)), workouts);
+  if (imported.size === 0) return imported;
+  const plan = knownPlan === undefined ? await loadPlanContext(userId) : knownPlan;
+  // A failed replacement remains retryable after app restart / focus refresh too.
+  return new Set(workouts.filter((w) => imported.has(healthWorkoutDayKey(w)) &&
+    unfinishedPlannedIds(data ?? [], doneKeys, w, plan).length === 0).map(healthWorkoutDayKey));
 }
 
 /** Ett import räknas bara om raden fortfarande har en övning kvar i träningskortet. */
@@ -146,28 +156,72 @@ export async function cleanupHealthImportDetails(userId: string): Promise<number
   return fixed;
 }
 
-export type ImportResult = { imported: number; skipped: number; failed: number };
+export type ImportResult = { imported: number; skipped: number; failed: number; successfulKeys: string[] };
+
+function unfinishedPlannedIds(
+  plans: { id: string; week: number; day: string }[], completed: Set<string>, w: HealthWorkout, plan: PlanContext,
+): string[] {
+  const dateKey = healthWorkoutLocalDate(w);
+  return plans.filter((p) => {
+    if (p.day.includes("_hc") || completed.has(`${p.week}-${p.day}`)) return false;
+    const date = p.week === 0 ? parseDateKey(p.day) : getPlanDayDateValue(plan?.planStartDate ?? null, p.week, p.day);
+    return date && toUtcDateKey(date) === dateKey;
+  }).map((p) => p.id);
+}
+
+/** Only remove unfinished non-HC sessions on the actual local calendar date.
+ * Called AFTER both HC writes succeed, including on retries of a completed import.
+ */
+async function removeUnfinishedPlannedWorkouts(userId: string, w: HealthWorkout, plan: PlanContext) {
+  const [{ data: plans, error }, { data: completions, error: completionError }] = await withTimeout(
+    Promise.all([
+      Promise.resolve(supabase.from("workout_plans").select("id,week,day").eq("user_id", userId)),
+      Promise.resolve(supabase.from("workout_completions").select("week,day,done").eq("user_id", userId)),
+    ]), DB_TIMEOUT_MS, "Ingen kontakt med servern – försök igen.",
+  );
+  if (error || completionError) throw error || completionError;
+  const completed = new Set((completions ?? []).filter((c) => c.done).map((c) => `${c.week}-${c.day}`));
+  const ids = unfinishedPlannedIds(plans ?? [], completed, w, plan);
+  if (!ids.length) return;
+  const { error: deleteError } = await withTimeout(
+    Promise.resolve(supabase.from("workout_plans").delete().eq("user_id", userId).in("id", ids)),
+    DB_TIMEOUT_MS, "Ingen kontakt med servern – försök igen.",
+  );
+  if (deleteError) throw deleteError;
+}
 
 export async function importHealthWorkouts(
   userId: string,
   workouts: HealthWorkout[],
 ): Promise<ImportResult> {
-  const existing = await findImportedHealthWorkouts(userId, workouts);
   const plan = await loadPlanContext(userId);
-  const seen = new Set(existing);
+  const existing = await findImportedHealthWorkouts(userId, workouts, plan);
+  const seen = new Set<string>();
   let imported = 0;
   let skipped = 0;
   let failed = 0;
+  const successfulKeys: string[] = [];
 
   for (const w of workouts) {
     const key = healthWorkoutDayKey(w);
-    const { week, day } = healthWorkoutTarget(w, plan);
+    let { week, day } = healthWorkoutTarget(w, plan);
     // seen fångar även dubbletter inom samma anrop (t.ex. dubbelklick på importera).
     if (seen.has(key)) {
       skipped += 1;
       continue;
     }
-    seen.add(key);
+    if (existing.has(key)) {
+      try {
+        await removeUnfinishedPlannedWorkouts(userId, w, plan);
+        successfulKeys.push(key);
+        seen.add(key);
+        skipped += 1;
+      } catch (err: any) {
+        healthLog("replacement failed", err?.message);
+        failed += 1;
+      }
+      continue;
+    }
 
     const { details, loggedWeights } = buildWorkoutFromAiExercises([
       {
@@ -197,20 +251,25 @@ export async function importHealthWorkouts(
     if (meta) loggedWeights[HC_META_KEY] = meta;
 
     try {
-      // Tomma rester efter att övningen tagits bort i Träning – rensa så vi inte får dubbletter.
-      await Promise.resolve(
-        supabase.from("workout_plans").delete().eq("user_id", userId).like("day", `%\\_hc${w.key}`),
-      ).catch(() => null);
+      // Retry the existing HC identity even if plan context changed after a
+      // partial write. Do not leave a second orphan in week 0 / another week.
+      const { data: partialRows, error: lookupError } = await withTimeout(
+        Promise.resolve(supabase.from("workout_plans").select("week,day").eq("user_id", userId).like("day", `%\\_hc${w.key}`)),
+        DB_TIMEOUT_MS, "Ingen kontakt med servern – försök igen.",
+      );
+      if (lookupError) throw lookupError;
+      const slot = partialRows?.find((p) => p.week === week && p.day === day) ?? partialRows?.[0];
+      if (slot) { week = slot.week; day = slot.day; }
       const { error: planError } = await withTimeout(
         Promise.resolve(
-          supabase.from("workout_plans").insert({
+          supabase.from("workout_plans").upsert({
             user_id: userId,
             week,
             day,
             session_name: w.label,
             details,
             is_circuit: false,
-          } as never),
+          } as never, { onConflict: "user_id,week,day" }),
         ),
         DB_TIMEOUT_MS,
         "Ingen kontakt med servern – försök igen.",
@@ -246,15 +305,18 @@ export async function importHealthWorkouts(
         failed += 1;
         continue;
       }
+      await removeUnfinishedPlannedWorkouts(userId, w, plan);
       imported += 1;
+      successfulKeys.push(key);
+      seen.add(key);
     } catch (err: any) {
       healthLog("import failed", err?.message);
       failed += 1;
     }
   }
 
-  if (imported > 0) notifyWorkoutsChanged(userId);
-  return { imported, skipped, failed };
+  if (successfulKeys.length > 0 || failed > 0) notifyWorkoutsChanged(userId);
+  return { imported, skipped, failed, successfulKeys };
 }
 
 
