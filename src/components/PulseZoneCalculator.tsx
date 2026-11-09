@@ -22,16 +22,16 @@ const PulseZoneCalculator = () => {
     setAge(profile.age);
   }, [profile]);
 
-  const maxHR = 220 - age;
+  const maxHR = profile?.maxHeartRate ?? 220 - age;
 
   // Karvonen formula: target = ((maxHR - restHR) * intensity) + restHR
   const karvonen = (pct: number) => Math.round((maxHR - restHR) * pct + restHR);
 
   return (
-    <div className="border border-border rounded-lg bg-card overflow-hidden">
+    <div className="border border-border rounded-lg bg-card text-card-foreground overflow-hidden">
       <button
         onClick={() => setOpen(!open)}
-        className="w-full flex items-center gap-3 p-4 transition-colors bg-secondary"
+        className="w-full flex items-center gap-3 p-4 transition-colors bg-card text-card-foreground hover:bg-muted hover:text-muted-foreground"
       >
         <Heart className="w-5 h-5 text-destructive" />
         <span className="font-semibold text-sm">Pulszonskalkylator</span>
@@ -51,7 +51,7 @@ const PulseZoneCalculator = () => {
                 onChange={(e) => setAge(Number(e.target.value))}
                 min={10}
                 max={100}
-                className="w-full bg-secondary text-foreground text-lg font-mono p-2 rounded-md border-none outline-none focus:ring-1 focus:ring-primary"
+                className="w-full bg-background text-foreground text-lg font-mono p-2 rounded-md border-none outline-none focus:ring-1 focus:ring-primary"
               />
             </div>
             <div>
@@ -62,13 +62,13 @@ const PulseZoneCalculator = () => {
                 onChange={(e) => setRestHR(Number(e.target.value))}
                 min={30}
                 max={120}
-                className="w-full bg-secondary text-foreground text-lg font-mono p-2 rounded-md border-none outline-none focus:ring-1 focus:ring-primary"
+                className="w-full bg-background text-foreground text-lg font-mono p-2 rounded-md border-none outline-none focus:ring-1 focus:ring-primary"
               />
             </div>
           </div>
 
-          <div className="text-center p-3 bg-secondary rounded-lg">
-            <p className="text-xs text-muted-foreground">Beräknad maxpuls</p>
+          <div className="text-center p-3 bg-muted rounded-lg">
+            <p className="text-xs text-muted-foreground">{profile?.maxHeartRate ? "Maxpuls från inställningarna" : "Beräknad maxpuls (220 − ålder)"}</p>
             <p className="text-3xl font-black text-destructive">{maxHR} bpm</p>
             <p className="text-xs text-muted-foreground mt-1">Karvonen-metoden</p>
           </div>

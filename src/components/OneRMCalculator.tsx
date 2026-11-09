@@ -40,7 +40,7 @@ const OneRMCalculator = () => {
                   const cleaned = e.target.value.replace(/\D/g, "").replace(/^0+(?=\d)/, "");
                   setWeight(Number(cleaned) || 0);
                 }}
-                className="w-full bg-secondary text-foreground text-lg font-mono p-2 rounded-md border-none outline-none focus:ring-1 focus:ring-primary"
+                className="w-full bg-background text-foreground text-lg font-mono p-2 rounded-md border-none outline-none focus:ring-1 focus:ring-primary"
               />
             </div>
             <div>
@@ -55,12 +55,12 @@ const OneRMCalculator = () => {
                   const n = Number(cleaned) || 0;
                   setReps(Math.max(1, Math.min(30, n || 1)));
                 }}
-                className="w-full bg-secondary text-foreground text-lg font-mono p-2 rounded-md border-none outline-none focus:ring-1 focus:ring-primary"
+                className="w-full bg-background text-foreground text-lg font-mono p-2 rounded-md border-none outline-none focus:ring-1 focus:ring-primary"
               />
             </div>
           </div>
 
-          <div className="text-center p-3 bg-secondary rounded-lg">
+          <div className="text-center p-3 bg-muted rounded-lg">
             <p className="text-xs text-muted-foreground">Beräknad 1RM (Epley)</p>
             <p className="text-3xl font-black text-primary">{oneRM} kg</p>
           </div>
@@ -74,7 +74,7 @@ const OneRMCalculator = () => {
               <div
                 key={r}
                 className={`flex justify-between p-2 rounded-md ${
-                  r === reps ? "bg-primary/20 text-primary" : "bg-secondary text-muted-foreground"
+                  r === reps ? "bg-primary/20 text-primary" : "bg-muted text-muted-foreground"
                 }`}
               >
                 <span>{r} rep</span>
