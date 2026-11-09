@@ -1667,6 +1667,7 @@ export type Database = {
           is_honorary: boolean
           main_sport: string | null
           max_distance_km: number | null
+          max_heart_rate: number | null
           must_change_password: boolean
           nickname: string
           plan_start_calibrated: boolean
@@ -1708,6 +1709,7 @@ export type Database = {
           is_honorary?: boolean
           main_sport?: string | null
           max_distance_km?: number | null
+          max_heart_rate?: number | null
           must_change_password?: boolean
           nickname: string
           plan_start_calibrated?: boolean
@@ -1749,6 +1751,7 @@ export type Database = {
           is_honorary?: boolean
           main_sport?: string | null
           max_distance_km?: number | null
+          max_heart_rate?: number | null
           must_change_password?: boolean
           nickname?: string
           plan_start_calibrated?: boolean
