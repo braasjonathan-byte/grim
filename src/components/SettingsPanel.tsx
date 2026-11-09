@@ -331,12 +331,14 @@ const SettingsPanel = ({ userId, isAdmin, isHonorary = false, category = "all", 
     }));
   };
 
+  const inCategory = (target: SettingsCategory) => category === "all" || category === target;
+
   return (
     <div className="bg-background border border-border rounded-lg p-4 space-y-4">
-      <h3 className="text-sm font-bold font-sans">⚙️ Inställningar</h3>
+      {category === "all" && <h3 className="text-sm font-bold font-sans">⚙️ Inställningar</h3>}
 
       {/* Theme picker - replaces old dark mode toggle */}
-      {userId && (
+      {userId && inCategory("appearance") && (
         <ThemePicker
           userId={userId}
           isHonorary={honorary}
@@ -346,7 +348,7 @@ const SettingsPanel = ({ userId, isAdmin, isHonorary = false, category = "all", 
       )}
 
       {/* Wake lock toggle */}
-      {isWakeLockSupported() && (
+      {isWakeLockSupported() && inCategory("permissions") && (
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Smartphone className="w-4 h-4 text-primary" />
@@ -361,6 +363,7 @@ const SettingsPanel = ({ userId, isAdmin, isHonorary = false, category = "all", 
         </div>
       )}
 
+      {inCategory("appearance") && (<>
       {/* Spotify widget toggle */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
@@ -503,6 +506,9 @@ const SettingsPanel = ({ userId, isAdmin, isHonorary = false, category = "all", 
         </button>
       </div>
 
+      </>)}
+
+      {inCategory("permissions") && (<>
       {/* GPS – röst & inspelning */}
       <div className="pt-2 border-t border-border space-y-2">
         <div className="flex items-center gap-2">
@@ -598,6 +604,9 @@ const SettingsPanel = ({ userId, isAdmin, isHonorary = false, category = "all", 
         </div>
       )}
 
+      </>)}
+
+      {inCategory("account") && (<>
       {userId && SHOW_STRAVA_INTEGRATION && (
         <div className="border-t border-border pt-2">
           <button
@@ -725,7 +734,9 @@ const SettingsPanel = ({ userId, isAdmin, isHonorary = false, category = "all", 
         </div>
       )}
 
-      {userId && SHOW_STRAVA_INTEGRATION && (
+      </>)}
+
+      {inCategory("permissions") && userId && SHOW_STRAVA_INTEGRATION && (
         <div className="border-t border-border pt-2">
           <div className="flex flex-col gap-3 py-2 sm:flex-row sm:items-start sm:justify-between">
             <div className="flex min-w-0 items-start gap-2">
@@ -807,8 +818,9 @@ const SettingsPanel = ({ userId, isAdmin, isHonorary = false, category = "all", 
           )}
         </div>
       )}
-      {userId && <PrivacySocialSettings userId={userId} />}
+      {inCategory("privacy") && userId && <PrivacySocialSettings userId={userId} />}
 
+      {inCategory("account") && (<>
       {/* Receipts */}
       {userId && <ReceiptsList />}
 
@@ -825,8 +837,10 @@ const SettingsPanel = ({ userId, isAdmin, isHonorary = false, category = "all", 
         </div>
       )}
 
+      </>)}
+
       {/* Start plan */}
-      {userId && (
+      {userId && inCategory("profile") && (
         <div className="border-t border-border pt-2">
           <button
             onClick={() => setConfirmStartPlan(true)}
@@ -857,7 +871,7 @@ const SettingsPanel = ({ userId, isAdmin, isHonorary = false, category = "all", 
       </AlertDialog>
 
       {/* Leave plan */}
-      {userId && (
+      {userId && inCategory("profile") && (
         <div className="border-t border-border pt-2">
           <button
             onClick={async () => {
@@ -893,7 +907,7 @@ const SettingsPanel = ({ userId, isAdmin, isHonorary = false, category = "all", 
       )}
 
       {/* Delete account */}
-      {userId && (
+      {userId && inCategory("account") && (
         <div className="border-t border-border pt-4">
           <button
             onClick={() => setConfirmDelete1(true)}
@@ -944,7 +958,7 @@ const SettingsPanel = ({ userId, isAdmin, isHonorary = false, category = "all", 
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-      {isAdmin && userId && (
+      {isAdmin && userId && inCategory("account") && (
         <Suspense fallback={null}><AdminPanel userId={userId} onViewUserPlan={onViewUserPlan} /></Suspense>
       )}
     </div>
