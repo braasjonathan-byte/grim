@@ -377,11 +377,11 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
   const [privacy, setPrivacy] = useState<PrivacySettings>(DEFAULT_PRIVACY);
   useEffect(() => { if (userId) loadPrivacySettings(userId).then(setPrivacy); }, [userId]);
   // Delning sker bara via aktivt val ("Dela") eller om användaren valt "Alltid".
-  const offerShare = async (week: number, day: string, viaCelebration: boolean) => {
+  const offerShare = async (week: number, day: string, viaCelebration: boolean, forcePrompt = false) => {
     const settings = userId ? await loadPrivacySettings(userId) : DEFAULT_PRIVACY;
     setPrivacy(settings);
     // "Av" = aldrig automatisk publicering; användaren får fortfarande frågan "Dela passet?".
-    if (settings.auto_share_workouts === "always") {
+    if (settings.auto_share_workouts === "always" && !forcePrompt) {
       autoShareCompletion(userId, week, day, undefined, settings.default_post_visibility);
       return;
     }
@@ -5518,7 +5518,7 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
           onPublishToSocial={shareTarget.completion.done && !shareTarget.completion.skipped ? () => {
             const { week, day } = shareTarget.plan;
             setShareTarget(null);
-            void offerShare(week, day, false);
+            void offerShare(week, day, false, true);
           } : undefined}
           onChatShare={async () => {
             const plan = shareTarget.plan;
@@ -9444,7 +9444,7 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
         onPublishToSocial={shareTarget.completion.done && !shareTarget.completion.skipped ? () => {
           const { week, day } = shareTarget.plan;
           setShareTarget(null);
-          void offerShare(week, day, false);
+          void offerShare(week, day, false, true);
         } : undefined}
         onChatShare={async () => {
           const plan = shareTarget.plan;
