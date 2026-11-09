@@ -424,7 +424,7 @@ const WorkoutShareCard = ({
         {onPublishToSocial && (
           <button
             onClick={onPublishToSocial}
-            className="w-full py-3 border border-primary/30 bg-primary/10 text-primary font-semibold rounded-lg hover:bg-primary/15 transition-colors text-sm flex items-center justify-center gap-1.5"
+            className="w-full py-3 border border-primary/40 bg-card text-card-foreground font-semibold rounded-lg hover:bg-accent hover:text-accent-foreground transition-colors text-sm flex items-center justify-center gap-1.5"
           >
             <Share2 className="w-4 h-4" /> Publicera i Social
           </button>
