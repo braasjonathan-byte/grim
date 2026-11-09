@@ -46,6 +46,10 @@ describe("Glömt lösenord UI", () => {
     fireEvent.click(screen.getByText("Skicka tillfälligt lösenord"));
     await waitFor(() => expect(screen.getByTestId("forgot-sent")).toBeTruthy());
     expect(invoke).toHaveBeenCalledWith("forgot-password", { body: { identifier: "kalle@example.com" } });
+    expect(screen.getByTestId("forgot-spam-hint").textContent).toContain(
+      'Hittar du inte mejlet? Kolla skräpposten och markera det som "Inte skräp" så hamnar nästa mejl rätt.',
+    );
+    expect(screen.getByText(/Om kontot finns och har en e-postadress kopplad/)).toBeTruthy();
   });
 });
 

@@ -143,60 +143,80 @@ export function getClientIp(headers: { get(name: string): string | null }): stri
 const escapeHtml = (s: string) =>
   s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 
+export const TEMP_PASSWORD_MAIL_SUBJECT = "Ditt tillfälliga lösenord till Grim";
+
+/**
+ * Plain, low-noise Swedish mail (text + HTML). Deliberately simple to stay out
+ * of spam filters: no external images, no button-heavy layout, one plain link,
+ * no shouting or "klicka här".
+ */
 export function buildTempPasswordMail(opts: { nickname: string; tempPassword: string; appUrl?: string }) {
   const appUrl = opts.appUrl ?? "https://grim.lovable.app";
+  const appHost = appUrl.replace(/^https?:\/\//, "").replace(/\/$/, "");
   const nick = escapeHtml(opts.nickname);
   const pw = escapeHtml(opts.tempPassword);
-  const subject = "Ditt tillfälliga lösenord till Grim";
+  const subject = TEMP_PASSWORD_MAIL_SUBJECT;
+  const footer = `Grim · ${appHost} · Svara på detta mejl om du behöver hjälp`;
   const text = [
-    `Hej ${opts.nickname}!`,
+    `Hej ${opts.nickname},`,
     "",
-    "Du (eller någon annan) har begärt ett nytt lösenord till Grim.",
+    "Du har begärt ett nytt lösenord till Grim. Här är ett tillfälligt lösenord:",
     "",
     `Användarnamn: ${opts.nickname}`,
     `Tillfälligt lösenord: ${opts.tempPassword}`,
     "",
-    "Lösenordet gäller i 24 timmar och kan bara användas en gång.",
-    "Ditt gamla lösenord fungerar fortfarande tills du har valt ett nytt.",
-    "När du loggar in med det tillfälliga lösenordet får du direkt välja ett nytt lösenord.",
+    "- Det tillfälliga lösenordet gäller i 24 timmar och kan användas en gång.",
+    "- Ditt gamla lösenord fungerar fortfarande.",
+    "- När du loggar in med det tillfälliga lösenordet får du välja ett nytt lösenord.",
     "",
-    "Har du inte begärt detta kan du ignorera mejlet – ditt konto är oförändrat.",
+    `Logga in i appen eller på ${appUrl}`,
     "",
-    `Logga in: ${appUrl}`,
+    "Om du inte har begärt detta kan du ignorera mejlet. Ditt konto är oförändrat.",
     "",
-    "/ Grim Support",
+    "Hälsningar,",
+    "Grim Support",
+    "",
+    "--",
+    footer,
   ].join("\n");
   const html = `<!doctype html>
-<html lang="sv"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${subject}</title></head>
-<body style="margin:0;padding:0;background:#0b0b0c;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;color:#f4f4f5;">
-  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#0b0b0c;padding:32px 12px;">
-    <tr><td align="center">
-      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:460px;background:#151517;border:1px solid #27272a;border-radius:16px;">
-        <tr><td style="padding:28px 28px 8px;text-align:center;">
-          <div style="font-size:34px;font-weight:900;letter-spacing:-1px;color:#ffffff;">GRIM<span style="color:#a1a1aa;">.</span></div>
-          <div style="font-size:12px;color:#a1a1aa;font-style:italic;margin-top:4px;">lift heavier than runners, run faster than lifters</div>
-        </td></tr>
-        <tr><td style="padding:16px 28px 0;">
-          <h1 style="margin:0 0 12px;font-size:20px;font-weight:800;color:#ffffff;">Ditt tillfälliga lösenord</h1>
-          <p style="margin:0 0 16px;font-size:15px;line-height:1.55;color:#d4d4d8;">Hej ${nick}! Du (eller någon annan) har begärt ett nytt lösenord till Grim.</p>
-          <p style="margin:0 0 6px;font-size:13px;color:#a1a1aa;">Användarnamn</p>
-          <p style="margin:0 0 14px;font-size:16px;font-weight:700;color:#ffffff;">${nick}</p>
-          <p style="margin:0 0 6px;font-size:13px;color:#a1a1aa;">Tillfälligt lösenord</p>
-          <div style="font-family:'SFMono-Regular',Menlo,Consolas,monospace;font-size:24px;font-weight:800;letter-spacing:2px;text-align:center;background:#0b0b0c;border:1px solid #ffffff;color:#ffffff;border-radius:10px;padding:16px 8px;margin:0 0 18px;">${pw}</div>
-          <ul style="margin:0 0 18px;padding-left:18px;font-size:14px;line-height:1.6;color:#d4d4d8;">
-            <li>Gäller i <strong style="color:#fff;">24 timmar</strong> och kan bara användas en gång.</li>
-            <li>Ditt <strong style="color:#fff;">gamla lösenord fungerar fortfarande</strong> tills du har valt ett nytt.</li>
-            <li>När du loggar in med det tillfälliga lösenordet får du direkt <strong style="color:#fff;">välja ett nytt lösenord</strong>.</li>
-          </ul>
-          <div style="text-align:center;margin:0 0 22px;">
-            <a href="${appUrl}" style="display:inline-block;background:#ffffff;color:#0b0b0c;text-decoration:none;font-weight:800;font-size:15px;padding:12px 28px;border-radius:10px;">Logga in på Grim</a>
-          </div>
-          <p style="margin:0 0 24px;font-size:12px;line-height:1.5;color:#71717a;">Har du inte begärt detta kan du ignorera mejlet – ditt konto är oförändrat. Svara på det här mejlet om du behöver hjälp.</p>
-        </td></tr>
-      </table>
-      <p style="font-size:11px;color:#52525b;margin:16px 0 0;">Grim Support · grimtraning@gmail.com</p>
-    </td></tr>
-  </table>
-</body></html>`;
+<html lang="sv">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>${escapeHtml(subject)}</title>
+</head>
+<body style="margin:0;padding:0;background-color:#f4f4f5;font-family:Arial,Helvetica,sans-serif;color:#18181b;">
+<div style="display:none;max-height:0;overflow:hidden;">Ditt tillfälliga lösenord gäller i 24 timmar.</div>
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#f4f4f5;">
+<tr><td align="center" style="padding:24px 12px;">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width:480px;background-color:#ffffff;border:1px solid #e4e4e7;border-radius:8px;">
+<tr><td style="padding:24px 28px 8px 28px;font-size:24px;font-weight:bold;letter-spacing:1px;color:#18181b;">GRIM</td></tr>
+<tr><td style="padding:8px 28px 0 28px;font-size:15px;line-height:22px;color:#18181b;">
+<p style="margin:0 0 14px 0;">Hej ${nick},</p>
+<p style="margin:0 0 18px 0;">Du har begärt ett nytt lösenord till Grim. Här är ett tillfälligt lösenord:</p>
+</td></tr>
+<tr><td style="padding:0 28px;">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#f4f4f5;border-radius:6px;">
+<tr><td style="padding:14px 16px 4px 16px;font-size:13px;color:#52525b;">Användarnamn</td></tr>
+<tr><td style="padding:0 16px 10px 16px;font-size:16px;font-weight:bold;color:#18181b;">${nick}</td></tr>
+<tr><td style="padding:4px 16px 4px 16px;font-size:13px;color:#52525b;">Tillfälligt lösenord</td></tr>
+<tr><td style="padding:0 16px 14px 16px;font-family:Consolas,Menlo,'Courier New',monospace;font-size:22px;font-weight:bold;letter-spacing:2px;color:#18181b;">${pw}</td></tr>
+</table>
+</td></tr>
+<tr><td style="padding:18px 28px 0 28px;font-size:14px;line-height:21px;color:#3f3f46;">
+<p style="margin:0 0 8px 0;">Det tillfälliga lösenordet gäller i 24 timmar och kan användas en gång.</p>
+<p style="margin:0 0 8px 0;">Ditt gamla lösenord fungerar fortfarande.</p>
+<p style="margin:0 0 16px 0;">När du loggar in med det tillfälliga lösenordet får du välja ett nytt lösenord.</p>
+<p style="margin:0 0 16px 0;">Logga in i appen eller på <a href="${appUrl}" style="color:#18181b;">${escapeHtml(appHost)}</a>.</p>
+<p style="margin:0 0 16px 0;color:#71717a;">Om du inte har begärt detta kan du ignorera mejlet. Ditt konto är oförändrat.</p>
+<p style="margin:0 0 24px 0;">Hälsningar,<br>Grim Support</p>
+</td></tr>
+<tr><td style="padding:14px 28px 20px 28px;border-top:1px solid #e4e4e7;font-size:12px;line-height:18px;color:#71717a;">${escapeHtml(footer)}</td></tr>
+</table>
+</td></tr>
+</table>
+</body>
+</html>`;
   return { subject, text, html };
 }

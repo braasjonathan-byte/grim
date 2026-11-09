@@ -9,7 +9,7 @@ import {
   RATE_LIMITS,
 } from "../_shared/tempPassword.ts";
 import { hitRateLimit } from "../_shared/resetRateLimit.ts";
-import { buildMimeMessage, toGmailRaw } from "../_shared/gmailMime.ts";
+import { buildMimeMessage, formatAddress, toGmailRaw } from "../_shared/gmailMime.ts";
 import { type GmailCreds, loadGmailCreds } from "../_shared/gmailConfig.ts";
 import { loginNameForUser, resolveLoginUserId } from "../_shared/loginUser.ts";
 
@@ -26,7 +26,7 @@ const GENERIC_OK = {
 };
 
 const SUPPORT_ADDRESS = "grimtraning@gmail.com";
-const FROM = '"Grim Support" <grimtraning@gmail.com>';
+const FROM = formatAddress("Grim Support", SUPPORT_ADDRESS);
 const MAX_ACCOUNTS_PER_EMAIL = 3;
 
 const ok = () =>

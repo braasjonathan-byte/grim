@@ -217,8 +217,11 @@ const AuthScreen = ({ onAuth }: AuthScreenProps) => {
                 <p className="text-sm text-muted-foreground">
                   Logga in med ditt användarnamn och det tillfälliga lösenordet – sedan får du välja ett nytt. Ditt gamla lösenord fungerar fortfarande tills dess.
                 </p>
+                <p className="text-xs text-muted-foreground" data-testid="forgot-spam-hint">
+                  Hittar du inte mejlet? Kolla skräpposten och markera det som "Inte skräp" så hamnar nästa mejl rätt.
+                </p>
                 <p className="text-xs text-muted-foreground">
-                  Inget mejl efter några minuter? Kolla skräpposten, eller mejla grimtraning@gmail.com.
+                  Fortfarande inget mejl? Mejla grimtraning@gmail.com.
                 </p>
               </div>
               <button
