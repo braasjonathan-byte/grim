@@ -5268,7 +5268,7 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
                         onChange={(e) => setCommentInput((prev) => ({ ...prev, [key]: e.target.value }))}
                         onKeyDown={(e) => e.key === "Enter" && saveComment(0, plan.day)}
                         placeholder="Skriv en kommentar..."
-                        className="w-full bg-secondary text-foreground text-sm pl-9 pr-3 py-2 rounded-md border-none outline-none focus:ring-1 focus:ring-primary placeholder:text-muted-foreground" />
+                        className="w-full bg-secondary text-secondary-foreground text-sm pl-9 pr-3 py-2 rounded-md border-none outline-none focus:ring-1 focus:ring-primary placeholder:text-muted-foreground" />
 
                       </div>
                       </div>
@@ -8846,7 +8846,7 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
                       onChange={(e) => setCommentInput((prev) => ({ ...prev, [key]: e.target.value }))}
                       onKeyDown={(e) => e.key === "Enter" && saveComment(plan.week, plan.day)}
                       placeholder="Skriv en kommentar..."
-                      className="w-full bg-secondary text-foreground text-sm pl-9 pr-3 py-2 rounded-md border-none outline-none focus:ring-1 focus:ring-primary placeholder:text-muted-foreground" />
+                      className="w-full bg-secondary text-secondary-foreground text-sm pl-9 pr-3 py-2 rounded-md border-none outline-none focus:ring-1 focus:ring-primary placeholder:text-muted-foreground" />
 
                     </div>
                   </div>
@@ -9055,7 +9055,7 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
                     value={extraName}
                     onChange={(e) => setExtraName(e.target.value)}
                     placeholder="Passnamn (t.ex. Kondition)"
-                    className="w-full bg-secondary text-foreground text-sm p-2 rounded-md border-none outline-none focus:ring-1 focus:ring-primary placeholder:text-muted-foreground"
+                    className="w-full bg-secondary text-secondary-foreground text-sm p-2 rounded-md border-none outline-none focus:ring-1 focus:ring-primary placeholder:text-muted-foreground"
                     autoFocus
                   />
                   <p className="text-[10px] text-muted-foreground">
@@ -9069,13 +9069,13 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
                     <div className="space-y-2">
                       <div className="flex items-center gap-2">
                         <label className="text-xs text-muted-foreground whitespace-nowrap">Sek/övning:</label>
-                        <input type="text" inputMode="numeric" min="5" max="300" value={extraCircuitSeconds} onChange={(e) => setExtraCircuitSeconds(e.target.value)} className="w-16 bg-secondary text-foreground text-sm px-2 py-1 rounded-md border-none outline-none focus:ring-1 focus:ring-primary text-center font-mono" />
+                        <input type="text" inputMode="numeric" min="5" max="300" value={extraCircuitSeconds} onChange={(e) => setExtraCircuitSeconds(e.target.value)} className="w-16 bg-secondary text-secondary-foreground text-sm px-2 py-1 rounded-md border-none outline-none focus:ring-1 focus:ring-primary text-center font-mono" />
                         <label className="text-xs text-muted-foreground whitespace-nowrap ml-2">Rundor:</label>
-                        <input type="text" inputMode="numeric" min="1" max="20" value={extraCircuitRounds} onChange={(e) => setExtraCircuitRounds(e.target.value)} className="w-16 bg-secondary text-foreground text-sm px-2 py-1 rounded-md border-none outline-none focus:ring-1 focus:ring-primary text-center font-mono" />
+                        <input type="text" inputMode="numeric" min="1" max="20" value={extraCircuitRounds} onChange={(e) => setExtraCircuitRounds(e.target.value)} className="w-16 bg-secondary text-secondary-foreground text-sm px-2 py-1 rounded-md border-none outline-none focus:ring-1 focus:ring-primary text-center font-mono" />
                       </div>
                       <div className="flex items-center gap-2">
                         <label className="text-xs text-muted-foreground whitespace-nowrap">Vila mellan rundor:</label>
-                        <input type="text" inputMode="numeric" min="0" max="300" value={extraCircuitRest} onChange={(e) => setExtraCircuitRest(e.target.value)} className="w-16 bg-secondary text-foreground text-sm px-2 py-1 rounded-md border-none outline-none focus:ring-1 focus:ring-primary text-center font-mono" />
+                        <input type="text" inputMode="numeric" min="0" max="300" value={extraCircuitRest} onChange={(e) => setExtraCircuitRest(e.target.value)} className="w-16 bg-secondary text-secondary-foreground text-sm px-2 py-1 rounded-md border-none outline-none focus:ring-1 focus:ring-primary text-center font-mono" />
                         <span className="text-xs text-muted-foreground">sek</span>
                       </div>
                     </div>
@@ -9258,7 +9258,7 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
               value={emptyDayName}
               onChange={(e) => setEmptyDayName(e.target.value)}
               placeholder="t.ex. Styrka överkropp"
-              className="w-full bg-secondary text-foreground text-sm p-2 rounded-md border-none outline-none focus:ring-1 focus:ring-primary placeholder:text-muted-foreground"
+              className="w-full bg-secondary text-secondary-foreground text-sm p-2 rounded-md border-none outline-none focus:ring-1 focus:ring-primary placeholder:text-muted-foreground"
               autoFocus
             />
             <button

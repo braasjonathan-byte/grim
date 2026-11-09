@@ -670,7 +670,7 @@ const ExerciseGifManager = ({ embedded = false }: { embedded?: boolean }) => {
                 value={filter}
                 onChange={(e) => setFilter(e.target.value)}
                 placeholder="Sök övningar..."
-                className="w-full bg-secondary text-foreground text-sm pl-8 pr-3 py-2 rounded-lg border-none outline-none focus:ring-2 focus:ring-primary placeholder:text-muted-foreground"
+                className="w-full bg-secondary text-secondary-foreground text-sm pl-8 pr-3 py-2 rounded-lg border-none outline-none focus:ring-2 focus:ring-primary placeholder:text-muted-foreground"
               />
             </div>
           </div>
@@ -762,14 +762,14 @@ const ExerciseGifManager = ({ embedded = false }: { embedded?: boolean }) => {
                 <button
                   onClick={() => bulkSetBodyweight(false)}
                   disabled={savingBulk}
-                  className="text-[11px] px-2.5 py-1.5 bg-secondary text-foreground rounded-lg font-semibold disabled:opacity-40 flex items-center gap-1"
+                  className="text-[11px] px-2.5 py-1.5 bg-secondary text-secondary-foreground rounded-lg font-semibold disabled:opacity-40 flex items-center gap-1"
                 >
                   ❌ Ej kroppsvikt
                 </button>
                 <select
                   onChange={(e) => { if (e.target.value) bulkSetCategory(e.target.value); e.target.value = ""; }}
                   disabled={savingBulk}
-                  className="text-[11px] px-2 py-1.5 bg-secondary text-foreground rounded-lg border-none outline-none disabled:opacity-40"
+                  className="text-[11px] px-2 py-1.5 bg-secondary text-secondary-foreground rounded-lg border-none outline-none disabled:opacity-40"
                   defaultValue=""
                 >
                   <option value="" disabled>Ändra kategori…</option>
@@ -892,7 +892,7 @@ const ExerciseGifManager = ({ embedded = false }: { embedded?: boolean }) => {
                         }
                         e.currentTarget.value = "";
                       }}
-                      className="w-full bg-secondary text-foreground text-[11px] p-1.5 rounded-lg border-none outline-none"
+                      className="w-full bg-secondary text-secondary-foreground text-[11px] p-1.5 rounded-lg border-none outline-none"
                     >
                       <option value="">+ Lägg till muskel...</option>
                       {muscleGroups.filter(mg => mg !== bulkPrimaryGroup && !bulkSecondary.some(s => s.muscle === mg)).map(mg => (
@@ -993,7 +993,7 @@ const ExerciseGifManager = ({ embedded = false }: { embedded?: boolean }) => {
                             setEditSubmuscles(item.submuscles || []);
                             setEditSecondary(item.secondaryMuscles || []);
                           }}
-                          className="text-[10px] bg-secondary text-foreground px-1.5 py-0.5 rounded-full font-medium hover:bg-muted"
+                          className="text-[10px] bg-secondary text-secondary-foreground px-1.5 py-0.5 rounded-full font-medium hover:bg-muted"
                           title="Redigera muskler"
                         >
                           <Pencil className="w-2.5 h-2.5" />
@@ -1077,7 +1077,7 @@ const ExerciseGifManager = ({ embedded = false }: { embedded?: boolean }) => {
                                   type="text"
                                   value={editSwedishName}
                                   onChange={(e) => setEditSwedishName(e.target.value)}
-                                  className="w-full bg-secondary text-foreground text-xs p-2 rounded-lg border border-border outline-none focus:ring-2 focus:ring-primary"
+                                  className="w-full bg-secondary text-secondary-foreground text-xs p-2 rounded-lg border border-border outline-none focus:ring-2 focus:ring-primary"
                                 />
                               </div>
                               <div>
@@ -1086,7 +1086,7 @@ const ExerciseGifManager = ({ embedded = false }: { embedded?: boolean }) => {
                                   type="text"
                                   value={editEnglishName}
                                   onChange={(e) => setEditEnglishName(e.target.value)}
-                                  className="w-full bg-secondary text-foreground text-xs p-2 rounded-lg border border-border outline-none focus:ring-2 focus:ring-primary"
+                                  className="w-full bg-secondary text-secondary-foreground text-xs p-2 rounded-lg border border-border outline-none focus:ring-2 focus:ring-primary"
                                 />
                               </div>
                             </div>
@@ -1163,7 +1163,7 @@ const ExerciseGifManager = ({ embedded = false }: { embedded?: boolean }) => {
                                 value={editText}
                                 onChange={(e) => setEditText(e.target.value)}
                                 placeholder="En instruktion per rad..."
-                                className="w-full bg-secondary text-foreground text-xs p-2.5 rounded-lg border border-border outline-none focus:ring-2 focus:ring-primary placeholder:text-muted-foreground min-h-[120px] resize-y"
+                                className="w-full bg-secondary text-secondary-foreground text-xs p-2.5 rounded-lg border border-border outline-none focus:ring-2 focus:ring-primary placeholder:text-muted-foreground min-h-[120px] resize-y"
                                 rows={6}
                               />
                             )}
@@ -1207,7 +1207,7 @@ const ExerciseGifManager = ({ embedded = false }: { embedded?: boolean }) => {
                                 e.stopPropagation();
                                 startEditingInstructions(item.name, m?.custom_instructions || null);
                               }}
-                              className="text-[11px] px-3 py-1.5 bg-secondary text-foreground rounded-lg font-semibold flex items-center gap-1 hover:opacity-90"
+                              className="text-[11px] px-3 py-1.5 bg-secondary text-secondary-foreground rounded-lg font-semibold flex items-center gap-1 hover:opacity-90"
                             >
                               <Pencil className="w-3 h-3" /> {m?.custom_instructions?.length ? "Redigera instruktioner" : "Skriv instruktioner"}
                             </button>
@@ -1301,7 +1301,7 @@ const ExerciseGifManager = ({ embedded = false }: { embedded?: boolean }) => {
                 <select
                   value=""
                   onChange={e => { if (e.target.value && !editSecondary.some(s => s.muscle === e.target.value) && e.target.value !== editPrimaryGroup) { setEditSecondary(p => [...p, { muscle: e.target.value, submuscles: [] }]); } e.currentTarget.value = ""; }}
-                  className="w-full bg-secondary text-foreground text-xs p-2 rounded-lg border-none outline-none"
+                  className="w-full bg-secondary text-secondary-foreground text-xs p-2 rounded-lg border-none outline-none"
                 >
                   <option value="">+ Lägg till muskel...</option>
                   {muscleGroups.filter(mg => mg !== editPrimaryGroup && !editSecondary.some(s => s.muscle === mg)).map(mg => (
@@ -1344,7 +1344,7 @@ const ExerciseGifManager = ({ embedded = false }: { embedded?: boolean }) => {
                   onChange={(e) => setSearchQuery(e.target.value)}
                   onKeyDown={(e) => e.key === "Enter" && handleSearch()}
                   placeholder="Sök övningar (engelska)..."
-                  className="flex-1 bg-secondary text-foreground text-sm p-2.5 rounded-lg border-none outline-none focus:ring-2 focus:ring-primary placeholder:text-muted-foreground"
+                  className="flex-1 bg-secondary text-secondary-foreground text-sm p-2.5 rounded-lg border-none outline-none focus:ring-2 focus:ring-primary placeholder:text-muted-foreground"
                   autoFocus
                 />
                 <button

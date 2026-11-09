@@ -752,7 +752,7 @@ const WorkoutStats = ({ userId }: WorkoutStatsProps) => {
         <button
           onClick={() => setPeriodOffset((o) => o - 1)}
           aria-label="Föregående period"
-          className="w-8 h-8 rounded-full flex items-center justify-center bg-secondary text-foreground hover:bg-muted transition-colors">
+          className="w-8 h-8 rounded-full flex items-center justify-center bg-secondary text-secondary-foreground hover:bg-muted transition-colors">
           <ChevronLeft className="w-4 h-4" />
         </button>
         <p className="text-sm font-bold capitalize">{periodLabel}</p>
@@ -760,7 +760,7 @@ const WorkoutStats = ({ userId }: WorkoutStatsProps) => {
           onClick={() => setPeriodOffset((o) => Math.min(0, o + 1))}
           disabled={periodOffset >= 0}
           aria-label="Nästa period"
-          className="w-8 h-8 rounded-full flex items-center justify-center bg-secondary text-foreground hover:bg-muted transition-colors disabled:opacity-30">
+          className="w-8 h-8 rounded-full flex items-center justify-center bg-secondary text-secondary-foreground hover:bg-muted transition-colors disabled:opacity-30">
           <ChevronRight className="w-4 h-4" />
         </button>
       </div>

@@ -265,7 +265,7 @@ const WorkoutLogDialog = ({
     onSaved();
   };
 
-  const inputClass = "w-full bg-secondary text-foreground text-sm p-2 rounded-lg border-none outline-none focus:ring-2 focus:ring-primary placeholder:text-muted-foreground";
+  const inputClass = "w-full bg-secondary text-secondary-foreground text-sm p-2 rounded-lg border-none outline-none focus:ring-2 focus:ring-primary placeholder:text-muted-foreground";
   const calcClass = "w-full bg-primary/10 ring-1 ring-primary/30 text-foreground text-sm p-2 rounded-lg border-none outline-none focus:ring-2 focus:ring-primary placeholder:text-muted-foreground";
 
   return (

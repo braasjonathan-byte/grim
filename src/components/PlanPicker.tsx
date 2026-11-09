@@ -485,7 +485,7 @@ const PlanPicker = ({ userId, onDone, onBack }: PlanPickerProps) => {
         <div className="flex gap-2">
           <button
             onClick={() => { setPreferredDays([]); setStep("start-date"); }}
-            className="flex-1 py-3 bg-secondary text-foreground font-bold rounded-lg hover:opacity-90 transition-opacity"
+            className="flex-1 py-3 bg-secondary text-secondary-foreground font-bold rounded-lg hover:opacity-90 transition-opacity"
           >
             Hoppa över
           </button>
@@ -554,7 +554,7 @@ const PlanPicker = ({ userId, onDone, onBack }: PlanPickerProps) => {
                   value={eventName}
                   onChange={(e) => setEventName(e.target.value)}
                   placeholder="t.ex. Stockholm Halvmaraton"
-                  className="w-full bg-secondary text-foreground text-sm p-3 rounded-lg border-none outline-none focus:ring-2 focus:ring-primary placeholder:text-muted-foreground"
+                  className="w-full bg-secondary text-secondary-foreground text-sm p-3 rounded-lg border-none outline-none focus:ring-2 focus:ring-primary placeholder:text-muted-foreground"
                 />
               </div>
             </div>
@@ -686,7 +686,7 @@ const PlanPicker = ({ userId, onDone, onBack }: PlanPickerProps) => {
         <div className="flex gap-2 max-w-sm mx-auto">
           <button
             onClick={() => { setStep("start-date"); setPendingApply(null); }}
-            className="flex-1 py-3 bg-secondary text-foreground font-bold rounded-lg hover:opacity-90 transition-opacity"
+            className="flex-1 py-3 bg-secondary text-secondary-foreground font-bold rounded-lg hover:opacity-90 transition-opacity"
           >
             Avbryt
           </button>
@@ -748,7 +748,7 @@ const PlanPicker = ({ userId, onDone, onBack }: PlanPickerProps) => {
                 value={rms[lift] || ""}
                 onChange={(e) => setRms((prev) => ({ ...prev, [lift]: e.target.value }))}
                 placeholder="t.ex. 100"
-                className="w-full bg-secondary text-foreground text-lg p-3 rounded-lg border-none outline-none focus:ring-2 focus:ring-primary placeholder:text-muted-foreground"
+                className="w-full bg-secondary text-secondary-foreground text-lg p-3 rounded-lg border-none outline-none focus:ring-2 focus:ring-primary placeholder:text-muted-foreground"
               />
               <FieldError error={rmErrors[lift]} />
             </div>

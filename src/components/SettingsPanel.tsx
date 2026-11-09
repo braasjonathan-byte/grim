@@ -618,7 +618,7 @@ const SettingsPanel = ({ userId, isAdmin, isHonorary = false, category = "all", 
                       newQs[slot] = e.target.value === "" ? null : parseInt(e.target.value);
                       setSecQuestions(newQs);
                     }}
-                    className="w-full bg-secondary text-foreground text-sm p-2 rounded-lg border-none outline-none focus:ring-2 focus:ring-primary"
+                    className="w-full bg-secondary text-secondary-foreground text-sm p-2 rounded-lg border-none outline-none focus:ring-2 focus:ring-primary"
                   >
                     <option value="">Välj fråga {slot + 1}...</option>
                     {getAvailableQuestions(slot).map((q) => (
@@ -638,7 +638,7 @@ const SettingsPanel = ({ userId, isAdmin, isHonorary = false, category = "all", 
                       }}
                       placeholder="Ditt svar..."
                       maxLength={100}
-                      className="w-full bg-secondary text-foreground text-sm p-2 rounded-lg border-none outline-none focus:ring-2 focus:ring-primary placeholder:text-muted-foreground"
+                      className="w-full bg-secondary text-secondary-foreground text-sm p-2 rounded-lg border-none outline-none focus:ring-2 focus:ring-primary placeholder:text-muted-foreground"
                     />
                   )}
                 </div>
@@ -688,7 +688,7 @@ const SettingsPanel = ({ userId, isAdmin, isHonorary = false, category = "all", 
                 value={email}
                 onChange={(e) => { setEmail(e.target.value); setEmailDirty(true); setEmailError(""); }}
                 placeholder="din@email.com"
-                className="w-full bg-secondary text-foreground text-sm p-2 rounded-lg border-none outline-none focus:ring-2 focus:ring-primary placeholder:text-muted-foreground"
+                className="w-full bg-secondary text-secondary-foreground text-sm p-2 rounded-lg border-none outline-none focus:ring-2 focus:ring-primary placeholder:text-muted-foreground"
               />
               {emailError && <p className="text-xs text-destructive" role="alert">{emailError}</p>}
               {emailDirty && (

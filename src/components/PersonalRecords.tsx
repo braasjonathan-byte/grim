@@ -426,7 +426,7 @@ const PersonalRecords = ({ userId }: PersonalRecordsProps) => {
                 value={goalWeight}
                 onChange={(e) => setGoalWeight(e.target.value)}
                 placeholder="t.ex. 100"
-                className="w-full bg-secondary text-foreground text-sm p-2.5 rounded-lg border-none outline-none focus:ring-2 focus:ring-primary placeholder:text-muted-foreground"
+                className="w-full bg-secondary text-secondary-foreground text-sm p-2.5 rounded-lg border-none outline-none focus:ring-2 focus:ring-primary placeholder:text-muted-foreground"
                 autoFocus />
 
               </div>
@@ -439,7 +439,7 @@ const PersonalRecords = ({ userId }: PersonalRecordsProps) => {
                 type="date"
                 value={goalDate}
                 onChange={(e) => setGoalDate(e.target.value)}
-                className="w-full bg-secondary text-foreground text-sm p-2.5 rounded-lg border-none outline-none focus:ring-2 focus:ring-primary" />
+                className="w-full bg-secondary text-secondary-foreground text-sm p-2.5 rounded-lg border-none outline-none focus:ring-2 focus:ring-primary" />
 
               </div>
 
@@ -498,7 +498,7 @@ const PersonalRecords = ({ userId }: PersonalRecordsProps) => {
                 value={editWeight}
                 onChange={(e) => setEditWeight(e.target.value)}
                 placeholder="t.ex. 120"
-                className="w-full bg-secondary text-foreground text-sm p-2.5 rounded-lg border-none outline-none focus:ring-2 focus:ring-primary placeholder:text-muted-foreground"
+                className="w-full bg-secondary text-secondary-foreground text-sm p-2.5 rounded-lg border-none outline-none focus:ring-2 focus:ring-primary placeholder:text-muted-foreground"
                 autoFocus />
               </div>
 

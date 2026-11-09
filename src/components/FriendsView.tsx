@@ -919,7 +919,7 @@ const FriendsView = ({ userId, isAdmin = false, friendActivities = [], onClearAc
               <button
                 onClick={() => weekIdx > 0 && setFriendCurrentWeek(friendWeeks[weekIdx - 1])}
                 disabled={weekIdx <= 0}
-                className="p-2 rounded-lg bg-secondary text-foreground disabled:opacity-30 hover:bg-muted transition-colors"
+                className="p-2 rounded-lg bg-secondary text-secondary-foreground disabled:opacity-30 hover:bg-muted transition-colors"
               >
                 <ChevronLeft className="w-5 h-5" />
               </button>
@@ -930,7 +930,7 @@ const FriendsView = ({ userId, isAdmin = false, friendActivities = [], onClearAc
               <button
                 onClick={() => weekIdx < friendWeeks.length - 1 && setFriendCurrentWeek(friendWeeks[weekIdx + 1])}
                 disabled={weekIdx >= friendWeeks.length - 1}
-                className="p-2 rounded-lg bg-secondary text-foreground disabled:opacity-30 hover:bg-muted transition-colors"
+                className="p-2 rounded-lg bg-secondary text-secondary-foreground disabled:opacity-30 hover:bg-muted transition-colors"
               >
                 <ChevronRight className="w-5 h-5" />
               </button>
@@ -1055,7 +1055,7 @@ const FriendsView = ({ userId, isAdmin = false, friendActivities = [], onClearAc
                                 type="text"
                                 value={editSessionName}
                                 onChange={(e) => setEditSessionName(e.target.value)}
-                                className="w-full bg-secondary text-foreground text-sm p-2 rounded-md border-none outline-none focus:ring-1 focus:ring-primary"
+                                className="w-full bg-secondary text-secondary-foreground text-sm p-2 rounded-md border-none outline-none focus:ring-1 focus:ring-primary"
                               />
                             </div>
 
@@ -1329,7 +1329,7 @@ const FriendsView = ({ userId, isAdmin = false, friendActivities = [], onClearAc
                               onChange={(e) => setNewComment((prev) => ({ ...prev, [key]: e.target.value }))}
                               onKeyDown={(e) => e.key === "Enter" && postComment(plan.week, plan.day, plan.id)}
                               placeholder="Skriv en kommentar..."
-                              className="w-full bg-secondary text-foreground text-sm pl-9 pr-3 py-2 rounded-md border-none outline-none focus:ring-1 focus:ring-primary placeholder:text-muted-foreground"
+                              className="w-full bg-secondary text-secondary-foreground text-sm pl-9 pr-3 py-2 rounded-md border-none outline-none focus:ring-1 focus:ring-primary placeholder:text-muted-foreground"
                             />
                           </div>
                           <button

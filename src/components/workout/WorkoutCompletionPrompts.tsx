@@ -124,7 +124,7 @@ export function BodyWeightPrompt({ showWeightPrompt, setShowWeightPrompt, weight
               value={weightPromptValue}
               onChange={(e) => setWeightPromptValue(e.target.value)}
               placeholder="kg"
-              className="flex-1 bg-secondary text-foreground text-sm px-3 py-2.5 rounded-lg border border-border outline-none focus:ring-2 focus:ring-primary placeholder:text-muted-foreground"
+              className="flex-1 bg-secondary text-secondary-foreground text-sm px-3 py-2.5 rounded-lg border border-border outline-none focus:ring-2 focus:ring-primary placeholder:text-muted-foreground"
               autoFocus
             />
             <span className="text-sm text-muted-foreground">kg</span>

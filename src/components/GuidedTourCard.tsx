@@ -18,7 +18,7 @@ const GuidedTourCard = () => (
       </button>
       <button
         onClick={() => startTour("long")}
-        className="flex-1 rounded-full bg-secondary text-foreground text-xs font-bold px-3 py-2 shadow-soft active:scale-95 transition-transform"
+        className="flex-1 rounded-full bg-secondary text-secondary-foreground text-xs font-bold px-3 py-2 shadow-soft active:scale-95 transition-transform"
       >
         Lång rundtur
       </button>

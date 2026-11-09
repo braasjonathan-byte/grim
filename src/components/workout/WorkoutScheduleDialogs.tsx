@@ -109,7 +109,7 @@ export function ChangeWorkoutDayDialog({ changeDayDialog, setChangeDayDialog, pl
                       ? "bg-primary text-primary-foreground" 
                       : isOccupied 
                         ? "bg-secondary text-muted-foreground cursor-pointer border border-border hover:border-primary"
-                        : "bg-secondary text-foreground hover:bg-primary hover:text-primary-foreground"
+                        : "bg-secondary text-secondary-foreground hover:bg-primary hover:text-primary-foreground"
                   }`}
                   title={isOccupied ? `Byt plats med ${plans.find(p => p.week === changeDayDialog.week && sameWorkoutDay(p.day, d))?.session_name}` : undefined}
                 >

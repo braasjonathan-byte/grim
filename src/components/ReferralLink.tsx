@@ -84,7 +84,7 @@ const ReferralLink = ({ userId }: ReferralLinkProps) => {
         Dela din personliga länk eller QR-kod. När någon registrerar sig via den blir du hedersmedlem!
       </p>
       <div className="flex gap-2">
-        <div className="flex-1 bg-secondary text-foreground text-xs p-2.5 rounded-lg font-mono truncate select-all">
+        <div className="flex-1 bg-secondary text-secondary-foreground text-xs p-2.5 rounded-lg font-mono truncate select-all">
           {referralUrl}
         </div>
         <button
@@ -96,14 +96,14 @@ const ReferralLink = ({ userId }: ReferralLinkProps) => {
         </button>
         <button
           onClick={() => setShowQR(!showQR)}
-          className="flex items-center gap-1.5 px-3 py-2 bg-secondary text-foreground text-xs font-semibold hover:opacity-90 transition-opacity border border-border"
+          className="flex items-center gap-1.5 px-3 py-2 bg-secondary text-secondary-foreground text-xs font-semibold hover:opacity-90 transition-opacity border border-border"
           title="Visa QR-kod"
         >
           {showQR ? <X className="w-3.5 h-3.5" /> : <QrCode className="w-3.5 h-3.5" />}
         </button>
         <button
           onClick={handleShare}
-          className="flex items-center gap-1.5 px-3 py-2 bg-secondary text-foreground text-xs font-semibold hover:opacity-90 transition-opacity border border-border"
+          className="flex items-center gap-1.5 px-3 py-2 bg-secondary text-secondary-foreground text-xs font-semibold hover:opacity-90 transition-opacity border border-border"
           title="Dela"
         >
           <Share2 className="w-3.5 h-3.5" />

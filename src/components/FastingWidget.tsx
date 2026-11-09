@@ -116,7 +116,7 @@ export default function FastingWidget({ userId }: { userId: string }) {
           <div className="flex items-center gap-1 flex-wrap">
             {[...Object.keys(SCHEDULES), "eget"].map((k) => (
               <button key={k} onClick={() => setSchedule(k)}
-                className={`px-2.5 py-1 rounded-full text-[11px] font-medium transition-colors ${schedule === k ? "bg-primary text-primary-foreground" : "bg-secondary text-foreground"}`}>
+                className={`px-2.5 py-1 rounded-full text-[11px] font-medium transition-colors ${schedule === k ? "bg-primary text-primary-foreground" : "bg-secondary text-secondary-foreground"}`}>
                 {k === "eget" ? "Eget" : k}
               </button>
             ))}

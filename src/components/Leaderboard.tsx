@@ -100,7 +100,7 @@ const Leaderboard = ({ userId }: LeaderboardProps) => {
       <div className="flex items-center justify-between">
         <button
           onClick={handlePrevMonth}
-          className="w-8 h-8 icon-round bg-secondary text-foreground hover:bg-muted transition-colors"
+          className="w-8 h-8 icon-round bg-secondary text-secondary-foreground hover:bg-muted transition-colors"
         >
           <ChevronLeft className="w-4 h-4" />
         </button>
@@ -117,7 +117,7 @@ const Leaderboard = ({ userId }: LeaderboardProps) => {
         </div>
         <button
           onClick={handleNextMonth}
-          className="w-8 h-8 icon-round bg-secondary text-foreground hover:bg-muted transition-colors"
+          className="w-8 h-8 icon-round bg-secondary text-secondary-foreground hover:bg-muted transition-colors"
         >
           <ChevronRight className="w-4 h-4" />
         </button>

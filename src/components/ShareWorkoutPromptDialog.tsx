@@ -93,7 +93,7 @@ const ShareWorkoutPromptDialog = ({ open, initialCaption, loading, nickname, ava
                 <input
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
-                  className="w-full bg-secondary text-foreground text-sm p-3 rounded-lg border border-border outline-none focus:ring-2 focus:ring-primary"
+                  className="w-full bg-secondary text-secondary-foreground text-sm p-3 rounded-lg border border-border outline-none focus:ring-2 focus:ring-primary"
                   placeholder="T.ex. Ben, Push, Löpning…"
                   autoFocus
                 />

@@ -44,7 +44,7 @@ export function SaveWorkoutDialog({ saveWorkoutSource, setSaveWorkoutSource, sav
                 value={saveWorkoutName}
                 onChange={(e) => setSaveWorkoutName(e.target.value)}
                 placeholder="T.ex. Mitt favoritpass"
-                className="w-full bg-secondary text-foreground text-sm px-3 py-2.5 rounded-lg border border-border outline-none focus:ring-2 focus:ring-primary placeholder:text-muted-foreground"
+                className="w-full bg-secondary text-secondary-foreground text-sm px-3 py-2.5 rounded-lg border border-border outline-none focus:ring-2 focus:ring-primary placeholder:text-muted-foreground"
                 autoFocus
               />
             </div>
@@ -152,7 +152,7 @@ export function WorkoutSessionSettingsDialog({ renameDialog, setRenameDialog, re
               onChange={(e) => setRenameInput(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && renameSession(renameDialog.planId, renameInput)}
               placeholder="Nytt namn..."
-              className="w-full bg-secondary text-foreground text-sm p-2.5 border-none outline-none focus:ring-2 focus:ring-primary placeholder:text-muted-foreground"
+              className="w-full bg-secondary text-secondary-foreground text-sm p-2.5 border-none outline-none focus:ring-2 focus:ring-primary placeholder:text-muted-foreground"
               autoFocus
             />
             <button

@@ -304,10 +304,10 @@ export default function RecipeEditor({ open, onOpenChange, userId, onSaved, init
             <div>
               <label className="text-xs font-medium">Synlighet</label>
               <div className="flex gap-1">
-                <button onClick={() => setVisibility("private")} className={`flex-1 flex items-center justify-center gap-1 py-2 text-xs font-medium rounded-full transition-colors ${visibility === "private" ? "bg-primary text-primary-foreground" : "bg-secondary text-foreground hover:bg-muted"}`}>
+                <button onClick={() => setVisibility("private")} className={`flex-1 flex items-center justify-center gap-1 py-2 text-xs font-medium rounded-full transition-colors ${visibility === "private" ? "bg-primary text-primary-foreground" : "bg-secondary text-secondary-foreground hover:bg-muted"}`}>
                   <Lock className="w-3 h-3" /> Privat
                 </button>
-                <button onClick={() => setVisibility("public")} className={`flex-1 flex items-center justify-center gap-1 py-2 text-xs font-medium rounded-full transition-colors ${visibility === "public" ? "bg-primary text-primary-foreground" : "bg-secondary text-foreground hover:bg-muted"}`}>
+                <button onClick={() => setVisibility("public")} className={`flex-1 flex items-center justify-center gap-1 py-2 text-xs font-medium rounded-full transition-colors ${visibility === "public" ? "bg-primary text-primary-foreground" : "bg-secondary text-secondary-foreground hover:bg-muted"}`}>
                   <Globe className="w-3 h-3" /> Publikt
                 </button>
               </div>
@@ -321,7 +321,7 @@ export default function RecipeEditor({ open, onOpenChange, userId, onSaved, init
                 <button
                   key={c}
                   onClick={() => setCategory(c)}
-                  className={`px-2 py-1.5 text-[11px] font-medium rounded-full transition-colors ${category === c ? "bg-primary text-primary-foreground" : "bg-secondary text-foreground hover:bg-muted"}`}
+                  className={`px-2 py-1.5 text-[11px] font-medium rounded-full transition-colors ${category === c ? "bg-primary text-primary-foreground" : "bg-secondary text-secondary-foreground hover:bg-muted"}`}
                 >
                   {c}
                 </button>

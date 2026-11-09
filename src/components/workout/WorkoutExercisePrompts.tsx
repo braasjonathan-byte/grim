@@ -58,7 +58,7 @@ export function ExerciseRepsPrompt({ repsEditor, setRepsEditor, repsEditorSaving
             autoFocus={false}
             value={repsEditor.reps}
             onChange={(e) => setRepsEditor(prev => prev ? { ...prev, reps: e.target.value.replace(/\D/g, "") } : prev)}
-            className="w-full bg-secondary text-foreground text-sm px-3 py-2 rounded-lg border border-border text-center font-mono outline-none focus:ring-1 focus:ring-primary"
+            className="w-full bg-secondary text-secondary-foreground text-sm px-3 py-2 rounded-lg border border-border text-center font-mono outline-none focus:ring-1 focus:ring-primary"
           />
           <p className="text-[11px] text-muted-foreground">
             Välj "Alla kommande pass" för att sätta samma förvalda {repsEditor.timeBased ? "sekunder" : "reps"} på övningen i resten av planen.
@@ -125,7 +125,7 @@ export function ReplaceExercisePrompt({ replaceAsk, setReplaceAsk, applyReplace 
           </p>
           <div className="flex flex-col gap-2">
             <div className="flex gap-2">
-              <button onClick={() => { const r = replaceAsk; setReplaceAsk(null); applyReplace(r, false); }} className="flex-1 py-2.5 bg-secondary text-foreground font-semibold rounded-lg hover:bg-muted transition-colors text-sm">
+              <button onClick={() => { const r = replaceAsk; setReplaceAsk(null); applyReplace(r, false); }} className="flex-1 py-2.5 bg-secondary text-secondary-foreground font-semibold rounded-lg hover:bg-muted transition-colors text-sm">
                 Bara detta pass
               </button>
               <button onClick={() => { const r = replaceAsk; setReplaceAsk(null); applyReplace(r, true); }} className="flex-1 py-2.5 bg-primary text-primary-foreground font-bold rounded-lg hover:opacity-90 transition-opacity text-sm">

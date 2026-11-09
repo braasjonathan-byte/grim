@@ -161,14 +161,14 @@ export default function CuratedRecipesDialog({ open, onOpenChange, isHonorary, u
             <div className="flex flex-wrap gap-1 pb-1">
               <button
                 onClick={() => setCat("alla")}
-                className={`px-3 py-1.5 text-xs font-bold whitespace-nowrap rounded-full transition-colors ${cat === "alla" ? "bg-primary text-primary-foreground" : "bg-secondary text-foreground hover:bg-muted"}`}
+                className={`px-3 py-1.5 text-xs font-bold whitespace-nowrap rounded-full transition-colors ${cat === "alla" ? "bg-primary text-primary-foreground" : "bg-secondary text-secondary-foreground hover:bg-muted"}`}
               >
                 Alla
               </button>
               {userId && (
                 <button
                   onClick={() => setCat("mina")}
-                  className={`px-3 py-1.5 text-xs font-bold whitespace-nowrap rounded-full transition-colors ${cat === "mina" ? "bg-primary text-primary-foreground" : "bg-secondary text-foreground hover:bg-muted"}`}
+                  className={`px-3 py-1.5 text-xs font-bold whitespace-nowrap rounded-full transition-colors ${cat === "mina" ? "bg-primary text-primary-foreground" : "bg-secondary text-secondary-foreground hover:bg-muted"}`}
                 >
                   Mina recept{myRecipes.length > 0 ? ` (${myRecipes.length})` : ""}
                 </button>
@@ -177,7 +177,7 @@ export default function CuratedRecipesDialog({ open, onOpenChange, isHonorary, u
                 <button
                   key={c}
                   onClick={() => setCat(c)}
-                  className={`px-3 py-1.5 text-xs font-bold whitespace-nowrap rounded-full transition-colors ${cat === c ? "bg-primary text-primary-foreground" : "bg-secondary text-foreground hover:bg-muted"}`}
+                  className={`px-3 py-1.5 text-xs font-bold whitespace-nowrap rounded-full transition-colors ${cat === c ? "bg-primary text-primary-foreground" : "bg-secondary text-secondary-foreground hover:bg-muted"}`}
                 >
                   {c}
                 </button>

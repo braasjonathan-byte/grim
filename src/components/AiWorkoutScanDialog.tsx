@@ -123,7 +123,7 @@ export default function AiWorkoutScanDialog({ open, onClose, onConfirm }: Props)
                 type="text"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                className="w-full bg-secondary text-foreground text-sm p-2 rounded-lg border-none outline-none focus:ring-1 focus:ring-primary"
+                className="w-full bg-secondary text-secondary-foreground text-sm p-2 rounded-lg border-none outline-none focus:ring-1 focus:ring-primary"
               />
             </div>
             <div className="space-y-1.5">
@@ -162,7 +162,7 @@ export default function AiWorkoutScanDialog({ open, onClose, onConfirm }: Props)
                 type="text"
                 value={tempo}
                 onChange={(e) => setTempo(e.target.value)}
-                className="w-full bg-secondary text-foreground text-sm p-2 rounded-lg border-none outline-none focus:ring-1 focus:ring-primary"
+                className="w-full bg-secondary text-secondary-foreground text-sm p-2 rounded-lg border-none outline-none focus:ring-1 focus:ring-primary"
               />
             </div>
             <p className="text-[10px] text-muted-foreground">Granska och justera innan du importerar.</p>

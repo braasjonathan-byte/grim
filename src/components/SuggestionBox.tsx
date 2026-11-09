@@ -276,7 +276,7 @@ const SuggestionBox = ({ userId, isAdmin = false }: SuggestionBoxProps) => {
         placeholder="Skriv ditt förslag här..."
         maxLength={500}
         rows={3}
-        className="w-full bg-secondary text-foreground text-sm p-3 rounded-lg border-none outline-none focus:ring-2 focus:ring-primary placeholder:text-muted-foreground resize-none"
+        className="w-full bg-secondary text-secondary-foreground text-sm p-3 rounded-lg border-none outline-none focus:ring-2 focus:ring-primary placeholder:text-muted-foreground resize-none"
       />
       <div className="flex items-center justify-between">
         <span className="text-xs text-muted-foreground">{message.length}/500</span>
