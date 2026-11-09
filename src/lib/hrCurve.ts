@@ -23,6 +23,16 @@ export function downsampleHr(samples: { timestamp: string; bpm: number }[], maxP
   return out;
 }
 
+/**
+ * Returnerar maxpulsen som zonerna ska bygga på. En sparad maxpuls går alltid
+ * före åldersuppskattningen; utan den behålls den tidigare uppskattningen.
+ */
+export function maxHeartRateForZones(configured?: number | null, age?: number | null, observedMax = 0): number {
+  if (configured != null && Number.isFinite(configured) && configured >= 80 && configured <= 230) return configured;
+  const estimated = age != null && Number.isFinite(age) ? 220 - age : 190;
+  return Math.max(estimated, observedMax || 0);
+}
+
 /** Andel (0–1) av punkterna i varje zon; under Z1 räknas till Z1. */
 export function zoneShares(hr: number[], maxHr: number): number[] {
   const counts = [0, 0, 0, 0, 0];

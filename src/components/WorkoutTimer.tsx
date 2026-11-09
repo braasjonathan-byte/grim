@@ -28,7 +28,7 @@ const WorkoutTimer = () => {
   };
 
   return (
-    <div className="border border-border rounded-lg p-4 space-y-3 bg-secondary">
+    <div className="border border-border rounded-lg p-4 space-y-3 bg-card text-card-foreground">
       <div className="flex items-center gap-2">
         <Timer className="w-5 h-5 text-primary" />
         <h3 className="text-sm font-bold">Timer</h3>
@@ -56,7 +56,7 @@ const WorkoutTimer = () => {
             setRunning(false);
             setSeconds(0);
           }}
-          className="w-10 h-10 rounded-full bg-secondary text-muted-foreground flex items-center justify-center hover:text-foreground transition-colors"
+          className="w-10 h-10 rounded-full bg-muted text-muted-foreground flex items-center justify-center hover:text-card-foreground transition-colors"
         >
           <RotateCcw className="w-4 h-4" />
         </button>
