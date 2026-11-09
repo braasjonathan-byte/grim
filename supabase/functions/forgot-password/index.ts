@@ -11,6 +11,7 @@ import {
 import { hitRateLimit } from "../_shared/resetRateLimit.ts";
 import { buildMimeMessage, toGmailRaw } from "../_shared/gmailMime.ts";
 import { type GmailCreds, loadGmailCreds } from "../_shared/gmailConfig.ts";
+import { loginNameForUser, resolveLoginUserId } from "../_shared/loginUser.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -95,25 +96,26 @@ async function processReset(admin: any, ip: string, ident: { kind: "email" | "ni
   // Resolve target accounts (user_id, nickname, real e-mail)
   const targets: { user_id: string; nickname: string; email: string }[] = [];
   if (ident.kind === "nickname") {
-    const { data: profile } = await admin
-      .from("profiles")
-      .select("user_id, nickname")
-      .ilike("nickname", ident.value)
-      .maybeSingle();
-    if (profile) {
-      const { data: em } = await admin.from("user_emails").select("email").eq("user_id", profile.user_id).maybeSingle();
-      if (em?.email) targets.push({ user_id: profile.user_id, nickname: profile.nickname, email: em.email.trim() });
+    const userId = await resolveLoginUserId(admin, ident.value);
+    if (userId) {
+      const { data: em } = await admin.from("user_emails").select("email").eq("user_id", userId).maybeSingle();
+      const login = em?.email ? await loginNameForUser(admin, userId) : null;
+      if (em?.email && login) targets.push({ user_id: userId, nickname: login, email: em.email.trim() });
+      else console.warn("[forgot-password] account has no recovery e-mail", { user: userId.slice(0, 8) });
+    } else {
+      console.warn("[forgot-password] no account for login name");
     }
   } else {
     const { data: rows } = await admin
       .from("user_emails")
       .select("user_id, email")
-      .ilike("email", ident.value)
+      .ilike("email", ident.value.replace(/[\\%_]/g, (c) => `\\${c}`))
       .limit(MAX_ACCOUNTS_PER_EMAIL);
     for (const r of rows ?? []) {
-      const { data: profile } = await admin.from("profiles").select("nickname").eq("user_id", r.user_id).maybeSingle();
-      if (profile?.nickname) targets.push({ user_id: r.user_id, nickname: profile.nickname, email: r.email.trim() });
+      const login = await loginNameForUser(admin, r.user_id);
+      if (login) targets.push({ user_id: r.user_id, nickname: login, email: r.email.trim() });
     }
+    if (!rows?.length) console.warn("[forgot-password] no account for e-mail");
   }
   if (targets.length === 0) return;
 

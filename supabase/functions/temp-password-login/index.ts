@@ -2,6 +2,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import bcrypt from "npm:bcryptjs@2.4.3";
 import { findMatchingTempRow, getClientIp, looksLikeTempPassword, RATE_LIMITS } from "../_shared/tempPassword.ts";
 import { hitRateLimit } from "../_shared/resetRateLimit.ts";
+import { resolveLoginUserId } from "../_shared/loginUser.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -38,12 +39,9 @@ Deno.serve(async (req) => {
       return json({ success: false, error: "För många försök. Vänta en stund och försök igen." }, 429);
     }
 
-    const { data: profile } = await admin
-      .from("profiles")
-      .select("user_id")
-      .ilike("nickname", nickname)
-      .maybeSingle();
-    if (!profile) return json(INVALID, 401);
+    const userId = await resolveLoginUserId(admin, nickname);
+    if (!userId) return json(INVALID, 401);
+    const profile = { user_id: userId };
 
     const { data: rows, error: rowsErr } = await admin
       .from("password_reset_temp")

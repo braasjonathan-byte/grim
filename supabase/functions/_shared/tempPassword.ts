@@ -115,6 +115,22 @@ export function normalizeIdentifier(raw: unknown): { kind: "email" | "nickname";
   return { kind: "nickname", value };
 }
 
+const LOGIN_EMAIL_DOMAIN = "@trainapp.local";
+
+/** Login name -> the internal auth e-mail used by the login screen. */
+export function loginEmailFor(login: string): string {
+  return `${login.trim().toLowerCase()}${LOGIN_EMAIL_DOMAIN}`;
+}
+
+/** Internal auth e-mail -> login name (what the user types). null if not a login-name account. */
+export function loginNameFromAuthEmail(email: string | null | undefined): string | null {
+  if (!email) return null;
+  const e = email.trim().toLowerCase();
+  if (!e.endsWith(LOGIN_EMAIL_DOMAIN)) return null;
+  const name = e.slice(0, -LOGIN_EMAIL_DOMAIN.length);
+  return name.length > 0 ? name : null;
+}
+
 export function getClientIp(headers: { get(name: string): string | null }): string {
   return (
     headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
