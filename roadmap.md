@@ -1,9 +1,9 @@
 # Roadmap
 
 ## Maxpuls och kontrast 9 november 2026
-- [ ] Gör texten i samtliga hjälpmedelsrutor läsbar i Tema 1–3.
-- [ ] Lägg till maxpuls ovanför FTP i Inställningar med gemensam validering och lagring.
-- [ ] Använd sparad maxpuls för pulszoner i nya och redan genomförda pass, med tester och verifiering i appen.
+- [x] Gör texten i samtliga hjälpmedelsrutor läsbar i Tema 1–3; Tema 2 verifierad till 9,21:1 och profilfältens kontrast korrigerad.
+- [x] Lägg till maxpuls ovanför FTP i Inställningar med gemensam validering och lagring; 80–230 bpm skyddas även i databasen och sparning över omladdning är verifierad.
+- [x] Använd sparad maxpuls för pulszoner i nya och redan genomförda pass; 20 tester godkända och gammalt pass i vecka 11 verifierat med ändrad maxpuls.
 
 ## Teman november 2026
 - [x] Lägg till Tema 1–3 med användarens godkända kulörer.
