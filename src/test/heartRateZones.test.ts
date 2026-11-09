@@ -9,7 +9,7 @@ describe("pulszoner från sparad maxpuls", () => {
   it("räknar om samma gamla pulsserie när maxpulsen ändras", () => {
     const savedCurve = [120, 150, 170];
     expect(zoneShares(savedCurve, 200)).toEqual([0, 1 / 3, 1 / 3, 1 / 3, 0]);
-    expect(zoneShares(savedCurve, 180)).toEqual([0, 0, 1 / 3, 1 / 3, 1 / 3]);
+    expect(zoneShares(savedCurve, 180)).toEqual([0, 1 / 3, 0, 1 / 3, 1 / 3]);
   });
 
   it("låter en sparad maxpuls styra zonen även när passet toppar högre", () => {
