@@ -42,19 +42,6 @@ $$;
 REVOKE ALL ON FUNCTION public.complete_forced_password_change() FROM PUBLIC, anon;
 GRANT EXECUTE ON FUNCTION public.complete_forced_password_change() TO authenticated;
 
--- Fallback for the Gmail SMTP app password when the GMAIL_APP_PASSWORD edge
--- secret is not set: read it from Supabase Vault (secret name 'GMAIL_APP_PASSWORD').
-CREATE OR REPLACE FUNCTION public.get_gmail_app_password()
-RETURNS text
-LANGUAGE sql
-SECURITY DEFINER
-SET search_path = public, vault
-AS $$
-  SELECT decrypted_secret FROM vault.decrypted_secrets WHERE name = 'GMAIL_APP_PASSWORD' LIMIT 1;
-$$;
-REVOKE ALL ON FUNCTION public.get_gmail_app_password() FROM PUBLIC, anon, authenticated;
-GRANT EXECUTE ON FUNCTION public.get_gmail_app_password() TO service_role;
-
 -- Housekeeping: drop expired temp rows and old rate events daily.
 DO $$
 BEGIN
