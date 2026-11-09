@@ -108,7 +108,8 @@ interface ToolGroup {
 const SETTINGS_CATEGORIES: { id: SettingsCategory; title: string; subtitle: string; icon: LucideIcon }[] = [
   { id: "profile", title: "Profil/kroppsdata", subtitle: "Personuppgifter, kroppsvärden och träningsplaner", icon: UserRound },
   { id: "account", title: "Konto", subtitle: "Lösenord, säkerhet, köp och kontouppgifter", icon: KeyRound },
-  { id: "appearance", title: "Tema", subtitle: "Färger, visning, ljud och appens funktioner", icon: Palette },
+  { id: "training", title: "Träning", subtitle: "Periodisk fasta, ljud, GPS och appens moduler", icon: Dumbbell },
+  { id: "appearance", title: "Tema", subtitle: "Färger och appens utseende", icon: Palette },
   { id: "stats", title: "Statistik", subtitle: "Sektioner, viktkurva och konditionsövningar", icon: BarChart3 },
   { id: "privacy", title: "Integritet", subtitle: "Delning, synlighet och blockeringar", icon: ShieldCheck },
   { id: "permissions", title: "Behörigheter", subtitle: "Notiser, biometri och enhetsåtkomst", icon: Bell },
