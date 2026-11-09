@@ -1501,6 +1501,51 @@ export type Database = {
         }
         Relationships: []
       }
+      password_reset_rate_events: {
+        Row: {
+          bucket: string
+          created_at: string
+          id: number
+        }
+        Insert: {
+          bucket: string
+          created_at?: string
+          id?: never
+        }
+        Update: {
+          bucket?: string
+          created_at?: string
+          id?: never
+        }
+        Relationships: []
+      }
+      password_reset_temp: {
+        Row: {
+          created_at: string
+          expires_at: string
+          id: string
+          password_hash: string
+          used_at: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          expires_at?: string
+          id?: string
+          password_hash: string
+          used_at?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          expires_at?: string
+          id?: string
+          password_hash?: string
+          used_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       popular_events: {
         Row: {
           city: string | null
@@ -3050,7 +3095,9 @@ export type Database = {
         Returns: string
       }
       can_view_post: { Args: { _post_id: string }; Returns: boolean }
+      complete_forced_password_change: { Args: never; Returns: undefined }
       count_implausible_sets: { Args: { lw: Json }; Returns: number }
+      get_gmail_app_password: { Args: never; Returns: string }
       get_inactive_users_for_nudge: {
         Args: { cutoff_date: string }
         Returns: {
