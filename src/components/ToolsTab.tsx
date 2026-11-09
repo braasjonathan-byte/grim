@@ -24,6 +24,11 @@ import {
   MessageSquarePlus,
   Camera,
   Activity,
+  UserRound,
+  KeyRound,
+  Palette,
+  ShieldCheck,
+  Bell,
 } from "lucide-react";
 import { useToolLayout, applyOrder, move } from "@/hooks/useToolLayout";
 import type { LucideIcon } from "lucide-react";
@@ -51,6 +56,7 @@ import HealthConnectCard from "@/components/HealthConnectCard";
 import { isHealthSupported } from "@/lib/healthSync";
 import { toast } from "sonner";
 import { getAdminGroups } from "@/components/admin/adminCatalog";
+import type { SettingsCategory } from "@/components/SettingsPanel";
 
 const SupporterButton = lazyRetry(() => import("@/components/SupporterButton"));
 const ProfileTab = lazyRetry(() => import("@/components/ProfileTab"));
@@ -97,6 +103,14 @@ interface ToolGroup {
   items: ToolItem[];
 }
 
+const SETTINGS_CATEGORIES: { id: SettingsCategory; title: string; subtitle: string; icon: LucideIcon }[] = [
+  { id: "profile", title: "Profil/kroppsdata", subtitle: "Personuppgifter, kroppsvärden och träningsplaner", icon: UserRound },
+  { id: "account", title: "Konto", subtitle: "Lösenord, säkerhet, köp och kontouppgifter", icon: KeyRound },
+  { id: "appearance", title: "Tema", subtitle: "Färger, visning, ljud och appens funktioner", icon: Palette },
+  { id: "privacy", title: "Integritet", subtitle: "Delning, synlighet och blockeringar", icon: ShieldCheck },
+  { id: "permissions", title: "Behörigheter", subtitle: "Notiser, biometri och enhetsåtkomst", icon: Bell },
+];
+
 const STORAGE_KEY = "grim:tools-collapsed-groups";
 
 const normalize = (s: string) =>
@@ -136,6 +150,9 @@ const ToolsTab = ({ userId, isAdmin, isHonorary, userRole, onViewUserPlan, onLog
     const f = sessionStorage.getItem("grim_tools_open");
     return f?.startsWith("settings") ? "settings" : "home";
   });
+  const [settingsCategory, setSettingsCategory] = useState<SettingsCategory | null>(() =>
+    sessionStorage.getItem("grim_tools_open") === "settings:supporter" ? "account" : null
+  );
   const [query, setQuery] = useState("");
   const [openItem, setOpenItem] = useState<string | null>(() => {
     const f = sessionStorage.getItem("grim_tools_open");
@@ -145,8 +162,10 @@ const ToolsTab = ({ userId, isAdmin, isHonorary, userRole, onViewUserPlan, onLog
   useEffect(() => {
     const open = () => {
       sessionStorage.removeItem("grim_tools_open");
+      setSettingsCategory("account");
       setSubView("settings");
       setOpenItem("supporter");
+      window.setTimeout(() => document.querySelector("[data-supporter-section]")?.scrollIntoView({ behavior: "smooth", block: "center" }), 150);
     };
     window.addEventListener("grim:open-supporter", open);
     return () => window.removeEventListener("grim:open-supporter", open);
@@ -195,7 +214,7 @@ const ToolsTab = ({ userId, isAdmin, isHonorary, userRole, onViewUserPlan, onLog
 
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: "auto" });
-  }, [subView]);
+  }, [subView, settingsCategory]);
 
   const groups: ToolGroup[] = useMemo(() => {
     const list: ToolGroup[] = [
@@ -269,7 +288,10 @@ const ToolsTab = ({ userId, isAdmin, isHonorary, userRole, onViewUserPlan, onLog
             icon: SlidersHorizontal,
             keywords: "profil tema notiser lösenord kroppsvikt",
             featured: true,
-            onSelect: () => setSubView("settings"),
+            onSelect: () => {
+              setSettingsCategory(null);
+              setSubView("settings");
+            },
           },
           {
             id: "supporter",
@@ -511,13 +533,17 @@ const ToolsTab = ({ userId, isAdmin, isHonorary, userRole, onViewUserPlan, onLog
   };
 
   if (subView !== "home") {
-    const title = subView === "settings" ? "Inställningar" : subView === "start" ? "Kom igång" : subView === "admin" ? "Admin" : "Hjälpmedel";
+    const settingsTitle = SETTINGS_CATEGORIES.find((category) => category.id === settingsCategory)?.title;
+    const title = subView === "settings" ? settingsTitle ?? "Inställningar" : subView === "start" ? "Kom igång" : subView === "admin" ? "Admin" : "Hjälpmedel";
     return (
       <div className="py-2 space-y-4">
         <div className="flex items-center gap-2 -mx-1">
           <button
             type="button"
-            onClick={() => setSubView("home")}
+            onClick={() => {
+              if (subView === "settings" && settingsCategory) setSettingsCategory(null);
+              else setSubView("home");
+            }}
             className="flex items-center gap-1 py-2 px-2 text-sm font-semibold text-primary hover:opacity-80 transition-opacity"
           >
             <ChevronLeft className="h-4 w-4" />
@@ -526,12 +552,24 @@ const ToolsTab = ({ userId, isAdmin, isHonorary, userRole, onViewUserPlan, onLog
           <h2 className="text-base font-bold text-foreground">{title}</h2>
         </div>
         <Suspense fallback={<div className="flex justify-center py-8"><Loader2 className="w-5 h-5 animate-spin text-primary" /></div>}>
-          {subView === "settings" ? (
+          {subView === "settings" ? !settingsCategory ? (
+            <div className="space-y-2">
+              {SETTINGS_CATEGORIES.map((category) => renderCard({
+                id: `settings-${category.id}`,
+                title: category.title,
+                subtitle: category.subtitle,
+                icon: category.icon,
+                featured: true,
+                onSelect: () => setSettingsCategory(category.id),
+              }))}
+            </div>
+          ) : (
             <div className="space-y-3">
-              <ProfileTab userId={userId} isAdmin={isAdmin} />
-              <SettingsPanel userId={userId} isAdmin={isAdmin} isHonorary={isHonorary} onStartPlan={onStartPlan} onViewUserPlan={onViewUserPlan} />
-              <NotificationSettings userId={userId} />
-              <div className="rounded-2xl bg-card border border-border/40 p-4"><ModuleSettings /></div>
+              {settingsCategory === "profile" && <ProfileTab userId={userId} isAdmin={isAdmin} showDangerZone={false} />}
+              {settingsCategory === "account" && <div data-supporter-section><SupporterButton userId={userId} /></div>}
+              <SettingsPanel category={settingsCategory} userId={userId} isAdmin={isAdmin} isHonorary={isHonorary} onStartPlan={onStartPlan} onViewUserPlan={onViewUserPlan} />
+              {settingsCategory === "permissions" && <NotificationSettings userId={userId} />}
+              {settingsCategory === "appearance" && <div className="rounded-2xl bg-card border border-border/40 p-4"><ModuleSettings /></div>}
             </div>
           ) : subView === "helpers" ? (
             <div className="space-y-3">

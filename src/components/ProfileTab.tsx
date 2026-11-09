@@ -7,9 +7,10 @@ import { Archive } from "lucide-react";
 interface ProfileTabProps {
   userId: string;
   isAdmin?: boolean;
+  showDangerZone?: boolean;
 }
 
-const ProfileTab = ({ userId, isAdmin }: ProfileTabProps) => {
+const ProfileTab = ({ userId, showDangerZone = true }: ProfileTabProps) => {
   return (
     <div className="py-2 space-y-4">
       {/* Identity title */}
@@ -21,7 +22,7 @@ const ProfileTab = ({ userId, isAdmin }: ProfileTabProps) => {
       </SettingsSection>
 
       {/* Profile, body data, socials, anthem, danger zone */}
-      <ProfileSection userId={userId} />
+      <ProfileSection userId={userId} showDangerZone={showDangerZone} />
     </div>
   );
 };
