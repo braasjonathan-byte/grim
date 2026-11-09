@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Camera, Images, Trash2, Columns2, X, Plus, Lock, Users } from "lucide-react";
+import { Camera, Eye, EyeOff, Images, Trash2, Columns2, X, Plus, Lock, Users } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { pickImage, pickImages } from "@/lib/pickImage";
@@ -32,6 +32,7 @@ export default function ProgressPhotos({ userId }: { userId: string }) {
   const [compareMode, setCompareMode] = useState(false);
   const [selected, setSelected] = useState<string[]>([]);
   const [comparing, setComparing] = useState(false);
+  const [revealed, setRevealed] = useState(false);
 
   const load = useCallback(async () => {
     try {
@@ -125,13 +126,19 @@ export default function ProgressPhotos({ userId }: { userId: string }) {
       <div className="flex items-center gap-2">
         <Images className="w-4 h-4 text-primary" />
         <p className="text-sm font-semibold flex-1">Progressbilder</p>
-        {photos.length >= 2 && (
+        {(photos.length > 0 || shared.length > 0) && (
+          <button onClick={() => { setRevealed((r) => !r); setCompareMode(false); setSelected([]); }}
+            className="text-xs px-2 py-1 rounded-lg flex items-center gap-1 bg-muted text-foreground">
+            {revealed ? <><EyeOff className="w-3.5 h-3.5" /> Dölj</> : <><Eye className="w-3.5 h-3.5" /> Visa</>}
+          </button>
+        )}
+        {revealed && photos.length >= 2 && (
           <button onClick={() => { setCompareMode((c) => !c); setSelected([]); }}
             className={`text-xs px-2 py-1 rounded-lg flex items-center gap-1 ${compareMode ? "bg-primary text-primary-foreground" : "bg-muted"}`}>
             <Columns2 className="w-3.5 h-3.5" /> Jämför
           </button>
         )}
-        {photos.length > 0 && (
+        {revealed && photos.length > 0 && (
           <>
             <button aria-label="Ta foto" onClick={() => add("camera")} className="p-1.5 rounded-lg bg-muted"><Camera className="w-4 h-4" /></button>
             <button aria-label="Från galleri" onClick={() => add("gallery")} className="p-1.5 rounded-lg bg-muted"><Plus className="w-4 h-4" /></button>
@@ -150,6 +157,10 @@ export default function ProgressPhotos({ userId }: { userId: string }) {
               <Button size="sm" variant="secondary" onClick={() => add("gallery")}><Images className="w-4 h-4 mr-1" />Galleri</Button>
             </div>
           </div>
+        ) : !revealed ? (
+          <button onClick={() => setRevealed(true)} className="w-full py-4 rounded-lg bg-muted text-sm text-muted-foreground flex items-center justify-center gap-2">
+            <Lock className="w-4 h-4" /> {photos.length} {photos.length === 1 ? "bild" : "bilder"} dolda – tryck för att visa
+          </button>
         ) : (
           <>
             {compareMode && (
@@ -177,7 +188,7 @@ export default function ProgressPhotos({ userId }: { userId: string }) {
           </>
         )}
 
-      {shared.length > 0 && (
+      {revealed && shared.length > 0 && (
         <div className="pt-2 space-y-1.5">
           <p className="text-xs font-semibold flex items-center gap-1"><Users className="w-3.5 h-3.5" /> Delat med dig</p>
           <div className="grid grid-cols-3 gap-1.5">
