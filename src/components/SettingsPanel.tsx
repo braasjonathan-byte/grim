@@ -20,6 +20,7 @@ const AdminPanel = lazyRetry(() => import("@/components/admin/AdminPanel"));
 const ChangePassword = lazyRetry(() => import("@/components/ChangePassword"));
 import ReceiptsList from "@/components/ReceiptsList";
 import PrivacySocialSettings from "@/components/PrivacySocialSettings";
+import { isValidRecoveryEmail, saveRecoveryEmail } from "@/lib/recoveryEmail";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -109,6 +110,7 @@ const SettingsPanel = ({ userId, isAdmin, isHonorary = false, onStartPlan, onVie
   const [emailSaved, setEmailSaved] = useState(false);
   const [emailDirty, setEmailDirty] = useState(false);
   const [hasEmail, setHasEmail] = useState(false);
+  const [emailError, setEmailError] = useState("");
   const [stravaLoading, setStravaLoading] = useState(false);
   const [stravaConnecting, setStravaConnecting] = useState(false);
   const [stravaConnected, setStravaConnected] = useState(false);
@@ -221,25 +223,23 @@ const SettingsPanel = ({ userId, isAdmin, isHonorary = false, onStartPlan, onVie
 
   const handleSaveEmail = async () => {
     if (!userId || !email.trim()) return;
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(email.trim())) return;
-
-    setEmailSaving(true);
-    if (hasEmail) {
-      await supabase
-        .from("user_emails")
-        .update({ email: email.trim() })
-        .eq("user_id", userId);
-    } else {
-      await supabase
-        .from("user_emails")
-        .insert({ user_id: userId, email: email.trim() });
+    if (!isValidRecoveryEmail(email)) {
+      setEmailError("Det ser inte ut som en giltig e-postadress");
+      return;
     }
+    setEmailError("");
+    setEmailSaving(true);
+    const result = await saveRecoveryEmail(supabase, userId, email);
+    setEmailSaving(false);
+    if (result.ok === false) {
+      setEmailError(result.error);
+      return;
+    }
+    setEmail(result.email);
     setHasEmail(true);
     setEmailSaved(true);
     setEmailDirty(false);
     setTimeout(() => setEmailSaved(false), 2000);
-    setEmailSaving(false);
   };
 
   const handleConnectStrava = async () => {
@@ -658,15 +658,16 @@ const SettingsPanel = ({ userId, isAdmin, isHonorary = false, onStartPlan, onVie
           {emailOpen && (
             <div className="space-y-3 pt-1">
               <p className="text-xs text-muted-foreground">
-                Koppla en e-postadress som kan användas vid lösenordsåterställning om du inte har säkerhetsfrågor.
+                Hit skickar vi ett tillfälligt lösenord om du glömmer ditt. Vi skickar ingen reklam.
               </p>
               <input
                 type="email"
                 value={email}
-                onChange={(e) => { setEmail(e.target.value); setEmailDirty(true); }}
+                onChange={(e) => { setEmail(e.target.value); setEmailDirty(true); setEmailError(""); }}
                 placeholder="din@email.com"
                 className="w-full bg-secondary text-foreground text-sm p-2 rounded-lg border-none outline-none focus:ring-2 focus:ring-primary placeholder:text-muted-foreground"
               />
+              {emailError && <p className="text-xs text-destructive" role="alert">{emailError}</p>}
               {emailDirty && (
                 <button
                   onClick={handleSaveEmail}

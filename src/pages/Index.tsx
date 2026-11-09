@@ -20,6 +20,8 @@ import { useNativePush } from "@/hooks/useNativePush";
 import { requestInitialPermissions } from "@/lib/requestInitialPermissions";
 import { autoConnectHeartRate } from "@/lib/heartRate";
 import { useOfflineSync } from "@/hooks/useOfflineSync";
+import { useRecoveryEmailGate } from "@/hooks/useRecoveryEmailGate";
+import RequiredEmailPrompt from "@/components/RequiredEmailPrompt";
 import { useDataSnapshots } from "@/hooks/useDataSnapshots";
 import HonoraryBadge from "@/components/HonoraryBadge";
 import MiniTimer from "@/components/MiniTimer";
@@ -288,6 +290,9 @@ const Index = () => {
   const [notification, setNotification] = useState<FriendActivity | null>(null);
   const [showChangePassword, setShowChangePassword] = useState(false);
   const [forceChangePassword, setForceChangePassword] = useState(false);
+  // user id whose access status (incl. must_change_password) has been loaded;
+  // the required-email gate waits for it so the password change always comes first.
+  const [accessLoadedFor, setAccessLoadedFor] = useState<string | null>(null);
   const [userRole, setUserRole] = useState<string>("member");
   const [isHonorary, setIsHonorary] = useState(false);
   const [unreadAnnouncements, setUnreadAnnouncements] = useState(0);
@@ -326,6 +331,10 @@ const Index = () => {
     }
   }, [user]);
 
+
+  const recoveryEmailGate = useRecoveryEmailGate(user?.id ?? null);
+  const showRequiredEmail =
+    Boolean(user?.id) && accessLoadedFor === user?.id && recoveryEmailGate.open && !forceChangePassword;
 
   usePushNotifications(user?.id ?? null);
   useNativePush(user?.id ?? null);
@@ -514,7 +523,8 @@ const Index = () => {
       setUserRole("admin");
       setIsHonorary(true);
     }
-    void loadUserData(user.id);
+    const uid = user.id;
+    void loadUserData(uid).finally(() => setAccessLoadedFor(uid));
   }, [user?.id, loadUserData]);
 
   // Force-refresh profile/role data when the app resumes (native APK) or tab
@@ -1122,7 +1132,7 @@ const Index = () => {
       }
 
       {/* Grim support info – shown once for all users */}
-      {!forceChangePassword && <GrimInfoDialog />}
+      {!forceChangePassword && !recoveryEmailGate.open && <GrimInfoDialog />}
 
 
 
@@ -1140,6 +1150,13 @@ const Index = () => {
           setShowChangePassword(false);
         }} />
 
+      }
+
+      {/* Required recovery e-mail (after any forced password change) */}
+      {showRequiredEmail && user &&
+      <RequiredEmailPrompt
+        userId={user.id}
+        onSaved={() => recoveryEmailGate.markSaved()} />
       }
 
       {/* AI Chat Button - temporarily disabled */}

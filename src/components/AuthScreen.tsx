@@ -10,6 +10,7 @@ import {
   saveBiometricLogin,
 } from "@/lib/biometric";
 import { requestPasswordReset, signInWithPasswordOrTemp } from "@/lib/passwordReset";
+import { RECOVERY_EMAIL_MAX_LENGTH, RECOVERY_EMAIL_WHY, saveRecoveryEmail, validateRecoveryEmail } from "@/lib/recoveryEmail";
 
 interface AuthScreenProps {
   onAuth: () => void;
@@ -20,6 +21,8 @@ const AuthScreen = ({ onAuth }: AuthScreenProps) => {
   const [showForgot, setShowForgot] = useState(false);
   const [nickname, setNickname] = useState("");
   const [password, setPassword] = useState("");
+  const [signupEmail, setSignupEmail] = useState("");
+  const [signupEmailConfirm, setSignupEmailConfirm] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(() => localStorage.getItem("grim_remember_me") === "true");
   const [error, setError] = useState("");
@@ -111,6 +114,15 @@ const AuthScreen = ({ onAuth }: AuthScreenProps) => {
       return;
     }
 
+    if (!isLogin) {
+      const emailError = validateRecoveryEmail(signupEmail, signupEmailConfirm);
+      if (emailError) {
+        setError(emailError);
+        setLoading(false);
+        return;
+      }
+    }
+
     const email = fakeEmail(trimmedNick);
 
     if (isLogin) {
@@ -137,6 +149,13 @@ const AuthScreen = ({ onAuth }: AuthScreenProps) => {
         setError("Registrering misslyckades. Försök med ett annat namn.");
         setLoading(false);
         return;
+      }
+      // Save the recovery e-mail right away. If this fails (e.g. no session
+      // yet), the required-email screen after login asks again.
+      const newUserId = signupData?.session?.user?.id ?? signupData?.user?.id;
+      if (newUserId && signupData?.session) {
+        const saved = await saveRecoveryEmail(supabase, newUserId, signupEmail);
+        if (saved.ok === false) console.warn("[signup] could not save recovery e-mail", saved.error);
       }
       // Process referral code if present
       if (referralCode && signupData?.user) {
@@ -298,6 +317,47 @@ const AuthScreen = ({ onAuth }: AuthScreenProps) => {
               </button>
             </div>
           </div>
+
+          {!isLogin && (
+            <div className="space-y-3" data-testid="signup-email">
+              <div>
+                <label htmlFor="signup-email" className="text-xs text-muted-foreground mb-1 block">E-postadress</label>
+                <input
+                  id="signup-email"
+                  type="email"
+                  inputMode="email"
+                  value={signupEmail}
+                  onChange={(e) => setSignupEmail(e.target.value)}
+                  placeholder="din@email.se"
+                  maxLength={RECOVERY_EMAIL_MAX_LENGTH}
+                  autoComplete="email"
+                  autoCapitalize="none"
+                  autoCorrect="off"
+                  spellCheck={false}
+                  className="w-full bg-secondary text-foreground text-lg p-3 rounded-lg border-none outline-none focus:ring-2 focus:ring-primary placeholder:text-muted-foreground" />
+              </div>
+              <div>
+                <label htmlFor="signup-email-confirm" className="text-xs text-muted-foreground mb-1 block">Skriv e-postadressen igen</label>
+                <input
+                  id="signup-email-confirm"
+                  type="email"
+                  inputMode="email"
+                  value={signupEmailConfirm}
+                  onChange={(e) => setSignupEmailConfirm(e.target.value)}
+                  onPaste={(e) => e.preventDefault()}
+                  placeholder="din@email.se"
+                  maxLength={RECOVERY_EMAIL_MAX_LENGTH}
+                  autoComplete="off"
+                  autoCapitalize="none"
+                  autoCorrect="off"
+                  spellCheck={false}
+                  className="w-full bg-secondary text-foreground text-lg p-3 rounded-lg border-none outline-none focus:ring-2 focus:ring-primary placeholder:text-muted-foreground" />
+              </div>
+              <p className="text-xs text-muted-foreground">
+                {RECOVERY_EMAIL_WHY} Du loggar fortfarande in med ditt användarnamn. Vi skickar ingen reklam.
+              </p>
+            </div>
+          )}
 
           {isLogin && (
             <label className="flex items-center gap-2 cursor-pointer select-none">
