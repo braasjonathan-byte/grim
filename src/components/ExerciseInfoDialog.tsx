@@ -249,7 +249,7 @@ const ExerciseInfoDialog = ({ exerciseName, onClose, isAdmin = false, initialEdi
               value={currentCategory}
               onChange={e => saveCategory(e.target.value)}
               disabled={savingCategory}
-              className="bg-secondary text-foreground text-xs p-1.5 rounded-lg border-none outline-none disabled:opacity-50"
+              className="bg-secondary text-secondary-foreground text-xs p-1.5 rounded-lg border-none outline-none disabled:opacity-50"
             >
               <option value="styrka">Styrka</option>
               <option value="kondition">Kondition</option>
@@ -382,7 +382,7 @@ const ExerciseInfoDialog = ({ exerciseName, onClose, isAdmin = false, initialEdi
                     value={editText}
                     onChange={(e) => setEditText(e.target.value)}
                     placeholder="Skriv en instruktion per rad..."
-                    className="allow-select w-full bg-secondary text-foreground text-sm p-3 rounded-lg border border-border outline-none focus:ring-2 focus:ring-primary placeholder:text-muted-foreground min-h-[150px] resize-y"
+                    className="allow-select w-full bg-secondary text-secondary-foreground text-sm p-3 rounded-lg border border-border outline-none focus:ring-2 focus:ring-primary placeholder:text-muted-foreground min-h-[150px] resize-y"
                     rows={8}
                   />
                   <p className="text-[10px] text-muted-foreground">En instruktion per rad. Numrering läggs till automatiskt.</p>
@@ -452,7 +452,7 @@ const ExerciseInfoDialog = ({ exerciseName, onClose, isAdmin = false, initialEdi
                               </button>
                               <button
                                 onClick={startEditing}
-                                className="flex-1 min-w-[90px] py-2 bg-secondary text-foreground text-xs font-semibold rounded-lg hover:bg-muted transition-colors flex items-center justify-center gap-1.5"
+                                className="flex-1 min-w-[90px] py-2 bg-secondary text-secondary-foreground text-xs font-semibold rounded-lg hover:bg-muted transition-colors flex items-center justify-center gap-1.5"
                               >
                                 <Pencil className="w-3.5 h-3.5" /> Redigera
                               </button>

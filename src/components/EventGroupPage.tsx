@@ -368,7 +368,7 @@ const EventGroupPage = ({ groupId, userId, isAdmin, onBack, onDeleted }: EventGr
                 value={caption}
                 onChange={(e) => setCaption(e.target.value)}
                 placeholder="Skriv något... klistra in länkar direkt i texten"
-                className="w-full bg-secondary text-foreground text-sm p-3 rounded-lg border-none outline-none focus:ring-2 focus:ring-primary placeholder:text-muted-foreground resize-none min-h-[80px]"
+                className="w-full bg-secondary text-secondary-foreground text-sm p-3 rounded-lg border-none outline-none focus:ring-2 focus:ring-primary placeholder:text-muted-foreground resize-none min-h-[80px]"
                 rows={3}
               />
               {imagePreview && (

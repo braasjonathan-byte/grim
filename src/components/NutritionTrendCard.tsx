@@ -71,7 +71,7 @@ export default function NutritionTrendCard({ userId }: { userId: string }) {
       <div className="flex gap-1 flex-wrap">
         {METRICS.map((x) => (
           <button key={x.key} onClick={() => setMetric(x.key)}
-            className={`px-2.5 py-1 rounded-full text-[11px] font-medium ${metric === x.key ? "bg-primary text-primary-foreground" : "bg-secondary text-foreground"}`}>{x.label}</button>
+            className={`px-2.5 py-1 rounded-full text-[11px] font-medium ${metric === x.key ? "bg-primary text-primary-foreground" : "bg-secondary text-secondary-foreground"}`}>{x.label}</button>
         ))}
       </div>
       <p className="text-xs text-muted-foreground">

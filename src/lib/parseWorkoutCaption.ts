@@ -67,14 +67,14 @@ export const WORKOUT_KIND_META: Record<WorkoutKind, { icon: LucideIcon; accent: 
   running: { icon: Footprints, accent: "bg-warning", badge: "bg-warning/15 text-warning" },
   cycling: { icon: Bike, accent: "bg-success", badge: "bg-success/15 text-success" },
   swimming: { icon: Waves, accent: "bg-primary", badge: "bg-primary/15 text-primary" },
-  other: { icon: Activity, accent: "bg-muted-foreground/40", badge: "bg-secondary text-foreground/70" },
+  other: { icon: Activity, accent: "bg-muted-foreground/40", badge: "bg-secondary text-secondary-foreground/70" },
 };
 
 export const CHIP_TONE_CLASS: Record<ChipTone, string> = {
   primary: "bg-primary/10 text-primary",
   success: "bg-success/10 text-success",
   warning: "bg-warning/10 text-warning",
-  muted: "bg-secondary text-foreground/70",
+  muted: "bg-secondary text-secondary-foreground/70",
 };
 
 /**

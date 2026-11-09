@@ -404,7 +404,7 @@ const SchemaBuilder = ({ userId, onDone, onBack }: SchemaBuilderProps) => {
                             value={day.session_name}
                             onChange={e => updateDay(weekIdx, realDayIdx, "session_name", e.target.value)}
                             placeholder="Passnamn (t.ex. Styrka överkropp)"
-                            className="w-full bg-secondary text-foreground text-sm p-2 rounded-md border-none outline-none focus:ring-1 focus:ring-primary placeholder:text-muted-foreground"
+                            className="w-full bg-secondary text-secondary-foreground text-sm p-2 rounded-md border-none outline-none focus:ring-1 focus:ring-primary placeholder:text-muted-foreground"
                           />
                           {renderExerciseList(day.exercises, weekIdx, realDayIdx, false)}
                           <textarea
@@ -412,14 +412,14 @@ const SchemaBuilder = ({ userId, onDone, onBack }: SchemaBuilderProps) => {
                             onChange={e => updateDay(weekIdx, realDayIdx, "details", e.target.value)}
                             placeholder="Övrig info (valfritt)"
                             rows={2}
-                            className="w-full bg-secondary text-foreground text-sm p-2 rounded-md border-none outline-none focus:ring-1 focus:ring-primary placeholder:text-muted-foreground resize-none"
+                            className="w-full bg-secondary text-secondary-foreground text-sm p-2 rounded-md border-none outline-none focus:ring-1 focus:ring-primary placeholder:text-muted-foreground resize-none"
                           />
                           <input
                             type="text"
                             value={day.tempo}
                             onChange={e => updateDay(weekIdx, realDayIdx, "tempo", e.target.value)}
                             placeholder="Tempo/RPE (valfritt)"
-                            className="w-full bg-secondary text-foreground text-sm p-2 rounded-md border-none outline-none focus:ring-1 focus:ring-primary placeholder:text-muted-foreground"
+                            className="w-full bg-secondary text-secondary-foreground text-sm p-2 rounded-md border-none outline-none focus:ring-1 focus:ring-primary placeholder:text-muted-foreground"
                           />
                         </div>
                       ) : (
@@ -448,7 +448,7 @@ const SchemaBuilder = ({ userId, onDone, onBack }: SchemaBuilderProps) => {
                   <select
                     value={newDay.day}
                     onChange={e => setNewDay(prev => ({ ...prev, day: e.target.value }))}
-                    className="w-full bg-secondary text-foreground text-sm p-2 rounded-md border-none outline-none"
+                    className="w-full bg-secondary text-secondary-foreground text-sm p-2 rounded-md border-none outline-none"
                   >
                     {availableDays(weekIdx).map(d => (
                       <option key={d} value={d}>{d}</option>
@@ -459,7 +459,7 @@ const SchemaBuilder = ({ userId, onDone, onBack }: SchemaBuilderProps) => {
                     value={newDay.session_name}
                     onChange={e => setNewDay(prev => ({ ...prev, session_name: e.target.value }))}
                     placeholder="Passnamn"
-                    className="w-full bg-secondary text-foreground text-sm p-2 rounded-md border-none outline-none focus:ring-1 focus:ring-primary placeholder:text-muted-foreground"
+                    className="w-full bg-secondary text-secondary-foreground text-sm p-2 rounded-md border-none outline-none focus:ring-1 focus:ring-primary placeholder:text-muted-foreground"
                   />
                   {renderExerciseList(newDay.exercises, -1, -1, true)}
                   <textarea
@@ -467,14 +467,14 @@ const SchemaBuilder = ({ userId, onDone, onBack }: SchemaBuilderProps) => {
                     onChange={e => setNewDay(prev => ({ ...prev, details: e.target.value }))}
                     placeholder="Övrig info (valfritt)"
                     rows={2}
-                    className="w-full bg-secondary text-foreground text-sm p-2 rounded-md border-none outline-none focus:ring-1 focus:ring-primary placeholder:text-muted-foreground resize-none"
+                    className="w-full bg-secondary text-secondary-foreground text-sm p-2 rounded-md border-none outline-none focus:ring-1 focus:ring-primary placeholder:text-muted-foreground resize-none"
                   />
                   <input
                     type="text"
                     value={newDay.tempo}
                     onChange={e => setNewDay(prev => ({ ...prev, tempo: e.target.value }))}
                     placeholder="Tempo/RPE (valfritt)"
-                    className="w-full bg-secondary text-foreground text-sm p-2 rounded-md border-none outline-none focus:ring-1 focus:ring-primary placeholder:text-muted-foreground"
+                    className="w-full bg-secondary text-secondary-foreground text-sm p-2 rounded-md border-none outline-none focus:ring-1 focus:ring-primary placeholder:text-muted-foreground"
                   />
                   <div className="flex gap-2">
                     <button

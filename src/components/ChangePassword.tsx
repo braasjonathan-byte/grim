@@ -112,7 +112,7 @@ const ChangePassword = ({ onClose, onChanged, forced }: ChangePasswordProps) => 
                 placeholder="••••••"
                 maxLength={50}
                 autoComplete="current-password"
-                className="w-full bg-secondary text-foreground text-base p-3 rounded-lg border-none outline-none focus:ring-2 focus:ring-primary placeholder:text-muted-foreground"
+                className="w-full bg-secondary text-secondary-foreground text-base p-3 rounded-lg border-none outline-none focus:ring-2 focus:ring-primary placeholder:text-muted-foreground"
                 autoFocus
               />
             </div>
@@ -129,7 +129,7 @@ const ChangePassword = ({ onClose, onChanged, forced }: ChangePasswordProps) => 
                   maxLength={50}
                   autoComplete="new-password"
                   autoFocus={forced}
-                  className="w-full bg-secondary text-foreground text-base p-3 rounded-lg border-none outline-none focus:ring-2 focus:ring-primary placeholder:text-muted-foreground pr-12"
+                  className="w-full bg-secondary text-secondary-foreground text-base p-3 rounded-lg border-none outline-none focus:ring-2 focus:ring-primary placeholder:text-muted-foreground pr-12"
                 />
                 <button
                   type="button"
@@ -149,7 +149,7 @@ const ChangePassword = ({ onClose, onChanged, forced }: ChangePasswordProps) => 
                 onChange={(e) => setConfirmPassword(e.target.value)}
                 placeholder="••••••"
                 maxLength={50}
-                className="w-full bg-secondary text-foreground text-base p-3 rounded-lg border-none outline-none focus:ring-2 focus:ring-primary placeholder:text-muted-foreground"
+                className="w-full bg-secondary text-secondary-foreground text-base p-3 rounded-lg border-none outline-none focus:ring-2 focus:ring-primary placeholder:text-muted-foreground"
               />
             </div>
 
@@ -177,7 +177,7 @@ const ChangePassword = ({ onClose, onChanged, forced }: ChangePasswordProps) => 
                 type="button"
                 onClick={onClose}
                 disabled={loading}
-                className="w-full py-3 bg-secondary text-foreground font-semibold rounded-lg hover:bg-muted transition-colors"
+                className="w-full py-3 bg-secondary text-secondary-foreground font-semibold rounded-lg hover:bg-muted transition-colors"
               >
                 Avbryt
               </button>

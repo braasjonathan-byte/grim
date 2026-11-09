@@ -669,7 +669,7 @@ export default function FoodPickerDialog({ open, onOpenChange, onPick, userId, h
                       key={p}
                       type="button"
                       onClick={() => setAmount(p)}
-                      className={`px-2.5 py-1 text-[11px] font-bold rounded-full transition-colors ${amount.replace(",", ".") === p ? "bg-primary text-primary-foreground" : "bg-secondary text-foreground hover:bg-muted"}`}
+                      className={`px-2.5 py-1 text-[11px] font-bold rounded-full transition-colors ${amount.replace(",", ".") === p ? "bg-primary text-primary-foreground" : "bg-secondary text-secondary-foreground hover:bg-muted"}`}
                     >
                       {p.replace(".", ",")} {unit}
                     </button>
@@ -690,7 +690,7 @@ export default function FoodPickerDialog({ open, onOpenChange, onPick, userId, h
                         key={p}
                         type="button"
                         onClick={() => setAmount(p)}
-                        className={`px-2.5 py-1 text-[11px] font-bold rounded-full transition-colors ${amount === p ? "bg-primary text-primary-foreground" : "bg-secondary text-foreground hover:bg-muted"}`}
+                        className={`px-2.5 py-1 text-[11px] font-bold rounded-full transition-colors ${amount === p ? "bg-primary text-primary-foreground" : "bg-secondary text-secondary-foreground hover:bg-muted"}`}
                       >
                         {p.replace(".", ",")}
                       </button>

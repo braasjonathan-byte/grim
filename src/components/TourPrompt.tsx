@@ -169,7 +169,7 @@ const TourPrompt = ({ userId }: TourPromptProps) => {
               <button
                 onClick={() => run("long")}
                 disabled={busy}
-                className="w-full bg-secondary text-foreground border border-border font-bold text-sm px-4 py-2.5 active:scale-95 transition-transform"
+                className="w-full bg-secondary text-secondary-foreground border border-border font-bold text-sm px-4 py-2.5 active:scale-95 transition-transform"
               >
                 Lång rundtur (alla områden)
               </button>

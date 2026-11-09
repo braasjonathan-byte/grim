@@ -36,7 +36,7 @@ export function WorkoutImportPicker({ importWorkoutTarget, setImportWorkoutTarge
           )}
           <button
             onClick={() => setShowFileImport(true)}
-            className="w-full py-2 rounded-lg bg-secondary text-foreground text-xs font-semibold hover:bg-muted transition-colors flex items-center justify-center gap-1.5"
+            className="w-full py-2 rounded-lg bg-secondary text-secondary-foreground text-xs font-semibold hover:bg-muted transition-colors flex items-center justify-center gap-1.5"
           >
             <Download className="w-3.5 h-3.5" /> Importera fil (.gpx / .tcx / .fit)
           </button>

@@ -297,7 +297,7 @@ const NotificationSettings = ({ userId }: NotificationSettingsProps) => {
           {isNative || isAndroid ? (
             <button
               onClick={openDeviceSettings}
-              className="w-full py-2 bg-secondary text-foreground text-sm font-semibold rounded-lg hover:opacity-90 transition-opacity flex items-center justify-center gap-2"
+              className="w-full py-2 bg-secondary text-secondary-foreground text-sm font-semibold rounded-lg hover:opacity-90 transition-opacity flex items-center justify-center gap-2"
             >
               <ExternalLink className="w-4 h-4" />
               Öppna notisinställningar
@@ -382,7 +382,7 @@ const NotificationSettings = ({ userId }: NotificationSettingsProps) => {
               <select
                 value={reminderTime}
                 onChange={(e) => saveReminder(true, e.target.value)}
-                className="w-full bg-secondary text-foreground text-sm p-2.5 rounded-lg border border-border outline-none focus:ring-2 focus:ring-primary"
+                className="w-full bg-secondary text-secondary-foreground text-sm p-2.5 rounded-lg border border-border outline-none focus:ring-2 focus:ring-primary"
               >
                 {REMINDER_TIMES.map((t) => (
                   <option key={t} value={t}>{t}</option>

@@ -37,7 +37,7 @@ const RequiredEmailPrompt = ({ userId, onSaved, onSignedOut }: RequiredEmailProm
   };
 
   const inputClass =
-    "w-full bg-secondary text-foreground text-base p-3 rounded-lg border-none outline-none focus:ring-2 focus:ring-primary placeholder:text-muted-foreground";
+    "w-full bg-secondary text-secondary-foreground text-base p-3 rounded-lg border-none outline-none focus:ring-2 focus:ring-primary placeholder:text-muted-foreground";
 
   return (
     <div

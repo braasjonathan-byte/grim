@@ -202,8 +202,8 @@ export default function NutritionGoalsDialog({ open, onOpenChange, userId, onSav
             <label className="text-xs font-medium">Kön</label>
             {!gender && <p className="text-[11px] text-muted-foreground">Inget valt – vi räknar med ett medelvärde. Välj för exaktare mål.</p>}
             <div className="flex gap-1">
-              <button onClick={() => setGender("male")} className={`flex-1 py-2 text-xs font-medium rounded-full transition-colors ${gender === "male" ? "bg-primary text-primary-foreground" : "bg-secondary text-foreground hover:bg-muted"}`}>Man</button>
-              <button onClick={() => setGender("female")} className={`flex-1 py-2 text-xs font-medium rounded-full transition-colors ${gender === "female" ? "bg-primary text-primary-foreground" : "bg-secondary text-foreground hover:bg-muted"}`}>Kvinna</button>
+              <button onClick={() => setGender("male")} className={`flex-1 py-2 text-xs font-medium rounded-full transition-colors ${gender === "male" ? "bg-primary text-primary-foreground" : "bg-secondary text-secondary-foreground hover:bg-muted"}`}>Man</button>
+              <button onClick={() => setGender("female")} className={`flex-1 py-2 text-xs font-medium rounded-full transition-colors ${gender === "female" ? "bg-primary text-primary-foreground" : "bg-secondary text-secondary-foreground hover:bg-muted"}`}>Kvinna</button>
             </div>
           </div>
           <div>

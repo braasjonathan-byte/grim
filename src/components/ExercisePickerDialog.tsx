@@ -290,7 +290,7 @@ const ExercisePickerDialog = ({
               value={search}
               onChange={e => setSearch(e.target.value)}
               placeholder="Sök övning..."
-              className="w-full bg-secondary text-foreground text-sm pl-9 pr-3 py-2.5 rounded-xl border-none outline-none focus:ring-2 focus:ring-primary/30 placeholder:text-muted-foreground transition-shadow"
+              className="w-full bg-secondary text-secondary-foreground text-sm pl-9 pr-3 py-2.5 rounded-xl border-none outline-none focus:ring-2 focus:ring-primary/30 placeholder:text-muted-foreground transition-shadow"
             />
           </div>
         </div>
@@ -437,14 +437,14 @@ const ExercisePickerDialog = ({
                   onChange={e => setNewName(e.target.value)}
                   onKeyDown={e => e.key === "Enter" && newName.trim() && handleCreateExercise()}
                   placeholder="Namn på övning..."
-                  className="w-full bg-secondary text-foreground text-sm px-3 py-2 rounded-lg border-none outline-none focus:ring-2 focus:ring-primary/30 placeholder:text-muted-foreground"
+                  className="w-full bg-secondary text-secondary-foreground text-sm px-3 py-2 rounded-lg border-none outline-none focus:ring-2 focus:ring-primary/30 placeholder:text-muted-foreground"
                   autoFocus
                 />
                 <div className="flex gap-2">
                   <select
                     value={newCategory}
                     onChange={e => setNewCategory(e.target.value)}
-                    className="flex-1 bg-secondary text-foreground text-xs p-2 rounded-lg border-none outline-none"
+                    className="flex-1 bg-secondary text-secondary-foreground text-xs p-2 rounded-lg border-none outline-none"
                   >
                     <option value="styrka">Styrka</option>
                     <option value="kondition">Kondition</option>
@@ -454,7 +454,7 @@ const ExercisePickerDialog = ({
                   <select
                     value={newMuscle}
                     onChange={e => { setNewMuscle(e.target.value); setNewSubmuscles([]); }}
-                    className="flex-1 bg-secondary text-foreground text-xs p-2 rounded-lg border-none outline-none"
+                    className="flex-1 bg-secondary text-secondary-foreground text-xs p-2 rounded-lg border-none outline-none"
                   >
                     {muscleGroups.map(mg => <option key={mg} value={mg}>{mg}</option>)}
                   </select>
@@ -517,7 +517,7 @@ const ExercisePickerDialog = ({
                   <select
                     value=""
                     onChange={e => { if (e.target.value) addSecondaryMuscle(e.target.value); e.currentTarget.value = ""; }}
-                    className="w-full bg-secondary text-foreground text-xs p-2 rounded-lg border-none outline-none"
+                    className="w-full bg-secondary text-secondary-foreground text-xs p-2 rounded-lg border-none outline-none"
                   >
                     <option value="">+ Lägg till muskel...</option>
                     {muscleGroups.filter(mg => mg !== newMuscle && !newSecondary.some(s => s.muscle === mg)).map(mg => (
@@ -555,7 +555,7 @@ const ExercisePickerDialog = ({
                       <select
                         value={newDistUnit}
                         onChange={e => setNewDistUnit(e.target.value as "km" | "m" | "none")}
-                        className="w-full bg-secondary text-foreground text-xs p-2 rounded-lg border-none outline-none"
+                        className="w-full bg-secondary text-secondary-foreground text-xs p-2 rounded-lg border-none outline-none"
                       >
                         <option value="km">Kilometer (km)</option>
                         <option value="m">Meter (m)</option>

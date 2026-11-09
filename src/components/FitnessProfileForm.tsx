@@ -101,7 +101,7 @@ const FitnessProfileForm = ({ userId, onDone, runningOnly = false, strengthOnly 
               value={maxDistance}
               onChange={(e) => setMaxDistance(e.target.value)}
               placeholder="t.ex. 15"
-              className="w-full bg-secondary text-foreground text-lg p-3 rounded-lg border-none outline-none focus:ring-2 focus:ring-primary placeholder:text-muted-foreground"
+              className="w-full bg-secondary text-secondary-foreground text-lg p-3 rounded-lg border-none outline-none focus:ring-2 focus:ring-primary placeholder:text-muted-foreground"
             />
           </div>
         )}
@@ -118,7 +118,7 @@ const FitnessProfileForm = ({ userId, onDone, runningOnly = false, strengthOnly 
               value={time10km}
               onChange={(e) => setTime10km(e.target.value)}
               placeholder="t.ex. 55"
-              className="w-full bg-secondary text-foreground text-lg p-3 rounded-lg border-none outline-none focus:ring-2 focus:ring-primary placeholder:text-muted-foreground"
+              className="w-full bg-secondary text-secondary-foreground text-lg p-3 rounded-lg border-none outline-none focus:ring-2 focus:ring-primary placeholder:text-muted-foreground"
             />
           </div>
         )}
@@ -136,7 +136,7 @@ const FitnessProfileForm = ({ userId, onDone, runningOnly = false, strengthOnly 
                 value={ftpWatt}
                 onChange={(e) => setFtpWatt(e.target.value)}
                 placeholder="t.ex. 220"
-                className="w-full bg-secondary text-foreground text-lg p-3 rounded-lg border-none outline-none focus:ring-2 focus:ring-primary placeholder:text-muted-foreground"
+                className="w-full bg-secondary text-secondary-foreground text-lg p-3 rounded-lg border-none outline-none focus:ring-2 focus:ring-primary placeholder:text-muted-foreground"
               />
               <FieldError error={ftpError} />
             </div>
@@ -151,7 +151,7 @@ const FitnessProfileForm = ({ userId, onDone, runningOnly = false, strengthOnly 
                 value={maxHeartRate}
                 onChange={(e) => setMaxHeartRate(e.target.value)}
                 placeholder="t.ex. 185"
-                className="w-full bg-secondary text-foreground text-lg p-3 rounded-lg border-none outline-none focus:ring-2 focus:ring-primary placeholder:text-muted-foreground"
+                className="w-full bg-secondary text-secondary-foreground text-lg p-3 rounded-lg border-none outline-none focus:ring-2 focus:ring-primary placeholder:text-muted-foreground"
               />
               <FieldError error={maxHrError} />
             </div>
@@ -166,7 +166,7 @@ const FitnessProfileForm = ({ userId, onDone, runningOnly = false, strengthOnly 
                 value={avgSpeed}
                 onChange={(e) => setAvgSpeed(e.target.value)}
                 placeholder="t.ex. 28"
-                className="w-full bg-secondary text-foreground text-lg p-3 rounded-lg border-none outline-none focus:ring-2 focus:ring-primary placeholder:text-muted-foreground"
+                className="w-full bg-secondary text-secondary-foreground text-lg p-3 rounded-lg border-none outline-none focus:ring-2 focus:ring-primary placeholder:text-muted-foreground"
               />
               <FieldError error={avgSpeedError} />
             </div>

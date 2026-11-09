@@ -28,7 +28,7 @@ interface Props {
 const ACTIVITY_TYPES = ["Löpning", "Cykling", "Simning", "Promenad"] as const;
 
 const fieldCls =
-  "w-full bg-secondary text-foreground text-sm p-2 rounded-lg border-none outline-none focus:ring-1 focus:ring-primary";
+  "w-full bg-secondary text-secondary-foreground text-sm p-2 rounded-lg border-none outline-none focus:ring-1 focus:ring-primary";
 
 const secToHms = (sec: number) => {
   const h = Math.floor(sec / 3600);

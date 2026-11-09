@@ -265,14 +265,14 @@ export const GpsTrackerControl = ({ onStop, autoStart = false, onCancel, storage
           <button
             type="button"
             onClick={(e) => { e.stopPropagation(); shareImage(); }}
-            className="px-3 py-2 bg-secondary text-foreground text-xs font-semibold rounded-md border border-border flex items-center gap-1"
+            className="px-3 py-2 bg-secondary text-secondary-foreground text-xs font-semibold rounded-md border border-border flex items-center gap-1"
           >
             <Share2 className="w-3.5 h-3.5" /> Dela
           </button>
           <button
             type="button"
             onClick={(e) => { e.stopPropagation(); setSummary(null); }}
-            className="px-3 py-2 bg-secondary text-foreground text-xs font-semibold rounded-md border border-border"
+            className="px-3 py-2 bg-secondary text-secondary-foreground text-xs font-semibold rounded-md border border-border"
           >
             Släng
           </button>

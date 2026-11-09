@@ -535,7 +535,7 @@ export const ConditioningEditCard = ({ name, lineIndex, planId, planCondTime, pl
           <p className="text-xs font-semibold text-foreground">Logga tid eller distans först</p>
           <p className="text-[11px] text-muted-foreground">Du har inte loggat något resultat än. Planens värden är bara ett mål, inte ett resultat.</p>
           <div className="flex gap-2">
-            <button type="button" onClick={() => setShowEmptyWarning(false)} className="flex-1 h-9 text-xs font-semibold bg-secondary text-foreground rounded-full">Logga själv</button>
+            <button type="button" onClick={() => setShowEmptyWarning(false)} className="flex-1 h-9 text-xs font-semibold bg-secondary text-secondary-foreground rounded-full">Logga själv</button>
             <button type="button" onClick={() => handleSave(true)} className="flex-1 h-9 text-xs font-semibold bg-primary text-primary-foreground rounded-full">Använd planens värden</button>
           </div>
         </div>

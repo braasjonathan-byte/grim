@@ -203,7 +203,7 @@ const PlanEditor = ({ userId }: PlanEditorProps) => {
               value={exerciseSearch}
               onChange={(e) => setExerciseSearch(e.target.value)}
               placeholder="Sök övning..."
-              className="w-full bg-secondary text-foreground text-sm pl-9 pr-3 py-2 rounded-md border-none outline-none focus:ring-1 focus:ring-primary placeholder:text-muted-foreground"
+              className="w-full bg-secondary text-secondary-foreground text-sm pl-9 pr-3 py-2 rounded-md border-none outline-none focus:ring-1 focus:ring-primary placeholder:text-muted-foreground"
             />
           </div>
           <div className="flex flex-wrap gap-1.5">
@@ -257,13 +257,13 @@ const PlanEditor = ({ userId }: PlanEditorProps) => {
                 value={newExName}
                 onChange={(e) => setNewExName(e.target.value)}
                 placeholder="Övningens namn"
-                className="w-full bg-secondary text-foreground text-sm p-2 rounded-md border-none outline-none focus:ring-1 focus:ring-primary placeholder:text-muted-foreground"
+                className="w-full bg-secondary text-secondary-foreground text-sm p-2 rounded-md border-none outline-none focus:ring-1 focus:ring-primary placeholder:text-muted-foreground"
               />
               <div className="flex gap-2">
                 <select
                   value={newExCategory}
                   onChange={(e) => setNewExCategory(e.target.value)}
-                  className="flex-1 bg-secondary text-foreground text-xs p-2 rounded-md border-none outline-none"
+                  className="flex-1 bg-secondary text-secondary-foreground text-xs p-2 rounded-md border-none outline-none"
                 >
                   <option value="styrka">Styrka</option>
                   <option value="kondition">Kondition</option>
@@ -273,7 +273,7 @@ const PlanEditor = ({ userId }: PlanEditorProps) => {
                 <select
                   value={newExMuscle}
                   onChange={(e) => setNewExMuscle(e.target.value)}
-                  className="flex-1 bg-secondary text-foreground text-xs p-2 rounded-md border-none outline-none"
+                  className="flex-1 bg-secondary text-secondary-foreground text-xs p-2 rounded-md border-none outline-none"
                 >
                   {muscleGroups.map((mg) => (
                     <option key={mg} value={mg}>{mg}</option>
@@ -359,20 +359,20 @@ const PlanEditor = ({ userId }: PlanEditorProps) => {
                     initialValue={plan.session_name}
                     onSave={(v) => autoSavePlanField(plan, "session_name", v)}
                     placeholder="Passnamn (t.ex. Styrka överkropp)"
-                    className="w-full bg-secondary text-foreground text-sm p-2 rounded-md border-none outline-none focus:ring-1 focus:ring-primary placeholder:text-muted-foreground"
+                    className="w-full bg-secondary text-secondary-foreground text-sm p-2 rounded-md border-none outline-none focus:ring-1 focus:ring-primary placeholder:text-muted-foreground"
                   />
                   <AutoSaveTextarea
                     initialValue={plan.details}
                     onSave={(v) => autoSavePlanField(plan, "details", v)}
                     placeholder="Detaljer (t.ex. Bänk 5×3 @ RPE 7; Rodd 3×8)"
                     rows={3}
-                    className="w-full bg-secondary text-foreground text-sm p-2 rounded-md border-none outline-none focus:ring-1 focus:ring-primary placeholder:text-muted-foreground resize-none"
+                    className="w-full bg-secondary text-secondary-foreground text-sm p-2 rounded-md border-none outline-none focus:ring-1 focus:ring-primary placeholder:text-muted-foreground resize-none"
                   />
                   <AutoSaveInput
                     initialValue={plan.tempo}
                     onSave={(v) => autoSavePlanField(plan, "tempo", v)}
                     placeholder="Tempo/RPE (t.ex. 5:40–5:35)"
-                    className="w-full bg-secondary text-foreground text-sm p-2 rounded-md border-none outline-none focus:ring-1 focus:ring-primary placeholder:text-muted-foreground"
+                    className="w-full bg-secondary text-secondary-foreground text-sm p-2 rounded-md border-none outline-none focus:ring-1 focus:ring-primary placeholder:text-muted-foreground"
                   />
                 </div>
               ) : (
@@ -398,7 +398,7 @@ const PlanEditor = ({ userId }: PlanEditorProps) => {
           <select
             value={newDay.day}
             onChange={(e) => setNewDay({ ...newDay, day: e.target.value })}
-            className="w-full bg-secondary text-foreground text-sm p-2 rounded-md border-none outline-none"
+            className="w-full bg-secondary text-secondary-foreground text-sm p-2 rounded-md border-none outline-none"
           >
             {DAYS.filter((d) => !weekDays.some((wd) => wd.day === d)).map((d) => (
               <option key={d} value={d}>{d}</option>
@@ -409,21 +409,21 @@ const PlanEditor = ({ userId }: PlanEditorProps) => {
             value={newDay.session_name}
             onChange={(e) => setNewDay({ ...newDay, session_name: e.target.value })}
             placeholder="Passnamn"
-            className="w-full bg-secondary text-foreground text-sm p-2 rounded-md border-none outline-none focus:ring-1 focus:ring-primary placeholder:text-muted-foreground"
+            className="w-full bg-secondary text-secondary-foreground text-sm p-2 rounded-md border-none outline-none focus:ring-1 focus:ring-primary placeholder:text-muted-foreground"
           />
           <textarea
             value={newDay.details}
             onChange={(e) => setNewDay({ ...newDay, details: e.target.value })}
             placeholder="Detaljer"
             rows={3}
-            className="w-full bg-secondary text-foreground text-sm p-2 rounded-md border-none outline-none focus:ring-1 focus:ring-primary placeholder:text-muted-foreground resize-none"
+            className="w-full bg-secondary text-secondary-foreground text-sm p-2 rounded-md border-none outline-none focus:ring-1 focus:ring-primary placeholder:text-muted-foreground resize-none"
           />
           <input
             type="text"
             value={newDay.tempo}
             onChange={(e) => setNewDay({ ...newDay, tempo: e.target.value })}
             placeholder="Tempo/RPE"
-            className="w-full bg-secondary text-foreground text-sm p-2 rounded-md border-none outline-none focus:ring-1 focus:ring-primary placeholder:text-muted-foreground"
+            className="w-full bg-secondary text-secondary-foreground text-sm p-2 rounded-md border-none outline-none focus:ring-1 focus:ring-primary placeholder:text-muted-foreground"
           />
           <div className="flex gap-2">
             <button onClick={addDay} className="flex-1 py-2 bg-primary text-primary-foreground font-semibold rounded-md text-sm">

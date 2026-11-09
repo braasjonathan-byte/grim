@@ -114,7 +114,7 @@ const ReplacementWorkoutDialog = ({
             value={newName}
             onChange={(e) => setNewName(e.target.value)}
             placeholder={`Ersättning: ${sessionName}`}
-            className="w-full bg-secondary text-foreground text-sm p-2.5 rounded-lg border-none outline-none focus:ring-2 focus:ring-primary placeholder:text-muted-foreground"
+            className="w-full bg-secondary text-secondary-foreground text-sm p-2.5 rounded-lg border-none outline-none focus:ring-2 focus:ring-primary placeholder:text-muted-foreground"
           />
         </div>
 

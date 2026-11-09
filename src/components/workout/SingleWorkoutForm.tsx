@@ -102,7 +102,7 @@ export function SingleWorkoutForm({ showAddSingle, plans, setShowCopyPicker, sho
                 <PopoverTrigger asChild>
                   <button
                   className={cn(
-                    "w-full flex items-center gap-2 bg-secondary text-foreground text-sm p-2 rounded-md text-left",
+                    "w-full flex items-center gap-2 bg-secondary text-secondary-foreground text-sm p-2 rounded-md text-left",
                     !singleDate && "text-muted-foreground"
                   )}>
 
@@ -127,7 +127,7 @@ export function SingleWorkoutForm({ showAddSingle, plans, setShowCopyPicker, sho
             value={singleName}
             onChange={(e) => setSingleName(e.target.value)}
             placeholder="Passnamn (t.ex. Styrka överkropp)"
-            className="w-full bg-secondary text-foreground text-sm p-2 rounded-md border-none outline-none focus:ring-1 focus:ring-primary placeholder:text-muted-foreground"
+            className="w-full bg-secondary text-secondary-foreground text-sm p-2 rounded-md border-none outline-none focus:ring-1 focus:ring-primary placeholder:text-muted-foreground"
             autoFocus />
 
             <p className="text-[10px] text-muted-foreground">
@@ -141,13 +141,13 @@ export function SingleWorkoutForm({ showAddSingle, plans, setShowCopyPicker, sho
               <div className="space-y-2">
                 <div className="flex items-center gap-2">
                   <label className="text-xs text-muted-foreground whitespace-nowrap">Sek/övning:</label>
-                  <input type="text" inputMode="numeric" min="5" max="300" value={singleCircuitSeconds} onChange={(e) => setSingleCircuitSeconds(e.target.value)} className="w-16 bg-secondary text-foreground text-sm px-2 py-1 rounded-md border-none outline-none focus:ring-1 focus:ring-primary text-center font-mono" />
+                  <input type="text" inputMode="numeric" min="5" max="300" value={singleCircuitSeconds} onChange={(e) => setSingleCircuitSeconds(e.target.value)} className="w-16 bg-secondary text-secondary-foreground text-sm px-2 py-1 rounded-md border-none outline-none focus:ring-1 focus:ring-primary text-center font-mono" />
                   <label className="text-xs text-muted-foreground whitespace-nowrap ml-2">Rundor:</label>
-                  <input type="text" inputMode="numeric" min="1" max="20" value={singleCircuitRounds} onChange={(e) => setSingleCircuitRounds(e.target.value)} className="w-16 bg-secondary text-foreground text-sm px-2 py-1 rounded-md border-none outline-none focus:ring-1 focus:ring-primary text-center font-mono" />
+                  <input type="text" inputMode="numeric" min="1" max="20" value={singleCircuitRounds} onChange={(e) => setSingleCircuitRounds(e.target.value)} className="w-16 bg-secondary text-secondary-foreground text-sm px-2 py-1 rounded-md border-none outline-none focus:ring-1 focus:ring-primary text-center font-mono" />
                 </div>
                 <div className="flex items-center gap-2">
                   <label className="text-xs text-muted-foreground whitespace-nowrap">Vila mellan rundor:</label>
-                  <input type="text" inputMode="numeric" min="0" max="300" value={singleCircuitRest} onChange={(e) => setSingleCircuitRest(e.target.value)} className="w-16 bg-secondary text-foreground text-sm px-2 py-1 rounded-md border-none outline-none focus:ring-1 focus:ring-primary text-center font-mono" />
+                  <input type="text" inputMode="numeric" min="0" max="300" value={singleCircuitRest} onChange={(e) => setSingleCircuitRest(e.target.value)} className="w-16 bg-secondary text-secondary-foreground text-sm px-2 py-1 rounded-md border-none outline-none focus:ring-1 focus:ring-primary text-center font-mono" />
                   <span className="text-xs text-muted-foreground">sek</span>
                 </div>
               </div>

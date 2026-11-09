@@ -200,7 +200,7 @@ const MiniTimer = () => {
           <button
             onClick={() => switchMode("stopwatch")}
             className={`flex-1 flex items-center justify-center gap-1.5 px-2 py-2 text-xs font-bold border ${
-              mode === "stopwatch" ? "bg-primary text-primary-foreground border-primary" : "bg-secondary text-foreground border-border"
+              mode === "stopwatch" ? "bg-primary text-primary-foreground border-primary" : "bg-secondary text-secondary-foreground border-border"
             }`}
           >
             <TimerReset className="w-3.5 h-3.5" /> Stoppur
@@ -208,7 +208,7 @@ const MiniTimer = () => {
           <button
             onClick={() => switchMode("countdown")}
             className={`flex-1 flex items-center justify-center gap-1.5 px-2 py-2 text-xs font-bold border ${
-              mode === "countdown" ? "bg-primary text-primary-foreground border-primary" : "bg-secondary text-foreground border-border"
+              mode === "countdown" ? "bg-primary text-primary-foreground border-primary" : "bg-secondary text-secondary-foreground border-border"
             }`}
           >
             <Hourglass className="w-3.5 h-3.5" /> Timer

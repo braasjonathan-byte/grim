@@ -240,7 +240,7 @@ const AuthScreen = ({ onAuth }: AuthScreenProps) => {
                   maxLength={254}
                   autoComplete="username"
                   autoCapitalize="none"
-                  className="w-full bg-secondary text-foreground text-lg p-3 rounded-lg border-none outline-none focus:ring-2 focus:ring-primary placeholder:text-muted-foreground"
+                  className="w-full bg-secondary text-secondary-foreground text-lg p-3 rounded-lg border-none outline-none focus:ring-2 focus:ring-primary placeholder:text-muted-foreground"
                   autoFocus />
                 </div>
                 <p className="text-xs text-muted-foreground">
@@ -291,7 +291,7 @@ const AuthScreen = ({ onAuth }: AuthScreenProps) => {
             <input type="text" value={nickname} onChange={(e) => setNickname(e.target.value)}
             placeholder="Användarnamn"
             maxLength={20}
-            className="w-full bg-secondary text-foreground text-lg p-3 rounded-lg border-none outline-none focus:ring-2 focus:ring-primary placeholder:text-muted-foreground"
+            className="w-full bg-secondary text-secondary-foreground text-lg p-3 rounded-lg border-none outline-none focus:ring-2 focus:ring-primary placeholder:text-muted-foreground"
             autoFocus />
 
           </div>
@@ -305,7 +305,7 @@ const AuthScreen = ({ onAuth }: AuthScreenProps) => {
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="••••••"
                 maxLength={50}
-                className="w-full bg-secondary text-foreground text-lg p-3 rounded-lg border-none outline-none focus:ring-2 focus:ring-primary placeholder:text-muted-foreground pr-12" />
+                className="w-full bg-secondary text-secondary-foreground text-lg p-3 rounded-lg border-none outline-none focus:ring-2 focus:ring-primary placeholder:text-muted-foreground pr-12" />
 
               <button
                 type="button"
@@ -334,7 +334,7 @@ const AuthScreen = ({ onAuth }: AuthScreenProps) => {
                   autoCapitalize="none"
                   autoCorrect="off"
                   spellCheck={false}
-                  className="w-full bg-secondary text-foreground text-lg p-3 rounded-lg border-none outline-none focus:ring-2 focus:ring-primary placeholder:text-muted-foreground" />
+                  className="w-full bg-secondary text-secondary-foreground text-lg p-3 rounded-lg border-none outline-none focus:ring-2 focus:ring-primary placeholder:text-muted-foreground" />
               </div>
               <div>
                 <label htmlFor="signup-email-confirm" className="text-xs text-muted-foreground mb-1 block">Skriv e-postadressen igen</label>
@@ -351,7 +351,7 @@ const AuthScreen = ({ onAuth }: AuthScreenProps) => {
                   autoCapitalize="none"
                   autoCorrect="off"
                   spellCheck={false}
-                  className="w-full bg-secondary text-foreground text-lg p-3 rounded-lg border-none outline-none focus:ring-2 focus:ring-primary placeholder:text-muted-foreground" />
+                  className="w-full bg-secondary text-secondary-foreground text-lg p-3 rounded-lg border-none outline-none focus:ring-2 focus:ring-primary placeholder:text-muted-foreground" />
               </div>
               <p className="text-xs text-muted-foreground">
                 {RECOVERY_EMAIL_WHY} Du loggar fortfarande in med ditt användarnamn. Vi skickar ingen reklam.
@@ -390,7 +390,7 @@ const AuthScreen = ({ onAuth }: AuthScreenProps) => {
             type="button"
             onClick={handleBiometricLogin}
             disabled={bioLoading}
-            className="w-full py-3 bg-secondary text-foreground font-bold rounded-lg disabled:opacity-40 hover:opacity-90 transition-opacity flex items-center justify-center gap-2">
+            className="w-full py-3 bg-secondary text-secondary-foreground font-bold rounded-lg disabled:opacity-40 hover:opacity-90 transition-opacity flex items-center justify-center gap-2">
             <Fingerprint className="w-5 h-5" />
             {bioLoading ? "Verifierar..." : "Logga in med biometri"}
           </button>
