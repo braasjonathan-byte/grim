@@ -910,6 +910,8 @@ export function applyTheme(themeId: string) {
     root.style.setProperty(key, value);
   });
 
+  enforceButtonContrast(root);
+
   // Dämpad bakgrundsbild (bara teman med backgroundImage).
   if (theme.backgroundImage) {
     root.style.setProperty("--theme-bg-image", `url("${theme.backgroundImage}")`);
@@ -921,4 +923,34 @@ export function applyTheme(themeId: string) {
 
   // Hemskärmswidgeten följer valt tema.
   setTimeout(syncWidgetTheme, 0);
+}
+
+/** HSL-token ("h s% l%") → relativ luminans. */
+function tokenLuminance(token: string): number | null {
+  const m = token.trim().match(/^(-?[\d.]+)\s+([\d.]+)%\s+([\d.]+)%/);
+  if (!m) return null;
+  const h = Number(m[1]) / 360, sat = Number(m[2]) / 100, l = Number(m[3]) / 100;
+  const q = l < 0.5 ? l * (1 + sat) : l + sat - l * sat, p = 2 * l - q;
+  const ch = (t: number) => {
+    t = (t + 1) % 1;
+    const v = t < 1 / 6 ? p + (q - p) * 6 * t : t < 0.5 ? q : t < 2 / 3 ? p + (q - p) * (2 / 3 - t) * 6 : p;
+    return v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4;
+  };
+  return 0.2126 * ch(h + 1 / 3) + 0.7152 * ch(h) + 0.0722 * ch(h - 1 / 3);
+}
+
+const contrast = (a: number, b: number) => (Math.max(a, b) + 0.05) / (Math.min(a, b) + 0.05);
+
+/** Säkerställer stark kontrast (≥ 7:1) för text på knappfärgerna i alla teman. */
+export function enforceButtonContrast(root: HTMLElement) {
+  const cs = getComputedStyle(root);
+  for (const name of ["secondary", "primary", "accent"]) {
+    const fgKey = `--${name}-foreground`;
+    const bg = tokenLuminance(cs.getPropertyValue(`--${name}`));
+    if (bg === null) continue;
+    const fg = tokenLuminance(cs.getPropertyValue(fgKey));
+    if (fg !== null && contrast(bg, fg) >= 7) continue;
+    const dark = contrast(bg, 0) >= contrast(bg, 1);
+    root.style.setProperty(fgKey, dark ? "0 0% 4%" : "0 0% 98%");
+  }
 }
