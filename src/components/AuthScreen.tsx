@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Eye, EyeOff, ArrowLeft, ShieldQuestion, Fingerprint } from "lucide-react";
+import { Eye, EyeOff, ArrowLeft, Fingerprint, Mail } from "lucide-react";
 import { Capacitor } from "@capacitor/core";
 import grimIcon from "@/assets/grim-icon.webp";
 import { supabase } from "@/integrations/supabase/client";
@@ -9,14 +9,10 @@ import {
   getBiometricLogin,
   saveBiometricLogin,
 } from "@/lib/biometric";
+import { requestPasswordReset, signInWithPasswordOrTemp } from "@/lib/passwordReset";
 
 interface AuthScreenProps {
   onAuth: () => void;
-}
-
-interface SecurityQuestion {
-  index: number;
-  question: string;
 }
 
 const AuthScreen = ({ onAuth }: AuthScreenProps) => {
@@ -63,14 +59,8 @@ const AuthScreen = ({ onAuth }: AuthScreenProps) => {
   };
 
   // Forgot password state
-  const [forgotNickname, setForgotNickname] = useState("");
-  const [resetMessage, setResetMessage] = useState("");
-  const [forgotStep, setForgotStep] = useState<"nickname" | "questions" | "new-password" | "done">("nickname");
-  const [securityQuestions, setSecurityQuestions] = useState<SecurityQuestion[]>([]);
-  const [securityAnswers, setSecurityAnswers] = useState<string[]>(["", "", "", ""]);
-  const [hasEmail, setHasEmail] = useState(false);
-  const [newPassword, setNewPassword] = useState("");
-  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [forgotIdentifier, setForgotIdentifier] = useState("");
+  const [forgotSent, setForgotSent] = useState(false);
   const [referralCode, setReferralCode] = useState<string | null>(null);
 
   // Capture referral code from URL
@@ -124,17 +114,15 @@ const AuthScreen = ({ onAuth }: AuthScreenProps) => {
     const email = fakeEmail(trimmedNick);
 
     if (isLogin) {
-      const { error: loginError } = await supabase.auth.signInWithPassword({
-        email,
-        password
-      });
-      if (loginError) {
-        setError("Fel användarnamn eller lösenord");
+      const result = await signInWithPasswordOrTemp(supabase, { email, nickname: trimmedNick, password });
+      if (result.ok === false) {
+        setError(result.error);
         setLoading(false);
         return;
       }
       // If biometric is enabled, remember credentials for biometric re-login
-      if (isBiometricEnabled()) {
+      // (never the one-time temporary password)
+      if (isBiometricEnabled() && !result.viaTempPassword) {
         saveBiometricLogin(trimmedNick, password);
       }
     } else {
@@ -163,110 +151,28 @@ const AuthScreen = ({ onAuth }: AuthScreenProps) => {
     onAuth();
   };
 
-  // Step 1: Look up user and get questions
-  const handleLookupUser = async (e: React.FormEvent) => {
+  const handleForgotSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
+    const value = forgotIdentifier.trim();
+    if (value.length < 2) {
+      setError("Ange ditt användarnamn eller din e-postadress");
+      return;
+    }
     setLoading(true);
-
-    const trimmed = forgotNickname.trim();
-    if (trimmed.length < 2) {
-      setError("Ange ditt användarnamn");
-      setLoading(false);
-      return;
-    }
-
-    try {
-      const { data, error: fnError } = await supabase.functions.invoke("reset-password", {
-        body: { nickname: trimmed, action: "get-questions" }
-      });
-
-      if (fnError || !data?.success) {
-        setError("Kontot hittades inte eller har inga återställningsalternativ.");
-        setLoading(false);
-        return;
-      }
-
-      if (data.hasQuestions) {
-        setSecurityQuestions(data.questions);
-        setSecurityAnswers(data.questions.map(() => ""));
-        setForgotStep("questions");
-      } else {
-        setResetMessage("Inga säkerhetsfrågor hittades för detta konto. Skicka ett mail till grimtraning@gmail.com med ditt användarnamn för att begära ett nytt lösenord. Det kan ta upp till ett dygn innan du får svar.");
-        setForgotStep("done");
-      }
-    } catch {
-      setError("Något gick fel. Försök igen.");
-    }
-
+    const { ok } = await requestPasswordReset(supabase, value);
     setLoading(false);
-  };
-
-  // Step 2: Verify security answers -> go to new password step
-  const handleVerifyAnswers = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError("");
-
-    if (securityAnswers.some((a) => !a.trim())) {
-      setError("Fyll i alla svar");
+    if (!ok) {
+      setError("Något gick fel. Kontrollera anslutningen och försök igen.");
       return;
     }
-
-    setForgotStep("new-password");
-  };
-
-  // Step 3: Set new password (with answers or email)
-  const handleSetNewPassword = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError("");
-    setLoading(true);
-
-    if (newPassword.trim().length < 8) {
-      setError("Lösenord måste vara minst 8 tecken");
-      setLoading(false);
-      return;
-    }
-
-    try {
-      const bodyPayload: Record<string, unknown> = {
-        nickname: forgotNickname.trim(),
-        action: "verify-answers",
-        newPassword: newPassword.trim(),
-        answers: securityAnswers.map((a) => a.trim()),
-      };
-
-      const { data, error: fnError } = await supabase.functions.invoke("reset-password", {
-        body: bodyPayload
-      });
-
-      if (fnError) {
-        setError("Något gick fel. Försök igen.");
-        setLoading(false);
-        return;
-      }
-
-      if (data?.success) {
-        setResetMessage(data.message);
-        setForgotStep("done");
-      } else {
-        setError(data?.error || "Något gick fel. Försök igen.");
-      }
-    } catch {
-      setError("Något gick fel. Försök igen.");
-    }
-
-    setLoading(false);
+    setForgotSent(true);
   };
 
   const resetForgotState = () => {
     setShowForgot(false);
-    setForgotStep("nickname");
-    setForgotNickname("");
-    setSecurityQuestions([]);
-    setSecurityAnswers(["", "", "", ""]);
-    setResetMessage("");
-    setHasEmail(false);
-    setNewPassword("");
+    setForgotSent(false);
+    setForgotIdentifier("");
     setError("");
   };
 
@@ -279,142 +185,47 @@ const AuthScreen = ({ onAuth }: AuthScreenProps) => {
             <h1 className="text-3xl font-black tracking-tight">
               Grim<span className="text-primary">.</span> – Återställ lösenord
             </h1>
-            <p className="text-sm text-muted-foreground">Återställ lösenord</p>
+            <p className="text-sm text-muted-foreground">Glömt lösenord</p>
           </div>
 
-          {/* Step: Done */}
-          {forgotStep === "done" &&
-          <div className="space-y-4">
-              <div className="bg-card border border-border rounded-lg p-4 space-y-3">
+          {forgotSent ?
+          <div className="space-y-4" data-testid="forgot-sent">
+              <div className="bg-card border border-border rounded-lg p-4 space-y-2">
+                <p className="text-sm font-semibold flex items-center gap-2"><Mail className="w-4 h-4" /> Kolla din e-post</p>
                 <p className="text-sm text-muted-foreground">
-                  ✅ {resetMessage}
+                  Om kontot finns och har en e-postadress kopplad har vi skickat ett tillfälligt lösenord. Det gäller i 24 timmar.
+                </p>
+                <p className="text-sm text-muted-foreground">
+                  Logga in med ditt användarnamn och det tillfälliga lösenordet – sedan får du välja ett nytt. Ditt gamla lösenord fungerar fortfarande tills dess.
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  Inget mejl efter några minuter? Kolla skräpposten, eller mejla grimtraning@gmail.com.
                 </p>
               </div>
-              <a
-              href="mailto:grimtraning@gmail.com?subject=Återställ lösenord&body=Hej! Jag vill återställa mitt lösenord. Mitt användarnamn är: "
-              className="w-full py-3 bg-primary text-primary-foreground font-bold rounded-lg hover:opacity-90 transition-opacity block text-center">
-                📧 Skicka mail
-              </a>
               <button
               onClick={resetForgotState}
-              className="w-full py-3 bg-secondary text-foreground font-bold rounded-lg hover:opacity-90 transition-opacity">
+              className="w-full py-3 bg-primary text-primary-foreground font-bold rounded-lg hover:opacity-90 transition-opacity">
                 Tillbaka till inloggning
               </button>
-            </div>
-          }
-
-          {/* Step: Set new password */}
-          {forgotStep === "new-password" &&
+            </div> :
           <>
-              <form onSubmit={handleSetNewPassword} className="space-y-4">
+              <form onSubmit={handleForgotSubmit} className="space-y-4">
                 <div>
-                  <label className="text-xs text-muted-foreground mb-1 block">Välj nytt lösenord</label>
-                  <div className="relative">
-                    <input
-                    type={showNewPassword ? "text" : "password"}
-                    value={newPassword}
-                    onChange={(e) => setNewPassword(e.target.value)}
-                    placeholder="Minst 8 tecken"
-                    maxLength={50}
-                    className="w-full bg-secondary text-foreground text-lg p-3 rounded-lg border-none outline-none focus:ring-2 focus:ring-primary placeholder:text-muted-foreground pr-12"
-                    autoFocus />
-
-                    <button
-                    type="button"
-                    onClick={() => setShowNewPassword(!showNewPassword)}
-                    className="absolute right-3 top-3.5 text-muted-foreground">
-
-                      {showNewPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
-                    </button>
-                  </div>
-                </div>
-
-                {error && <p className="text-sm text-destructive text-center">{error}</p>}
-
-                <button
-                type="submit"
-                disabled={loading}
-                className="w-full py-3 bg-primary text-primary-foreground font-bold rounded-lg disabled:opacity-40 hover:opacity-90 transition-opacity">
-
-                  {loading ? "Sparar..." : "Byt lösenord"}
-                </button>
-              </form>
-
-              <button
-              onClick={resetForgotState}
-              className="w-full text-center text-sm text-muted-foreground hover:text-foreground transition-colors flex items-center justify-center gap-1">
-
-                <ArrowLeft className="w-4 h-4" /> Avbryt
-              </button>
-            </>
-          }
-
-          {/* Step: Answer security questions */}
-          {forgotStep === "questions" &&
-          <>
-              <form onSubmit={handleVerifyAnswers} className="space-y-4">
-                <div className="flex items-center gap-2 justify-center text-muted-foreground">
-                  <ShieldQuestion className="w-5 h-5 text-primary" />
-                  <span className="text-sm font-semibold">Svara på dina säkerhetsfrågor</span>
-                </div>
-
-                {securityQuestions.map((q, i) =>
-              <div key={q.index} className="space-y-1">
-                    <label className="text-xs text-muted-foreground block">{q.question}</label>
-                    <input
-                  type="text"
-                  value={securityAnswers[i]}
-                  onChange={(e) => {
-                    const newAnswers = [...securityAnswers];
-                    newAnswers[i] = e.target.value;
-                    setSecurityAnswers(newAnswers);
-                  }}
-                  placeholder="Ditt svar..."
-                  maxLength={100}
-                  className="w-full bg-secondary text-foreground text-sm p-3 rounded-lg border-none outline-none focus:ring-2 focus:ring-primary placeholder:text-muted-foreground"
-                  autoFocus={i === 0} />
-
-                  </div>
-              )}
-
-                {error && <p className="text-sm text-destructive text-center">{error}</p>}
-
-                <button
-                type="submit"
-                disabled={loading}
-                className="w-full py-3 bg-primary text-primary-foreground font-bold rounded-lg disabled:opacity-40 hover:opacity-90 transition-opacity">
-
-                  {loading ? "Verifierar..." : "Fortsätt"}
-                </button>
-              </form>
-
-              <button
-              onClick={resetForgotState}
-              className="w-full text-center text-sm text-muted-foreground hover:text-foreground transition-colors flex items-center justify-center gap-1">
-
-                <ArrowLeft className="w-4 h-4" /> Avbryt
-              </button>
-            </>
-          }
-
-          {/* Step: Enter nickname */}
-          {forgotStep === "nickname" &&
-          <>
-              <form onSubmit={handleLookupUser} className="space-y-4">
-                <div>
-                  <label className="text-xs text-muted-foreground mb-1 block">Användarnamn</label>
+                  <label htmlFor="forgot-identifier" className="text-xs text-muted-foreground mb-1 block">Användarnamn eller e-post</label>
                   <input
+                  id="forgot-identifier"
                   type="text"
-                  value={forgotNickname}
-                  onChange={(e) => setForgotNickname(e.target.value)}
-                  placeholder="Ditt användarnamn"
-                  maxLength={20}
+                  value={forgotIdentifier}
+                  onChange={(e) => setForgotIdentifier(e.target.value)}
+                  placeholder="Användarnamn eller e-post"
+                  maxLength={254}
+                  autoComplete="username"
+                  autoCapitalize="none"
                   className="w-full bg-secondary text-foreground text-lg p-3 rounded-lg border-none outline-none focus:ring-2 focus:ring-primary placeholder:text-muted-foreground"
                   autoFocus />
-
                 </div>
                 <p className="text-xs text-muted-foreground">
-                  Ange ditt användarnamn för att återställa lösenordet via säkerhetsfrågor eller e-post.
+                  Vi skickar ett tillfälligt lösenord till e-postadressen som är kopplad till ditt konto (Inställningar → E-post).
                 </p>
 
                 {error && <p className="text-sm text-destructive text-center">{error}</p>}
@@ -423,15 +234,13 @@ const AuthScreen = ({ onAuth }: AuthScreenProps) => {
                 type="submit"
                 disabled={loading}
                 className="w-full py-3 bg-primary text-primary-foreground font-bold rounded-lg disabled:opacity-40 hover:opacity-90 transition-opacity">
-
-                  {loading ? "Laddar..." : "Fortsätt"}
+                  {loading ? "Skickar..." : "Skicka tillfälligt lösenord"}
                 </button>
               </form>
 
               <button
               onClick={resetForgotState}
               className="w-full text-center text-sm text-muted-foreground hover:text-foreground transition-colors flex items-center justify-center gap-1">
-
                 <ArrowLeft className="w-4 h-4" /> Tillbaka till inloggning
               </button>
             </>

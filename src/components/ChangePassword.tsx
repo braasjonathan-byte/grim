@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Eye, EyeOff, X, KeyRound } from "lucide-react";
+import { completeForcedPasswordChange, validateNewPassword } from "@/lib/passwordReset";
 
 interface ChangePasswordProps {
   onClose: () => void;
@@ -28,20 +29,13 @@ const ChangePassword = ({ onClose, onChanged, forced }: ChangePasswordProps) => 
     e.preventDefault();
     setError("");
 
-    if (!currentPassword) {
+    if (!forced && !currentPassword) {
       setError("Ange ditt nuvarande lösenord.");
       return;
     }
-    if (newPassword.length < 8) {
-      setError("Lösenord måste vara minst 8 tecken");
-      return;
-    }
-    if (newPassword === "12345678") {
-      setError("Välj ett annat lösenord");
-      return;
-    }
-    if (newPassword !== confirmPassword) {
-      setError("Lösenorden matchar inte");
+    const validationError = validateNewPassword(newPassword, confirmPassword);
+    if (validationError) {
+      setError(validationError);
       return;
     }
 
@@ -52,30 +46,22 @@ const ChangePassword = ({ onClose, onChanged, forced }: ChangePasswordProps) => 
       setLoading(false);
       return;
     }
-    const { error: verifyError } = await supabase.auth.signInWithPassword({
-      email: authUser.email,
-      password: currentPassword,
-    });
-    if (verifyError) {
-      setError("Fel nuvarande lösenord.");
-      setLoading(false);
-      return;
-    }
-    const { error: updateError } = await supabase.auth.updateUser({
-      password: newPassword,
-    });
-
-    if (updateError) {
-      setError(updateError.message);
-    } else {
-      // Clear the forced flag in the database
-      const { data: { user } } = await supabase.auth.getUser();
-      if (user) {
-        await supabase
-          .from("profiles")
-          .update({ must_change_password: false })
-          .eq("user_id", user.id);
+    if (!forced) {
+      const { error: verifyError } = await supabase.auth.signInWithPassword({
+        email: authUser.email,
+        password: currentPassword,
+      });
+      if (verifyError) {
+        setError("Fel nuvarande lösenord.");
+        setLoading(false);
+        return;
       }
+    }
+    // Sets the password, clears must_change_password and deletes temp passwords
+    const result = await completeForcedPasswordChange(supabase, newPassword);
+    if (!result.ok) {
+      setError(result.error || "Kunde inte byta lösenord");
+    } else {
       setSuccess(true);
       setTimeout(() => {
         onChanged?.();
@@ -86,12 +72,18 @@ const ChangePassword = ({ onClose, onChanged, forced }: ChangePasswordProps) => 
   };
 
   return (
-    <div className="fixed inset-0 z-[70] bg-background/80 backdrop-blur-sm flex items-center justify-center p-4 animate-fade-in">
+    <div
+      className={forced
+        ? "fixed inset-0 z-[9999] bg-background flex items-center justify-center p-4 animate-fade-in"
+        : "fixed inset-0 z-[70] bg-background/80 backdrop-blur-sm flex items-center justify-center p-4 animate-fade-in"}
+      role="dialog"
+      aria-modal="true"
+      data-testid={forced ? "forced-password-change" : "change-password"}>
       <div className="w-full max-w-sm bg-card border border-border rounded-xl p-6 space-y-5 shadow-lg">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <KeyRound className="w-5 h-5 text-primary" />
-            <h2 className="text-lg font-black">Byt lösenord</h2>
+            <h2 className="text-lg font-black">{forced ? "Välj nytt lösenord" : "Byt lösenord"}</h2>
           </div>
           {!forced && (
             <button onClick={onClose} className="text-muted-foreground hover:text-foreground">
@@ -102,7 +94,7 @@ const ChangePassword = ({ onClose, onChanged, forced }: ChangePasswordProps) => 
 
         {forced && (
           <p className="text-sm text-destructive font-semibold">
-            ⚠️ Du måste byta lösenord innan du kan fortsätta.
+            ⚠️ Du måste välja ett nytt lösenord innan du kan fortsätta.
           </p>
         )}
 
@@ -110,6 +102,7 @@ const ChangePassword = ({ onClose, onChanged, forced }: ChangePasswordProps) => 
           <p className="text-sm text-success text-center py-4">Lösenordet har ändrats! ✅</p>
         ) : (
           <form onSubmit={handleSubmit} className="space-y-4">
+            {!forced && (
             <div>
               <label className="text-xs text-muted-foreground mb-1 block">Nuvarande lösenord</label>
               <input
@@ -123,6 +116,7 @@ const ChangePassword = ({ onClose, onChanged, forced }: ChangePasswordProps) => 
                 autoFocus
               />
             </div>
+            )}
 
             <div>
               <label className="text-xs text-muted-foreground mb-1 block">Nytt lösenord</label>
@@ -134,6 +128,7 @@ const ChangePassword = ({ onClose, onChanged, forced }: ChangePasswordProps) => 
                   placeholder="••••••"
                   maxLength={50}
                   autoComplete="new-password"
+                  autoFocus={forced}
                   className="w-full bg-secondary text-foreground text-base p-3 rounded-lg border-none outline-none focus:ring-2 focus:ring-primary placeholder:text-muted-foreground pr-12"
                 />
                 <button
@@ -167,6 +162,16 @@ const ChangePassword = ({ onClose, onChanged, forced }: ChangePasswordProps) => 
             >
               {loading ? "Sparar..." : "Byt lösenord"}
             </button>
+            {forced && (
+              <button
+                type="button"
+                onClick={() => { void supabase.auth.signOut().finally(() => onChanged?.()); }}
+                disabled={loading}
+                className="w-full py-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
+              >
+                Logga ut
+              </button>
+            )}
             {!forced && (
               <button
                 type="button"

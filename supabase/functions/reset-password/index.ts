@@ -323,73 +323,13 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Step 3: Email-based reset - generate temp password and send via email
+    // Step 3 (legacy "email-reset") removed: it overwrote the user's password
+    // and mailed it via Resend. Replaced by the forgot-password +
+    // temp-password-login edge functions.
     if (action === "email-reset") {
-      if (!userEmail) {
-        return new Response(
-          JSON.stringify({ error: "Återställning misslyckades" }),
-          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
-      }
-
-      // Generate a random temporary password
-      const chars = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789";
-      let tempPassword = "";
-      const randomBytes = new Uint8Array(12);
-      crypto.getRandomValues(randomBytes);
-      for (const byte of randomBytes) {
-        tempPassword += chars[byte % chars.length];
-      }
-
-      const { error: updateError } = await supabaseAdmin.auth.admin.updateUserById(
-        profile.user_id,
-        { password: tempPassword }
-      );
-
-      if (updateError) {
-        return new Response(
-          JSON.stringify({ error: "Kunde inte uppdatera lösenordet" }),
-          { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
-      }
-
-      await supabaseAdmin
-        .from("profiles")
-        .update({ must_change_password: true })
-        .eq("user_id", profile.user_id);
-
-      const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY");
-      if (RESEND_API_KEY) {
-        const emailHtml = `
-          <div style="font-family: -apple-system, sans-serif; max-width: 420px; margin: 0 auto; padding: 32px 24px;">
-            <h2 style="margin: 0 0 16px; font-size: 20px;">Tillfälligt lösenord</h2>
-            <p style="color: #444; line-height: 1.5;">Ditt tillfälliga lösenord är:</p>
-            <p style="font-size: 24px; font-weight: bold; letter-spacing: 2px; background: #f4f4f4; padding: 16px; border-radius: 8px; text-align: center; font-family: monospace;">${tempPassword}</p>
-            <p style="color: #444; line-height: 1.5;">Logga in med detta lösenord. Du kommer att bli ombedd att välja ett nytt lösenord direkt.</p>
-            <p style="color: #888; font-size: 12px; margin-top: 24px;">Om du inte begärt detta, kontakta en administratör omedelbart.</p>
-          </div>
-        `;
-
-        await fetch("https://api.resend.com/emails", {
-          method: "POST",
-          headers: {
-            "Authorization": `Bearer ${RESEND_API_KEY}`,
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            from: "GRIM <onboarding@resend.dev>",
-            to: [userEmail],
-            subject: "Ditt tillfälliga lösenord",
-            html: emailHtml,
-          }),
-        });
-      }
-
-      await resetRateLimit(supabaseAdmin, ip, nickname.trim());
-
       return new Response(
-        JSON.stringify({ success: true, message: "Ett tillfälligt lösenord har skickats till din e-post. Logga in med det och välj sedan ett nytt lösenord." }),
-        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        JSON.stringify({ error: "Använd Glömt lösenord i appen" }),
+        { status: 410, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 

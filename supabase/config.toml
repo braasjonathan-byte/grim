@@ -67,3 +67,9 @@ verify_jwt = false
 
 [functions.notify-smart]
 verify_jwt = false
+
+[functions.forgot-password]
+verify_jwt = false
+
+[functions.temp-password-login]
+verify_jwt = false
