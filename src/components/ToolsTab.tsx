@@ -645,7 +645,7 @@ const ToolsTab = ({ userId, isAdmin, isHonorary, userRole, onViewUserPlan, onLog
           type="button"
           onClick={() => setEditLayout((v) => !v)}
           className={`w-full flex items-center justify-center gap-2 py-2 px-4 text-sm font-semibold rounded-full shadow-soft active:scale-[0.97] transition-all ${
-            editLayout ? "bg-primary text-primary-foreground" : "bg-secondary text-foreground"
+            editLayout ? "bg-primary text-primary-foreground" : "bg-secondary text-secondary-foreground"
           }`}
         >
           {editLayout ? <Check className="w-4 h-4" /> : <Move className="w-4 h-4" />}
