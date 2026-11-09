@@ -1,8 +1,8 @@
 # Roadmap
 
 ## Inställningar 9 november 2026
-- [ ] Flytta statistikvisningens inställningar till en egen Statistik-kategori.
-- [ ] Dölj valet Visa Spotify i träningsvyn helt.
+- [x] Flytta statistikvisningens inställningar till en egen Statistik-kategori.
+- [x] Dölj valet Visa Spotify i träningsvyn helt.
 
 ## Health Connect till Social 9 november 2026
 - [x] Lägg till explicit publicering till Social från delningsrutan för genomförda Health Connect-pass; manuell publicering visar alltid granskningsdialogen.
