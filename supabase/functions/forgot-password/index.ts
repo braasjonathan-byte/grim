@@ -10,6 +10,7 @@ import {
 } from "../_shared/tempPassword.ts";
 import { hitRateLimit } from "../_shared/resetRateLimit.ts";
 import { buildMimeMessage, toGmailRaw } from "../_shared/gmailMime.ts";
+import { type GmailCreds, loadGmailCreds } from "../_shared/gmailConfig.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -32,18 +33,20 @@ const ok = () =>
     headers: { ...corsHeaders, "Content-Type": "application/json" },
   });
 
-// Gmail API (OAuth refresh token). Access token cached in memory only.
+// Gmail API (OAuth refresh token). Credentials come from env if set, else from
+// public.app_private_config (service role). Access token cached in memory only.
 let cachedToken: { token: string; expiresAt: number } | null = null;
 
-async function getGmailAccessToken(): Promise<string | null> {
+// deno-lint-ignore no-explicit-any
+async function getGmailAccessToken(admin: any, credsCache: { v?: GmailCreds | null }): Promise<string | null> {
   if (cachedToken && cachedToken.expiresAt > Date.now() + 60_000) return cachedToken.token;
-  const clientId = Deno.env.get("GMAIL_CLIENT_ID");
-  const clientSecret = Deno.env.get("GMAIL_CLIENT_SECRET");
-  const refreshToken = Deno.env.get("GMAIL_REFRESH_TOKEN");
-  if (!clientId || !clientSecret || !refreshToken) {
-    console.error("[forgot-password] GMAIL_CLIENT_ID / GMAIL_CLIENT_SECRET / GMAIL_REFRESH_TOKEN missing – cannot send mail");
+  if (credsCache.v === undefined) credsCache.v = await loadGmailCreds((k) => Deno.env.get(k), admin);
+  const creds = credsCache.v;
+  if (!creds) {
+    console.error("[forgot-password] Gmail credentials missing (env and app_private_config) – cannot send mail");
     return null;
   }
+  const { clientId, clientSecret, refreshToken } = creds;
   const res = await fetch("https://oauth2.googleapis.com/token", {
     method: "POST",
     headers: { "Content-Type": "application/x-www-form-urlencoded" },
@@ -64,8 +67,14 @@ async function getGmailAccessToken(): Promise<string | null> {
   return cachedToken.token;
 }
 
-async function sendGmail(to: string, mail: { subject: string; text: string; html: string }): Promise<boolean> {
-  const token = await getGmailAccessToken();
+async function sendGmail(
+  // deno-lint-ignore no-explicit-any
+  admin: any,
+  credsCache: { v?: GmailCreds | null },
+  to: string,
+  mail: { subject: string; text: string; html: string },
+): Promise<boolean> {
+  const token = await getGmailAccessToken(admin, credsCache);
   if (!token) return false;
   const raw = toGmailRaw(buildMimeMessage({ from: FROM, to, replyTo: SUPPORT_ADDRESS, ...mail }));
   const res = await fetch("https://gmail.googleapis.com/gmail/v1/users/me/messages/send", {
@@ -108,6 +117,9 @@ async function processReset(admin: any, ip: string, ident: { kind: "email" | "ni
   }
   if (targets.length === 0) return;
 
+  // Per-invocation cache of Gmail credentials (loaded lazily on first send).
+  const credsCache: { v?: GmailCreds | null } = {};
+
   for (const t of targets) {
     if (await hitRateLimit(admin, `forgot-user:${t.user_id}`, RATE_LIMITS.forgotPerIdentifier)) {
       console.warn("[forgot-password] per-user limit hit");
@@ -127,7 +139,7 @@ async function processReset(admin: any, ip: string, ident: { kind: "email" | "ni
     const mail = buildTempPasswordMail({ nickname: t.nickname, tempPassword });
     let sent = false;
     try {
-      sent = await sendGmail(t.email, mail);
+      sent = await sendGmail(admin, credsCache, t.email, mail);
     } catch (err) {
       console.error("[forgot-password] gmail error", err instanceof Error ? err.message : String(err));
     }
