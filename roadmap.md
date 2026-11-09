@@ -1,5 +1,10 @@
 # Roadmap
 
+## Maxpuls och kontrast 9 november 2026
+- [ ] Gör texten i samtliga hjälpmedelsrutor läsbar i Tema 1–3.
+- [ ] Lägg till maxpuls ovanför FTP i Inställningar med gemensam validering och lagring.
+- [ ] Använd sparad maxpuls för pulszoner i nya och redan genomförda pass, med tester och verifiering i appen.
+
 ## Teman november 2026
 - [x] Lägg till Tema 1–3 med användarens godkända kulörer.
 - [x] Verifiera läsbar text i kostens Mallar-knapp i Tema 1–3, även vid pekning; kontrast minst 5,55:1 och bygget godkänt.
