@@ -37,7 +37,7 @@ const GENDER_OPTIONS = [
 ];
 
 const inputClass =
-  "w-full rounded-xl bg-secondary/60 border border-border/60 text-foreground text-sm px-3 py-2.5 outline-none transition-colors focus:border-primary focus:ring-2 focus:ring-primary/40 placeholder:text-muted-foreground";
+  "w-full rounded-xl bg-background border border-border/60 text-foreground text-sm px-3 py-2.5 outline-none transition-colors focus:border-primary focus:ring-2 focus:ring-primary/40 placeholder:text-muted-foreground";
 
 // Extract username from a full URL or plain handle
 const extractUsername = (input: string, domain: string): string => {
