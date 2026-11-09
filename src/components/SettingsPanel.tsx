@@ -46,15 +46,18 @@ export const SECURITY_QUESTIONS = [
   "Vad är ditt favoritlag?",
 ];
 
+export type SettingsCategory = "profile" | "account" | "appearance" | "privacy" | "permissions";
+
 interface SettingsPanelProps {
   userId?: string;
   isAdmin?: boolean;
   isHonorary?: boolean;
+  category?: SettingsCategory | "all";
   onStartPlan?: () => void;
   onViewUserPlan?: (targetUserId: string) => void;
 }
 
-const SettingsPanel = ({ userId, isAdmin, isHonorary = false, onStartPlan, onViewUserPlan }: SettingsPanelProps) => {
+const SettingsPanel = ({ userId, isAdmin, isHonorary = false, category = "all", onStartPlan, onViewUserPlan }: SettingsPanelProps) => {
   const navigate = useNavigate();
   const [colorTheme, setColorTheme] = useState(getStoredThemeId());
   const { state: cardioVis, set: setCardioVis } = useCardioVisibility();

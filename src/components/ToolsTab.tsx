@@ -24,6 +24,11 @@ import {
   MessageSquarePlus,
   Camera,
   Activity,
+  UserRound,
+  KeyRound,
+  Palette,
+  ShieldCheck,
+  Bell,
 } from "lucide-react";
 import { useToolLayout, applyOrder, move } from "@/hooks/useToolLayout";
 import type { LucideIcon } from "lucide-react";
@@ -51,6 +56,7 @@ import HealthConnectCard from "@/components/HealthConnectCard";
 import { isHealthSupported } from "@/lib/healthSync";
 import { toast } from "sonner";
 import { getAdminGroups } from "@/components/admin/adminCatalog";
+import type { SettingsCategory } from "@/components/SettingsPanel";
 
 const SupporterButton = lazyRetry(() => import("@/components/SupporterButton"));
 const ProfileTab = lazyRetry(() => import("@/components/ProfileTab"));
@@ -97,6 +103,14 @@ interface ToolGroup {
   items: ToolItem[];
 }
 
+const SETTINGS_CATEGORIES: { id: SettingsCategory; title: string; subtitle: string; icon: LucideIcon }[] = [
+  { id: "profile", title: "Profil/kroppsdata", subtitle: "Personuppgifter, kroppsvärden och träningsplaner", icon: UserRound },
+  { id: "account", title: "Konto", subtitle: "Lösenord, säkerhet, köp och kontouppgifter", icon: KeyRound },
+  { id: "appearance", title: "Tema", subtitle: "Färger, visning och appens funktioner", icon: Palette },
+  { id: "privacy", title: "Integritet", subtitle: "Delning, synlighet och blockeringar", icon: ShieldCheck },
+  { id: "permissions", title: "Behörigheter", subtitle: "Notiser, GPS och enhetsåtkomst", icon: Bell },
+];
+
 const STORAGE_KEY = "grim:tools-collapsed-groups";
 
 const normalize = (s: string) =>
@@ -136,6 +150,7 @@ const ToolsTab = ({ userId, isAdmin, isHonorary, userRole, onViewUserPlan, onLog
     const f = sessionStorage.getItem("grim_tools_open");
     return f?.startsWith("settings") ? "settings" : "home";
   });
+  const [settingsCategory, setSettingsCategory] = useState<SettingsCategory | null>(null);
   const [query, setQuery] = useState("");
   const [openItem, setOpenItem] = useState<string | null>(() => {
     const f = sessionStorage.getItem("grim_tools_open");
