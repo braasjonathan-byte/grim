@@ -132,7 +132,7 @@ const topicItem = (
 const ToolsTab = ({ userId, isAdmin, isHonorary, userRole, onViewUserPlan, onLogout, onStartPlan }: ToolsTabProps) => {
   const help = useHelpCategories();
   const [confirmLogout, setConfirmLogout] = useState(false);
-  const [subView, setSubView] = useState<"home" | "helpers" | "settings">(() => {
+  const [subView, setSubView] = useState<"home" | "helpers" | "settings" | "start">(() => {
     const f = sessionStorage.getItem("grim_tools_open");
     return f?.startsWith("settings") ? "settings" : "home";
   });
@@ -182,18 +182,7 @@ const ToolsTab = ({ userId, isAdmin, isHonorary, userRole, onViewUserPlan, onLog
       if (target === "settings") setSubView("settings");
       else if (target === "helpers") setSubView("helpers");
       else if (target === "help") {
-        setSubView("home");
-        setCollapsed((prev) => {
-          if (!prev.has("start")) return prev;
-          const next = new Set(prev);
-          next.delete("start");
-          try {
-            localStorage.setItem(STORAGE_KEY, JSON.stringify([...next]));
-          } catch {
-            /* ignore */
-          }
-          return next;
-        });
+        setSubView("start");
         setOpenItem("tour");
         requestAnimationFrame(() => {
           document.querySelector('[data-tour="tools-help"]')?.scrollIntoView({ behavior: "smooth", block: "center" });
@@ -522,7 +511,7 @@ const ToolsTab = ({ userId, isAdmin, isHonorary, userRole, onViewUserPlan, onLog
   };
 
   if (subView !== "home") {
-    const title = subView === "settings" ? "Inställningar" : "Hjälpmedel";
+    const title = subView === "settings" ? "Inställningar" : subView === "start" ? "Kom igång" : "Hjälpmedel";
     return (
       <div className="py-2 space-y-4">
         <div className="flex items-center gap-2 -mx-1">
@@ -544,7 +533,7 @@ const ToolsTab = ({ userId, isAdmin, isHonorary, userRole, onViewUserPlan, onLog
               <NotificationSettings userId={userId} />
               <div className="rounded-2xl bg-card border border-border/40 p-4"><ModuleSettings /></div>
             </div>
-          ) : (
+          ) : subView === "helpers" ? (
             <div className="space-y-3">
               <RestTimerSettings />
               <EventCountdown userId={userId} />
@@ -552,6 +541,10 @@ const ToolsTab = ({ userId, isAdmin, isHonorary, userRole, onViewUserPlan, onLog
               <OneRMCalculator />
               <PulseZoneCalculator />
               <WorkoutTimer />
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {(orderedGroups.find((group) => group.id === "start")?.items ?? []).map((item) => renderCard(item))}
             </div>
           )}
         </Suspense>
@@ -622,6 +615,20 @@ const ToolsTab = ({ userId, isAdmin, isHonorary, userRole, onViewUserPlan, onLog
       ) : (
         orderedGroups.map((group, gIndex) => {
           const isCollapsed = collapsed.has(group.id) && !editLayout;
+          if (group.id === "start" && !editLayout) {
+            return (
+              <section key={group.id}>
+                {renderCard({
+                  id: "start-page",
+                  title: "Kom igång",
+                  subtitle: "Rundtur, tips, inbjudningar och förslag",
+                  icon: Sparkles,
+                  featured: true,
+                  onSelect: () => setSubView("start"),
+                })}
+              </section>
+            );
+          }
           return (
             <section key={group.id} className="space-y-2">
               <div className="flex items-center gap-1">
