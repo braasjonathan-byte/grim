@@ -5515,6 +5515,11 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
           ownerUserId={userId}
           viewerUserId={userId}
           onClose={() => setShareTarget(null)}
+          onPublishToSocial={shareTarget.completion.done && !shareTarget.completion.skipped ? () => {
+            const { week, day } = shareTarget.plan;
+            setShareTarget(null);
+            void offerShare(week, day, false);
+          } : undefined}
           onChatShare={async () => {
             const plan = shareTarget.plan;
             setShareTarget(null);
