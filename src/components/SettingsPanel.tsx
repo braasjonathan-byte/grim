@@ -2,7 +2,7 @@ import { lazyRetry } from "@/lib/lazyRetry";
 import { useAccessLevel } from "@/hooks/useAccessLevel";
 import { useState, useEffect, useRef, lazy, Suspense, useCallback } from "react";
 import { toast } from "sonner";
-import { Check, Loader2, ShieldQuestion, ChevronDown, Smartphone, Mail, KeyRound, LogOut, Music, Volume2, Link2, Unlink, RefreshCw, Fingerprint, Eye, MapPin, Dumbbell, Trash2, Timer } from "lucide-react";
+import { Check, Loader2, ShieldQuestion, ChevronDown, Smartphone, Mail, KeyRound, LogOut, Music, Volume2, Link2, Unlink, RefreshCw, Fingerprint, BarChart3, MapPin, Dumbbell, Trash2, Timer } from "lucide-react";
 import { isFastingEnabled, setFastingEnabled } from "@/components/FastingWidget";
 import { getGpsVoiceIntervalMin, setGpsVoiceIntervalMin, getGpsVoiceIntervalKm, setGpsVoiceIntervalKm, speakPace } from "@/lib/gpsSettings";
 import { Slider } from "@/components/ui/slider";
@@ -376,31 +376,92 @@ const SettingsPanel = ({ userId, isAdmin, isHonorary = false, onStartPlan, onVie
         </button>
       </div>
 
-      {/* Statistik sections */}
-      <div className="space-y-2">
-        <p className="text-sm font-semibold">Visa i Statistik</p>
-        {STATS_SECTIONS.map((sec) => {
-          const on = statsSettings.isVisible(sec.key);
-          return (
-            <div key={sec.key} className="flex items-center justify-between">
-              <span className="text-sm">{sec.label}</span>
-              <button onClick={() => statsSettings.toggle(sec.key)} aria-label={`Visa ${sec.label}`}
-                className={`relative w-11 h-6 rounded-full transition-colors ${on ? "bg-primary" : "bg-secondary border border-border"}`}>
-                <span className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full transition-transform ${on ? "translate-x-5 bg-primary-foreground" : "translate-x-0 bg-muted-foreground"}`} />
-              </button>
-            </div>
-          );
-        })}
-        <p className="text-xs text-muted-foreground pt-1">Viktkurvans tidsperiod</p>
-        <div className="grid grid-cols-4 gap-1 rounded-full bg-muted/60 p-1">
-          {WEIGHT_RANGES.map((x) => (
-            <button key={x.days} onClick={() => statsSettings.setWeightDays(x.days)}
-              className={`py-1 px-1 text-[10px] leading-tight font-semibold rounded-full ${statsSettings.weightDays === x.days ? "bg-primary text-primary-foreground" : "text-muted-foreground"}`}>
-              {x.label}
-            </button>
-          ))}
+      {/* Samlade visningsval för Statistik */}
+      <section className="rounded-2xl border border-border/60 bg-card p-3 space-y-4">
+        <div className="flex items-center gap-3">
+          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
+            <BarChart3 className="h-5 w-5" />
+          </span>
+          <div>
+            <p className="text-sm font-semibold">Statistik</p>
+            <p className="text-xs text-muted-foreground">Anpassa vad som visas i statistikvyn</p>
+          </div>
         </div>
-      </div>
+
+        <div className="space-y-2">
+          <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Sektioner</p>
+          <div className="flex flex-wrap gap-1.5">
+            {STATS_SECTIONS.map((sec) => {
+              const on = statsSettings.isVisible(sec.key);
+              return (
+                <button
+                  key={sec.key}
+                  type="button"
+                  onClick={() => statsSettings.toggle(sec.key)}
+                  aria-pressed={on}
+                  aria-label={`Visa ${sec.label}`}
+                  className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-semibold transition-colors ${
+                    on
+                      ? "border-primary/50 bg-primary/10 text-foreground"
+                      : "border-border/60 bg-muted/40 text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  {on && <Check className="h-3.5 w-3.5 text-primary" />}
+                  {sec.label}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        <div className="space-y-2 border-t border-border/60 pt-3">
+          <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Viktkurvans tidsperiod</p>
+          <div className="grid grid-cols-2 gap-1.5">
+            {WEIGHT_RANGES.map((x) => (
+              <button
+                key={x.days}
+                type="button"
+                onClick={() => statsSettings.setWeightDays(x.days)}
+                aria-pressed={statsSettings.weightDays === x.days}
+                className={`rounded-xl px-2 py-2 text-xs font-semibold transition-colors ${
+                  statsSettings.weightDays === x.days
+                    ? "bg-primary text-primary-foreground"
+                    : "bg-muted/50 text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                {x.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div className="space-y-2 border-t border-border/60 pt-3">
+          <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Konditionsövningar</p>
+          <div className="grid grid-cols-2 gap-1.5">
+            {CARDIO_CATEGORIES.map((cat) => {
+              const on = cardioVis[cat.key] !== false;
+              return (
+                <button
+                  key={cat.key}
+                  type="button"
+                  onClick={() => setCardioVis(cat.key, !on)}
+                  aria-pressed={on}
+                  aria-label={`Visa ${cat.label} i statistik`}
+                  className={`flex min-w-0 items-center gap-2 rounded-xl border p-2.5 text-left transition-colors ${
+                    on
+                      ? "border-primary/50 bg-primary/10 text-foreground"
+                      : "border-border/60 bg-muted/40 text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  <span className="text-xl leading-none">{cat.icon}</span>
+                  <span className="min-w-0 flex-1 text-xs font-semibold leading-tight">{cat.label}</span>
+                  {on && <Check className="h-4 w-4 shrink-0 text-primary" />}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      </section>
 
       {/* Fasting widget toggle */}
       <div className="flex items-center justify-between">
@@ -437,37 +498,6 @@ const SettingsPanel = ({ userId, isAdmin, isHonorary = false, onStartPlan, onVie
         >
           <span className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full transition-transform ${soundEnabled ? "translate-x-5 bg-primary-foreground" : "translate-x-0 bg-muted-foreground"}`} />
         </button>
-      </div>
-
-      {/* Visning – konditionsövningar i statistik */}
-      <div className="pt-2 border-t border-border space-y-2">
-        <div className="flex items-center gap-2">
-          <Eye className="w-4 h-4 text-primary" />
-          <span className="text-sm font-semibold">Visning i statistik</span>
-        </div>
-        <p className="text-[11px] text-muted-foreground">
-          Välj vilka konditionsövningar som ska räknas med i statistikvyn.
-        </p>
-        <div className="space-y-1.5">
-          {CARDIO_CATEGORIES.map(cat => {
-            const on = cardioVis[cat.key] !== false;
-            return (
-              <div key={cat.key} className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <span className="text-base leading-none">{cat.icon}</span>
-                  <span className="text-sm">{cat.label}</span>
-                </div>
-                <button
-                  onClick={() => setCardioVis(cat.key, !on)}
-                  className={`relative w-11 h-6 rounded-full transition-colors ${on ? "bg-primary" : "bg-secondary border border-border"}`}
-                  aria-label={`Visa ${cat.label} i statistik`}
-                >
-                  <span className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full transition-transform ${on ? "translate-x-5 bg-primary-foreground" : "translate-x-0 bg-muted-foreground"}`} />
-                </button>
-              </div>
-            );
-          })}
-        </div>
       </div>
 
       {/* GPS – röst & inspelning */}
