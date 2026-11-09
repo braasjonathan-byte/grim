@@ -27,6 +27,7 @@ import { pickImage } from "@/lib/pickImage";
 
 interface ProfileSectionProps {
   userId: string;
+  showDangerZone?: boolean;
 }
 
 const GENDER_OPTIONS = [
@@ -53,7 +54,7 @@ const extractUsername = (input: string, domain: string): string => {
   return trimmed;
 };
 
-const ProfileSection = ({ userId }: ProfileSectionProps) => {
+const ProfileSection = ({ userId, showDangerZone = true }: ProfileSectionProps) => {
   const navigate = useNavigate();
   const [age, setAge] = useState<string>("");
   const [gender, setGender] = useState<string>("");
@@ -541,7 +542,7 @@ const ProfileSection = ({ userId }: ProfileSectionProps) => {
       />
 
       {/* Farozon */}
-      <div className="pt-2">
+      {showDangerZone && <div className="pt-2">
         <SettingsSection title="Farozon" icon={AlertTriangle} tone="danger" defaultOpen={false}>
           <div className="space-y-3">
             <p className="text-xs text-muted-foreground">
@@ -556,7 +557,7 @@ const ProfileSection = ({ userId }: ProfileSectionProps) => {
             </button>
           </div>
         </SettingsSection>
-      </div>
+      </div>}
 
       <AlertDialog open={confirmDelete} onOpenChange={setConfirmDelete}>
         <AlertDialogContent>

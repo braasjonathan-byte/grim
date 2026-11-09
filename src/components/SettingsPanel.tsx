@@ -506,9 +506,6 @@ const SettingsPanel = ({ userId, isAdmin, isHonorary = false, category = "all", 
         </button>
       </div>
 
-      </>)}
-
-      {inCategory("permissions") && (<>
       {/* GPS – röst & inspelning */}
       <div className="pt-2 border-t border-border space-y-2">
         <div className="flex items-center gap-2">
@@ -570,6 +567,9 @@ const SettingsPanel = ({ userId, isAdmin, isHonorary = false, category = "all", 
 
 
 
+      </>)}
+
+      {inCategory("permissions") && (<>
       {/* Biometric unlock toggle */}
       {bioSupported && userId && (
         <div className="flex items-center justify-between">

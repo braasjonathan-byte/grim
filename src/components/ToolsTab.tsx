@@ -106,9 +106,9 @@ interface ToolGroup {
 const SETTINGS_CATEGORIES: { id: SettingsCategory; title: string; subtitle: string; icon: LucideIcon }[] = [
   { id: "profile", title: "Profil/kroppsdata", subtitle: "Personuppgifter, kroppsvärden och träningsplaner", icon: UserRound },
   { id: "account", title: "Konto", subtitle: "Lösenord, säkerhet, köp och kontouppgifter", icon: KeyRound },
-  { id: "appearance", title: "Tema", subtitle: "Färger, visning och appens funktioner", icon: Palette },
+  { id: "appearance", title: "Tema", subtitle: "Färger, visning, ljud och appens funktioner", icon: Palette },
   { id: "privacy", title: "Integritet", subtitle: "Delning, synlighet och blockeringar", icon: ShieldCheck },
-  { id: "permissions", title: "Behörigheter", subtitle: "Notiser, GPS och enhetsåtkomst", icon: Bell },
+  { id: "permissions", title: "Behörigheter", subtitle: "Notiser, biometri och enhetsåtkomst", icon: Bell },
 ];
 
 const STORAGE_KEY = "grim:tools-collapsed-groups";
@@ -150,7 +150,9 @@ const ToolsTab = ({ userId, isAdmin, isHonorary, userRole, onViewUserPlan, onLog
     const f = sessionStorage.getItem("grim_tools_open");
     return f?.startsWith("settings") ? "settings" : "home";
   });
-  const [settingsCategory, setSettingsCategory] = useState<SettingsCategory | null>(null);
+  const [settingsCategory, setSettingsCategory] = useState<SettingsCategory | null>(() =>
+    sessionStorage.getItem("grim_tools_open") === "settings:supporter" ? "account" : null
+  );
   const [query, setQuery] = useState("");
   const [openItem, setOpenItem] = useState<string | null>(() => {
     const f = sessionStorage.getItem("grim_tools_open");
@@ -160,8 +162,10 @@ const ToolsTab = ({ userId, isAdmin, isHonorary, userRole, onViewUserPlan, onLog
   useEffect(() => {
     const open = () => {
       sessionStorage.removeItem("grim_tools_open");
+      setSettingsCategory("account");
       setSubView("settings");
       setOpenItem("supporter");
+      window.setTimeout(() => document.querySelector("[data-supporter-section]")?.scrollIntoView({ behavior: "smooth", block: "center" }), 150);
     };
     window.addEventListener("grim:open-supporter", open);
     return () => window.removeEventListener("grim:open-supporter", open);
@@ -561,7 +565,8 @@ const ToolsTab = ({ userId, isAdmin, isHonorary, userRole, onViewUserPlan, onLog
             </div>
           ) : (
             <div className="space-y-3">
-              {settingsCategory === "profile" && <ProfileTab userId={userId} isAdmin={isAdmin} />}
+              {settingsCategory === "profile" && <ProfileTab userId={userId} isAdmin={isAdmin} showDangerZone={false} />}
+              {settingsCategory === "account" && <div data-supporter-section><SupporterButton userId={userId} /></div>}
               <SettingsPanel category={settingsCategory} userId={userId} isAdmin={isAdmin} isHonorary={isHonorary} onStartPlan={onStartPlan} onViewUserPlan={onViewUserPlan} />
               {settingsCategory === "permissions" && <NotificationSettings userId={userId} />}
               {settingsCategory === "appearance" && <div className="rounded-2xl bg-card border border-border/40 p-4"><ModuleSettings /></div>}
