@@ -573,7 +573,7 @@ const ToolsTab = ({ userId, isAdmin, isHonorary, userRole, onViewUserPlan, onLog
               {settingsCategory === "account" && <div data-supporter-section><SupporterButton userId={userId} /></div>}
               <SettingsPanel category={settingsCategory} userId={userId} isAdmin={isAdmin} isHonorary={isHonorary} onStartPlan={onStartPlan} onViewUserPlan={onViewUserPlan} />
               {settingsCategory === "permissions" && <NotificationSettings userId={userId} />}
-              {settingsCategory === "appearance" && <div className="rounded-2xl bg-card border border-border/40 p-4"><ModuleSettings /></div>}
+              {settingsCategory === "training" && <div className="rounded-2xl bg-card border border-border/40 p-4"><ModuleSettings /></div>}
             </div>
           ) : subView === "helpers" ? (
             <div className="space-y-3">
