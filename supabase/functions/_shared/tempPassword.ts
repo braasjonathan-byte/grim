@@ -20,7 +20,12 @@ export const RATE_LIMITS = {
 } as const;
 
 type RandomSource = (bytes: Uint8Array) => Uint8Array;
-const defaultRandom: RandomSource = (bytes) => crypto.getRandomValues(bytes);
+const defaultRandom: RandomSource = (bytes) => {
+  // Own the buffer so Web Crypto receives an ArrayBuffer-backed view.
+  const randomBytes = new Uint8Array(bytes.length);
+  crypto.getRandomValues(randomBytes);
+  return randomBytes;
+};
 
 /**
  * Generates e.g. "K7mP-x9Qa-R3tW" (12 random chars, ~69 bits of entropy).
