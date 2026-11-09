@@ -2,7 +2,7 @@ import { lazyRetry } from "@/lib/lazyRetry";
 import { useAccessLevel } from "@/hooks/useAccessLevel";
 import { useState, useEffect, useRef, lazy, Suspense, useCallback } from "react";
 import { toast } from "sonner";
-import { Check, Loader2, ShieldQuestion, ChevronDown, Smartphone, Mail, KeyRound, LogOut, Music, Volume2, Link2, Unlink, RefreshCw, Fingerprint, BarChart3, MapPin, Dumbbell, Trash2, Timer } from "lucide-react";
+import { Check, Loader2, ShieldQuestion, ChevronDown, Smartphone, Mail, KeyRound, LogOut, Volume2, Link2, Unlink, RefreshCw, Fingerprint, BarChart3, MapPin, Dumbbell, Trash2, Timer } from "lucide-react";
 import { isFastingEnabled, setFastingEnabled } from "@/components/FastingWidget";
 import { getGpsVoiceIntervalMin, setGpsVoiceIntervalMin, getGpsVoiceIntervalKm, setGpsVoiceIntervalKm, speakPace } from "@/lib/gpsSettings";
 import { Slider } from "@/components/ui/slider";
@@ -47,7 +47,7 @@ export const SECURITY_QUESTIONS = [
   "Vad är ditt favoritlag?",
 ];
 
-export type SettingsCategory = "profile" | "account" | "appearance" | "privacy" | "permissions";
+export type SettingsCategory = "profile" | "account" | "appearance" | "stats" | "privacy" | "permissions";
 
 interface SettingsPanelProps {
   userId?: string;
@@ -92,9 +92,6 @@ const SettingsPanel = ({ userId, isAdmin, isHonorary = false, category = "all", 
   const [confirmStartPlan, setConfirmStartPlan] = useState(false);
   const [confirmDelete1, setConfirmDelete1] = useState(false);
   const [confirmDelete2, setConfirmDelete2] = useState(false);
-  const [spotifyWidget, setSpotifyWidget] = useState(() => {
-    return localStorage.getItem("gymberget_spotify_widget") !== "false";
-  });
   const [fastingOn, setFastingOn] = useState(() => isFastingEnabled());
   const statsSettings = useStatsSettings();
   const [soundEnabled, setSoundEnabled] = useState(() => {
@@ -363,26 +360,8 @@ const SettingsPanel = ({ userId, isAdmin, isHonorary = false, category = "all", 
         </div>
       )}
 
-      {inCategory("appearance") && (<>
-      {/* Spotify widget toggle */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <Music className="w-4 h-4 text-primary" />
-          <span className="text-sm">Visa Spotify i träningsvyn</span>
-        </div>
-        <button
-          onClick={() => {
-            const next = localStorage.getItem("gymberget_spotify_widget") !== "true";
-            localStorage.setItem("gymberget_spotify_widget", next ? "true" : "false");
-            setSpotifyWidget(next);
-          }}
-          className={`relative w-11 h-6 rounded-full transition-colors ${spotifyWidget ? "bg-primary" : "bg-secondary border border-border"}`}
-        >
-          <span className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full transition-transform ${spotifyWidget ? "translate-x-5 bg-primary-foreground" : "translate-x-0 bg-muted-foreground"}`} />
-        </button>
-      </div>
-
       {/* Samlade visningsval för Statistik */}
+      {inCategory("stats") && (
       <section className="rounded-2xl border border-border/60 bg-card p-3 space-y-4">
         <div className="flex items-center gap-3">
           <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
@@ -468,7 +447,9 @@ const SettingsPanel = ({ userId, isAdmin, isHonorary = false, category = "all", 
           </div>
         </div>
       </section>
+      )}
 
+      {inCategory("appearance") && (<>
       {/* Fasting widget toggle */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
