@@ -182,7 +182,7 @@ const WorkoutPostThread = ({ userId, viewerId, week, day }: WorkoutPostThreadPro
   if (!postId) {
     return (
       <div className="text-xs text-muted-foreground text-center py-3">
-        Markera passet som klart för att dela det med vänner.
+        När passet publicerats i Social kan vänner reagera och kommentera här.
       </div>
     );
   }

@@ -1,5 +1,9 @@
 # Roadmap
 
+## Health Connect till Social 9 november 2026
+- [x] Lägg till explicit publicering till Social från delningsrutan för genomförda Health Connect-pass; manuell publicering visar alltid granskningsdialogen.
+- [x] Testa att det importerade passets nyckel och sammanfattning publiceras korrekt; 13 tester godkända, inlägg verifierat i Social med tid/distans/puls och testinlägget borttaget.
+
 ## Maxpuls och kontrast 9 november 2026
 - [x] Gör texten i samtliga hjälpmedelsrutor läsbar i Tema 1–3; Tema 2 verifierad till 9,21:1 och profilfältens kontrast korrigerad.
 - [x] Lägg till maxpuls ovanför FTP i Inställningar med gemensam validering och lagring; 80–230 bpm skyddas även i databasen och sparning över omladdning är verifierad.

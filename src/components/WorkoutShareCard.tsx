@@ -30,6 +30,7 @@ interface WorkoutShareCardProps {
   viewerUserId?: string;
   onClose: () => void;
   onChatShare?: () => void;
+  onPublishToSocial?: () => void;
   onCopyToDate?: () => void;
   onSaveWorkout?: () => void;
 }
@@ -73,6 +74,7 @@ const WorkoutShareCard = ({
   viewerUserId,
   onClose,
   onChatShare,
+  onPublishToSocial,
   onCopyToDate,
   onSaveWorkout,
 }: WorkoutShareCardProps) => {
@@ -419,6 +421,14 @@ const WorkoutShareCard = ({
             <Share2 className="w-4 h-4" /> Dela
           </button>
         </div>
+        {onPublishToSocial && (
+          <button
+            onClick={onPublishToSocial}
+            className="w-full py-3 border border-primary/40 bg-card text-card-foreground font-semibold rounded-lg hover:bg-accent hover:text-accent-foreground transition-colors text-sm flex items-center justify-center gap-1.5"
+          >
+            <Share2 className="w-4 h-4" /> Publicera i Social
+          </button>
+        )}
         {onChatShare && (
           <button
             onClick={onChatShare}
