@@ -2,7 +2,7 @@ import { lazyRetry } from "@/lib/lazyRetry";
 import { useAccessLevel } from "@/hooks/useAccessLevel";
 import { useState, useEffect, useRef, lazy, Suspense, useCallback } from "react";
 import { toast } from "sonner";
-import { Check, Loader2, ShieldQuestion, ChevronDown, Smartphone, Mail, KeyRound, LogOut, Music, Volume2, Link2, Unlink, RefreshCw, Fingerprint, BarChart3, MapPin, Dumbbell, Trash2, Timer } from "lucide-react";
+import { Check, Loader2, ShieldQuestion, ChevronDown, Smartphone, Mail, KeyRound, LogOut, Volume2, Link2, Unlink, RefreshCw, Fingerprint, BarChart3, MapPin, Dumbbell, Trash2, Timer } from "lucide-react";
 import { isFastingEnabled, setFastingEnabled } from "@/components/FastingWidget";
 import { getGpsVoiceIntervalMin, setGpsVoiceIntervalMin, getGpsVoiceIntervalKm, setGpsVoiceIntervalKm, speakPace } from "@/lib/gpsSettings";
 import { Slider } from "@/components/ui/slider";
@@ -47,7 +47,7 @@ export const SECURITY_QUESTIONS = [
   "Vad är ditt favoritlag?",
 ];
 
-export type SettingsCategory = "profile" | "account" | "appearance" | "privacy" | "permissions";
+export type SettingsCategory = "profile" | "account" | "appearance" | "stats" | "privacy" | "permissions";
 
 interface SettingsPanelProps {
   userId?: string;
@@ -92,9 +92,6 @@ const SettingsPanel = ({ userId, isAdmin, isHonorary = false, category = "all", 
   const [confirmStartPlan, setConfirmStartPlan] = useState(false);
   const [confirmDelete1, setConfirmDelete1] = useState(false);
   const [confirmDelete2, setConfirmDelete2] = useState(false);
-  const [spotifyWidget, setSpotifyWidget] = useState(() => {
-    return localStorage.getItem("gymberget_spotify_widget") !== "false";
-  });
   const [fastingOn, setFastingOn] = useState(() => isFastingEnabled());
   const statsSettings = useStatsSettings();
   const [soundEnabled, setSoundEnabled] = useState(() => {
