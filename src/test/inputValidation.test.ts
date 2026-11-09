@@ -40,4 +40,12 @@ describe("inputValidation", () => {
     expect(validateNumber("155", "pulseBpm").error).toBeNull();
     expect(validateNumber("", "pulseBpm").error).toBeNull();
   });
+  it("validerar sparad maxpuls 80–230 bpm som heltal", () => {
+    expect(validateNumber("79", "maxHeartRateBpm").error).not.toBeNull();
+    expect(validateNumber("80", "maxHeartRateBpm").value).toBe(80);
+    expect(validateNumber("230", "maxHeartRateBpm").value).toBe(230);
+    expect(validateNumber("231", "maxHeartRateBpm").error).not.toBeNull();
+    expect(validateNumber("185,5", "maxHeartRateBpm").error).toBe("Ange ett heltal.");
+    expect(validateNumber("", "maxHeartRateBpm").value).toBeNull();
+  });
 });

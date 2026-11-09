@@ -239,6 +239,20 @@
       "when": 1792401370543,
       "tag": "0033_merge_exercises_hide_sources",
       "breakpoints": true
+    },
+    {
+      "idx": 34,
+      "version": "7",
+      "when": 1794207839403,
+      "tag": "0034_add_profile_max_heart_rate",
+      "breakpoints": true
+    },
+    {
+      "idx": 35,
+      "version": "7",
+      "when": 1794208138262,
+      "tag": "0035_validate_profile_max_heart_rate",
+      "breakpoints": true
     }
   ]
 }

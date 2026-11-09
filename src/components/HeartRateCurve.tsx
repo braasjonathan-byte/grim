@@ -1,6 +1,6 @@
 import { useMemo } from "react";
 import { useProfileBasics } from "@/lib/profileBasics";
-import { HR_ZONES, effortLabel, relativeEffort, zoneShares } from "@/lib/hrCurve";
+import { HR_ZONES, effortLabel, maxHeartRateForZones, relativeEffort, zoneShares } from "@/lib/hrCurve";
 
 interface Props {
   hr?: number[] | null;
@@ -17,14 +17,15 @@ export default function HeartRateCurve({ hr, avg, max, min, minutes }: Props) {
   const maxObserved = series.length ? Math.max(...series) : Number(max) || 0;
   const minObserved = series.length ? Math.min(...series) : Number(min) || 0;
   const avgVal = series.length ? Math.round(series.reduce((a, b) => a + b, 0) / series.length) : Number(avg) || 0;
-  const maxHr = Math.max(profile?.age ? 220 - profile.age : 190, maxObserved);
+  const maxHr = maxHeartRateForZones(profile?.maxHeartRate, profile?.age, maxObserved);
+  const chartMaxHr = Math.max(maxHr, maxObserved);
   const shares = useMemo(() => zoneShares(series, maxHr), [series.join(","), maxHr]);
 
   if (!series.length && !maxObserved && !minObserved) return null;
 
   const W = 300, H = 70;
   const lo = Math.min(minObserved, maxHr * 0.5) - 5;
-  const hi = maxHr;
+  const hi = chartMaxHr;
   const y = (b: number) => H - ((b - lo) / (hi - lo)) * H;
   const path = series.map((b, i) => `${i ? "L" : "M"}${((i / Math.max(1, series.length - 1)) * W).toFixed(1)},${y(b).toFixed(1)}`).join(" ");
 
@@ -54,6 +55,7 @@ export default function HeartRateCurve({ hr, avg, max, min, minutes }: Props) {
               <span key={z.label} title={z.name}>{z.label} {minutes ? `${Math.round(shares[i] * minutes)}m` : `${Math.round(shares[i] * 100)}%`}</span>
             ))}
           </div>
+          <p className="text-[10px] text-muted-foreground">Zoner beräknade med maxpuls {maxHr} bpm</p>
         </>
       )}
     </div>

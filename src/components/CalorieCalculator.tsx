@@ -84,10 +84,10 @@ const CalorieCalculator = () => {
   };
 
   return (
-    <div className="border border-border rounded-lg bg-secondary overflow-hidden">
+    <div className="border border-border rounded-lg bg-card text-card-foreground overflow-hidden">
       <button
         onClick={() => setOpen((v) => !v)}
-        className="w-full flex items-center gap-3 p-4 hover:bg-secondary transition-colors"
+        className="w-full flex items-center gap-3 p-4 bg-card text-card-foreground hover:bg-muted hover:text-muted-foreground transition-colors"
       >
         <Flame className="w-5 h-5 text-primary" />
         <span className="font-semibold text-sm">Kalorikalkylator</span>

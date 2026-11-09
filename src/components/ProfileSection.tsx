@@ -37,7 +37,7 @@ const GENDER_OPTIONS = [
 ];
 
 const inputClass =
-  "w-full rounded-xl bg-secondary/60 border border-border/60 text-foreground text-sm px-3 py-2.5 outline-none transition-colors focus:border-primary focus:ring-2 focus:ring-primary/40 placeholder:text-muted-foreground";
+  "w-full rounded-xl bg-background border border-border/60 text-foreground text-sm px-3 py-2.5 outline-none transition-colors focus:border-primary focus:ring-2 focus:ring-primary/40 placeholder:text-muted-foreground";
 
 // Extract username from a full URL or plain handle
 const extractUsername = (input: string, domain: string): string => {
@@ -62,6 +62,7 @@ const ProfileSection = ({ userId }: ProfileSectionProps) => {
   const [heightCm, setHeightCm] = useState("");
   const [mainSport, setMainSport] = useState("");
   const [ftp, setFtp] = useState("");
+  const [maxHeartRate, setMaxHeartRate] = useState("");
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -84,7 +85,7 @@ const ProfileSection = ({ userId }: ProfileSectionProps) => {
     const fetchProfile = async () => {
       const { data } = await supabase
         .from("profiles")
-        .select("age, gender, avatar_url, instagram, tiktok, snapchat, spotify_anthem_url, spotify_anthem_name, weight_kg, height_cm, main_sport, ftp_watt, display_name")
+        .select("age, gender, avatar_url, instagram, tiktok, snapchat, spotify_anthem_url, spotify_anthem_name, weight_kg, height_cm, main_sport, ftp_watt, max_heart_rate, display_name")
         .eq("user_id", userId)
         .single();
 
@@ -99,6 +100,7 @@ const ProfileSection = ({ userId }: ProfileSectionProps) => {
         setHeightCm((data as any).height_cm != null ? formatDecimal((data as any).height_cm) : "");
         setMainSport((data as any).main_sport || "");
         setFtp((data as any).ftp_watt != null ? String((data as any).ftp_watt) : "");
+        setMaxHeartRate(data.max_heart_rate != null ? String(data.max_heart_rate) : "");
         setInstagram((data as any).instagram || "");
         setTiktok((data as any).tiktok || "");
         setSnapchat((data as any).snapchat || "");
@@ -171,6 +173,8 @@ const ProfileSection = ({ userId }: ProfileSectionProps) => {
     if (ageRes.error) return; // ogiltiga värden sparas aldrig
     const hRes = validateNumber(heightCm, "heightCm");
     if (hRes.error) return;
+    const maxHeartRateRes = validateNumber(maxHeartRate, "maxHeartRateBpm");
+    if (maxHeartRateRes.error) return;
     const ftpNum = ftp.trim() ? parseInt(ftp, 10) : null;
     if (ftpNum != null && !(ftpNum >= 30 && ftpNum <= 700)) return;
     const url = spotifyUrl.trim();
@@ -182,6 +186,7 @@ const ProfileSection = ({ userId }: ProfileSectionProps) => {
         height_cm: hRes.value,
         main_sport: mainSport || null,
         ftp_watt: ftpNum,
+        max_heart_rate: maxHeartRateRes.value,
         display_name: displayName.trim().slice(0, 40) || null,
         gender: gender || null,
         instagram: extractUsername(instagram, "instagram.com") || null,
@@ -194,7 +199,7 @@ const ProfileSection = ({ userId }: ProfileSectionProps) => {
       .eq("user_id", userId);
     dirty.current = false;
     notifyProfileUpdated();
-  }, [heightCm, mainSport, ftp, displayName, age, gender, instagram, tiktok, snapchat, spotifyUrl, spotifyName, userId]);
+  }, [heightCm, mainSport, ftp, maxHeartRate, displayName, age, gender, instagram, tiktok, snapchat, spotifyUrl, spotifyName, userId]);
 
   // Trigger auto-save when any field changes (after initial load AND user interaction)
   useEffect(() => {
@@ -204,7 +209,7 @@ const ProfileSection = ({ userId }: ProfileSectionProps) => {
       doSave();
     }, 1000);
     return () => { if (saveTimer.current) clearTimeout(saveTimer.current); };
-  }, [heightCm, mainSport, ftp, displayName, age, gender, instagram, tiktok, snapchat, spotifyUrl, spotifyName, loaded, doSave]);
+  }, [heightCm, mainSport, ftp, maxHeartRate, displayName, age, gender, instagram, tiktok, snapchat, spotifyUrl, spotifyName, loaded, doSave]);
 
   // Save on unmount/visibility change (only if user changed something)
   useEffect(() => {
@@ -412,6 +417,13 @@ const ProfileSection = ({ userId }: ProfileSectionProps) => {
             <select value={mainSport} onChange={(e) => { dirty.current = true; setMainSport(e.target.value); }} className={inputClass}>
               {(["", "Styrketräning", "Löpning", "Cykling", "Simning", "Triathlon", "Kraftlyft", "CrossFit", "Promenad", "Annat"]).map((s) => <option key={s} value={s}>{s || "Ej angivet"}</option>)}
             </select>
+          </div>
+
+          <div className="space-y-1.5">
+            <label htmlFor="profile-max-heart-rate" className="text-xs text-muted-foreground block">Maxpuls (slag/min, valfritt)</label>
+            <input id="profile-max-heart-rate" type="text" inputMode="numeric" value={maxHeartRate} onChange={(e) => { dirty.current = true; setMaxHeartRate(e.target.value.replace(/\D/g, "")); }} placeholder="T.ex. 185" className={inputClass} />
+            <FieldError error={validateNumber(maxHeartRate, "maxHeartRateBpm").error} />
+            <p className="text-[10px] text-muted-foreground">Styr pulszonerna i nya och tidigare pass</p>
           </div>
 
           <div className="space-y-1.5">

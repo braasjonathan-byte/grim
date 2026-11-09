@@ -17,7 +17,7 @@ const RestTimerSettings = () => {
   };
 
   return (
-    <div className="flex items-center justify-between gap-3 rounded-lg border border-border bg-secondary p-4">
+    <div className="flex items-center justify-between gap-3 rounded-lg border border-border bg-card text-card-foreground p-4">
       <label className="flex min-w-0 flex-col text-sm font-bold text-foreground">
         <span className="flex min-w-0 items-center gap-2">
         <Timer className="h-4 w-4 shrink-0 text-primary" />
@@ -42,7 +42,7 @@ const RestTimerSettings = () => {
           aria-pressed={enabled}
           aria-label={enabled ? "Avaktivera vilotimer" : "Aktivera vilotimer"}
         >
-          <span className={`block h-4 w-4 rounded-full bg-foreground transition-transform ${enabled ? "translate-x-5" : "translate-x-0"}`} />
+          <span className={`block h-4 w-4 rounded-full transition-transform ${enabled ? "translate-x-5 bg-primary-foreground" : "translate-x-0 bg-muted-foreground"}`} />
         </button>
       </div>
     </div>
