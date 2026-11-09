@@ -2099,30 +2099,6 @@ export type Database = {
         }
         Relationships: []
       }
-      security_answers: {
-        Row: {
-          answer_hash: string
-          created_at: string
-          id: string
-          question_index: number
-          user_id: string
-        }
-        Insert: {
-          answer_hash: string
-          created_at?: string
-          id?: string
-          question_index: number
-          user_id: string
-        }
-        Update: {
-          answer_hash?: string
-          created_at?: string
-          id?: string
-          question_index?: number
-          user_id?: string
-        }
-        Relationships: []
-      }
       social_post_comments: {
         Row: {
           comment: string
@@ -2317,6 +2293,7 @@ export type Database = {
           athlete_lastname: string | null
           athlete_profile_url: string | null
           athlete_username: string | null
+          auto_export: boolean
           created_at: string
           expires_at: string
           id: string
@@ -2337,6 +2314,7 @@ export type Database = {
           athlete_lastname?: string | null
           athlete_profile_url?: string | null
           athlete_username?: string | null
+          auto_export?: boolean
           created_at?: string
           expires_at: string
           id?: string
@@ -2357,6 +2335,7 @@ export type Database = {
           athlete_lastname?: string | null
           athlete_profile_url?: string | null
           athlete_username?: string | null
+          auto_export?: boolean
           created_at?: string
           expires_at?: string
           id?: string
@@ -2369,6 +2348,42 @@ export type Database = {
           strava_athlete_id?: number
           total_imported_activities?: number
           updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      strava_exports: {
+        Row: {
+          completion_id: string
+          created_at: string
+          error: string | null
+          id: string
+          status: string
+          strava_activity_id: number | null
+          updated_at: string
+          upload_id: number | null
+          user_id: string
+        }
+        Insert: {
+          completion_id: string
+          created_at?: string
+          error?: string | null
+          id?: string
+          status?: string
+          strava_activity_id?: number | null
+          updated_at?: string
+          upload_id?: number | null
+          user_id: string
+        }
+        Update: {
+          completion_id?: string
+          created_at?: string
+          error?: string | null
+          id?: string
+          status?: string
+          strava_activity_id?: number | null
+          updated_at?: string
+          upload_id?: number | null
           user_id?: string
         }
         Relationships: []
@@ -3141,12 +3156,6 @@ export type Database = {
           theme: string
         }[]
       }
-      get_my_security_question_indices: {
-        Args: never
-        Returns: {
-          question_index: number
-        }[]
-      }
       get_my_strava_connection: {
         Args: never
         Returns: {
@@ -3161,6 +3170,14 @@ export type Database = {
           last_synced_at: string
           total_imported_activities: number
           updated_at: string
+        }[]
+      }
+      get_my_strava_export_settings: {
+        Args: never
+        Returns: {
+          auto_export: boolean
+          can_write: boolean
+          connected: boolean
         }[]
       }
       get_suggested_friends: {
@@ -3234,6 +3251,10 @@ export type Database = {
           nickname: string
           user_id: string
         }[]
+      }
+      set_my_strava_auto_export: {
+        Args: { enabled: boolean }
+        Returns: undefined
       }
       shares_plan_with_friends: { Args: { _user_id: string }; Returns: boolean }
       show_limit: { Args: never; Returns: number }
