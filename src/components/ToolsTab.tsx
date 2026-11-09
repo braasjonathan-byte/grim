@@ -547,8 +547,15 @@ const ToolsTab = ({ userId, isAdmin, isHonorary, userRole, onViewUserPlan, onLog
               {(orderedGroups.find((group) => group.id === "start")?.items ?? []).map((item) => renderCard(item))}
             </div>
           ) : (
-            <div className="space-y-2">
-              {(orderedGroups.find((group) => group.id === "admin-edit")?.items ?? []).map((item) => renderCard(item))}
+            <div className="space-y-5">
+              {orderedGroups
+                .filter((group) => group.id.startsWith("admin-"))
+                .map((group) => (
+                  <section key={group.id} className="space-y-2">
+                    <h3 className="px-1 text-sm font-bold uppercase tracking-wider text-foreground">{group.title}</h3>
+                    <div className="space-y-2">{group.items.map((item) => renderCard(item))}</div>
+                  </section>
+                ))}
             </div>
           )}
         </Suspense>
@@ -639,7 +646,7 @@ const ToolsTab = ({ userId, isAdmin, isHonorary, userRole, onViewUserPlan, onLog
                 {renderCard({
                   id: "admin-page",
                   title: "Admin",
-                  subtitle: "Utmaningar, passinnehåll, hjälptexter och nyheter",
+                  subtitle: "Innehåll, livsmedel, användare och moderering",
                   icon: UserCog,
                   featured: true,
                   onSelect: () => setSubView("admin"),
@@ -647,6 +654,7 @@ const ToolsTab = ({ userId, isAdmin, isHonorary, userRole, onViewUserPlan, onLog
               </section>
             );
           }
+          if (group.id.startsWith("admin-") && !editLayout) return null;
           return (
             <section key={group.id} className="space-y-2">
               <div className="flex items-center gap-1">
