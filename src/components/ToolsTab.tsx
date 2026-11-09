@@ -132,7 +132,7 @@ const topicItem = (
 const ToolsTab = ({ userId, isAdmin, isHonorary, userRole, onViewUserPlan, onLogout, onStartPlan }: ToolsTabProps) => {
   const help = useHelpCategories();
   const [confirmLogout, setConfirmLogout] = useState(false);
-  const [subView, setSubView] = useState<"home" | "helpers" | "settings" | "start">(() => {
+  const [subView, setSubView] = useState<"home" | "helpers" | "settings" | "start" | "admin">(() => {
     const f = sessionStorage.getItem("grim_tools_open");
     return f?.startsWith("settings") ? "settings" : "home";
   });
@@ -511,7 +511,7 @@ const ToolsTab = ({ userId, isAdmin, isHonorary, userRole, onViewUserPlan, onLog
   };
 
   if (subView !== "home") {
-    const title = subView === "settings" ? "Inställningar" : subView === "start" ? "Kom igång" : "Hjälpmedel";
+    const title = subView === "settings" ? "Inställningar" : subView === "start" ? "Kom igång" : subView === "admin" ? "Admin" : "Hjälpmedel";
     return (
       <div className="py-2 space-y-4">
         <div className="flex items-center gap-2 -mx-1">
@@ -542,9 +542,13 @@ const ToolsTab = ({ userId, isAdmin, isHonorary, userRole, onViewUserPlan, onLog
               <PulseZoneCalculator />
               <WorkoutTimer />
             </div>
-          ) : (
+          ) : subView === "start" ? (
             <div className="space-y-2">
               {(orderedGroups.find((group) => group.id === "start")?.items ?? []).map((item) => renderCard(item))}
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {(orderedGroups.find((group) => group.id === "admin-edit")?.items ?? []).map((item) => renderCard(item))}
             </div>
           )}
         </Suspense>
@@ -625,6 +629,20 @@ const ToolsTab = ({ userId, isAdmin, isHonorary, userRole, onViewUserPlan, onLog
                   icon: Sparkles,
                   featured: true,
                   onSelect: () => setSubView("start"),
+                })}
+              </section>
+            );
+          }
+          if (group.id === "admin-edit" && !editLayout) {
+            return (
+              <section key={group.id}>
+                {renderCard({
+                  id: "admin-page",
+                  title: "Admin",
+                  subtitle: "Utmaningar, passinnehåll, hjälptexter och nyheter",
+                  icon: UserCog,
+                  featured: true,
+                  onSelect: () => setSubView("admin"),
                 })}
               </section>
             );
