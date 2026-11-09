@@ -450,7 +450,9 @@ const SettingsPanel = ({ userId, isAdmin, isHonorary = false, category = "all", 
           </div>
         </div>
       </section>
+      )}
 
+      {inCategory("appearance") && (<>
       {/* Fasting widget toggle */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
