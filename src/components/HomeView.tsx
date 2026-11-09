@@ -40,7 +40,8 @@ import { loadUntrainedRegions, buildSuggestion } from "@/lib/untrainedMuscles";
 import { restingHrSignal } from "@/lib/restingHr";
 import HealthWorkoutPrompt from "@/components/HealthWorkoutPrompt";
 import HomeTrainingStats from "@/components/HomeTrainingStats";
-import HomeHealthTrends, { WeeklySummaryEntry } from "@/components/HomeHealthTrends";
+import HomeHealthTrends from "@/components/HomeHealthTrends";
+import WeeklySummaryCard from "@/components/WeeklySummaryCard";
 import DailyRecipeCard from "@/components/DailyRecipeCard";
 import { getCardioModes, getStoredCardioMode } from "@/lib/cardioUnits";
 
@@ -643,7 +644,8 @@ const HomeView = ({ userId, onNavigate, isHonorary = false }: HomeViewProps) => 
         </div>
       )}
 
-      <WeeklySummaryEntry />
+      {/* 1c. Veckan i siffror: pass, volym, rekord, kost och vikt mot förra veckan */}
+      <WeeklySummaryCard userId={userId} />
 
       {/* 1d. Träningsstatistik vecka/månad/år med grenval direkt i kortet */}
       <HomeTrainingStats userId={userId} />

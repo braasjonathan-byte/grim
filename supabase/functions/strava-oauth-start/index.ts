@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { loadStravaCreds, STRAVA_SCOPE } from "../_shared/stravaConfig.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -35,12 +36,10 @@ serve(async (req) => {
       return jsonResponse({ error: "Method not allowed" }, 405);
     }
 
-    const clientId = Deno.env.get("STRAVA_CLIENT_ID");
     const supabaseUrl = Deno.env.get("SUPABASE_URL");
     const anonKey = Deno.env.get("SUPABASE_ANON_KEY");
     const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
 
-    if (!clientId) throw new Error("STRAVA_CLIENT_ID is not configured");
     if (!supabaseUrl) throw new Error("SUPABASE_URL is not configured");
     if (!anonKey) throw new Error("SUPABASE_ANON_KEY is not configured");
     if (!serviceRoleKey) throw new Error("SUPABASE_SERVICE_ROLE_KEY is not configured");
@@ -65,6 +64,11 @@ serve(async (req) => {
     const state = createState();
 
     const adminClient = createClient(supabaseUrl, serviceRoleKey, { auth: { persistSession: false } });
+    const creds = await loadStravaCreds((k) => Deno.env.get(k), adminClient);
+    // Klienten frågar om Strava är aktiverat innan kopplingen visas
+    if (body.check) return jsonResponse({ configured: !!creds });
+    if (!creds) return jsonResponse({ error: "strava_not_configured" }, 503);
+    const clientId = creds.clientId;
     const { error: insertError } = await adminClient.from("strava_oauth_states").insert({
       user_id: userData.user.id,
       state,
@@ -77,8 +81,8 @@ serve(async (req) => {
     authUrl.searchParams.set("client_id", clientId);
     authUrl.searchParams.set("redirect_uri", `${getFunctionBaseUrl()}/strava-oauth-callback`);
     authUrl.searchParams.set("response_type", "code");
-    authUrl.searchParams.set("approval_prompt", "auto");
-    authUrl.searchParams.set("scope", "read,activity:read_all");
+    authUrl.searchParams.set("approval_prompt", body.forcePrompt ? "force" : "auto");
+    authUrl.searchParams.set("scope", STRAVA_SCOPE);
     authUrl.searchParams.set("state", state);
 
     return jsonResponse({ authUrl: authUrl.toString() });

@@ -1,4 +1,7 @@
 import { SingleWorkoutForm } from "@/components/workout/SingleWorkoutForm";
+import { maybeAutoExportToStrava, STRAVA_ERROR_TEXT } from "@/lib/stravaExport";
+import { getHeartRateSamplesBetween } from "@/lib/heartRate";
+import { readSessionHr, summarizeSessionHr, SESSION_HR_KEY } from "@/lib/sessionHeartRate";
 import { DeleteExercisePrompt, ExerciseRepsPrompt, ExercisePropagationPrompt, ReplaceExercisePrompt, type PendingReplace } from "@/components/workout/WorkoutExercisePrompts";
 import { WorkoutImportPicker, WorkoutImportConflictPrompts } from "@/components/workout/WorkoutImportDialogs";
 import { WorkoutNamePrompt, UncheckedSetsPrompt, BodyWeightPrompt } from "@/components/workout/WorkoutCompletionPrompts";
@@ -1285,6 +1288,24 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
         }
       } catch {}
 
+      // Pulsband: spara passets pulsserie (från första avbockade set, annars senaste 90 min)
+      try {
+        if (!readSessionHr(latestWeights)) {
+          const firstAt = latestWeights["__first_set_at__"];
+          const firstMs = typeof firstAt === "string" ? new Date(firstAt).getTime() : NaN;
+          const nowMs = Date.now();
+          const fromMs = isFinite(firstMs) && nowMs - firstMs < 4 * 3600000 ? firstMs - 2 * 60000 : nowMs - 90 * 60000;
+          const hr = summarizeSessionHr(getHeartRateSamplesBetween(fromMs, nowMs));
+          if (hr) {
+            await updateCompletionWeights(week, day, (existing) => {
+              const next = { ...existing, [SESSION_HR_KEY]: hr };
+              latestWeights = next;
+              return next;
+            });
+          }
+        }
+      } catch {}
+
       // Auto-mark all conditioning lines in this day as completed as well
       try {
         const dayPlans = plans.filter((p) => p.week === week && p.day === day);
@@ -1325,6 +1346,14 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
         });
       } catch {}
 
+
+      // Strava: skicka passet automatiskt om användaren slagit på det (körs i bakgrunden)
+      void maybeAutoExportToStrava(userId, week, day).then((r) => {
+        if (!r) return;
+        if (r.status === "already") return;
+        if (r.ok) toast("Passet skickades till Strava ✅", { duration: 3000 });
+        else toast(STRAVA_ERROR_TEXT[r.error || ""] || "Kunde inte skicka passet till Strava", { duration: 5000 });
+      });
 
       // Prepare the share dialog; it opens once the celebration is dismissed.
       offerShare(week, day, true);

@@ -185,7 +185,7 @@ export const helpCategories: HelpCategory[] = [
       "Aktivera push-notiser för att bli påmind om träning.",
       "Ställ in påminnelsetid och tidszon under notifikationsinställningar.",
       "Bjud in vänner med din unika referrallänk – du blir hedersmedlem!",
-      "Byt lösenord och ställ in säkerhetsfrågor under inställningar.",
+      "Byt lösenord och lägg till din e-post under inställningar – den används om du glömmer lösenordet.",
       "Mörkt läge kan aktiveras under inställningar.",
       "Skicka feedback och förslag via förslagslådan.",
       "Ange din kroppsvikt under Verktyg för att möjliggöra loggning av kroppsviktsövningar.",

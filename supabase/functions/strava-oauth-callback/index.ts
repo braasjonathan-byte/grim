@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { loadStravaCreds } from "../_shared/stravaConfig.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -30,15 +31,13 @@ serve(async (req) => {
 
     const supabaseUrl = Deno.env.get("SUPABASE_URL");
     const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
-    const clientId = Deno.env.get("STRAVA_CLIENT_ID");
-    const clientSecret = Deno.env.get("STRAVA_CLIENT_SECRET");
 
     if (!supabaseUrl) throw new Error("SUPABASE_URL is not configured");
     if (!serviceRoleKey) throw new Error("SUPABASE_SERVICE_ROLE_KEY is not configured");
-    if (!clientId) throw new Error("STRAVA_CLIENT_ID is not configured");
-    if (!clientSecret) throw new Error("STRAVA_CLIENT_SECRET is not configured");
-
     const adminClient = createClient(supabaseUrl, serviceRoleKey, { auth: { persistSession: false } });
+    const creds = await loadStravaCreds((k) => Deno.env.get(k), adminClient);
+    if (!creds) throw new Error("Strava is not configured");
+    const { clientId, clientSecret } = creds;
 
     if (!state) return redirectTo(fallbackOrigin, "error", "missing_state");
 

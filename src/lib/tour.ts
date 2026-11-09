@@ -421,7 +421,7 @@ const LONG: TourStep[] = [
       popover: {
         title: "Profil & inställningar",
         description:
-          "I 'Inställningar'-sektionen finns Profil, Tema och Notifikationer:<br>• Ladda upp avatar och länka sociala medier<br>• Ange din kroppsvikt (krävs för kroppsviktsövningar)<br>• Aktivera push-notiser och ställ in påminnelsetid + tidszon<br>• Byt lösenord och säkerhetsfrågor",
+          "I 'Inställningar'-sektionen finns Profil, Tema och Notifikationer:<br>• Ladda upp avatar och länka sociala medier<br>• Ange din kroppsvikt (krävs för kroppsviktsövningar)<br>• Aktivera push-notiser och ställ in påminnelsetid + tidszon<br>• Byt lösenord och lägg till e-post för återställning",
         side: "bottom",
       },
     },

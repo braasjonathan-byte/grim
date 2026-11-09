@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { loadStravaCreds } from "../_shared/stravaConfig.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -31,6 +32,7 @@ type StravaActivity = {
   max_heartrate?: number;
   calories?: number;
   kilojoules?: number;
+  external_id?: string | null;
 };
 
 function jsonResponse(body: unknown, status = 200) {
@@ -361,8 +363,15 @@ async function syncConnection(supabaseAdmin: any, connection: StravaConnection, 
   let imported = 0;
   let applied = 0;
 
+  // Pass som Grim själv har skickat till Strava ska inte importeras tillbaka
+  const { data: exportedRows } = activityIds.length > 0
+    ? await supabaseAdmin.from("strava_exports").select("strava_activity_id").eq("user_id", connection.user_id).in("strava_activity_id", activityIds)
+    : { data: [] };
+  const exportedIds = new Set((exportedRows || []).map((row: { strava_activity_id: number }) => Number(row.strava_activity_id)));
+
   for (const activity of activities) {
     if (!activity.id || !activity.start_date) continue;
+    if (exportedIds.has(activity.id) || String(activity.external_id || "").startsWith("grim-")) continue;
 
     const dateKey = getActivityDateKey(activity);
     const dayKey = targetWorkout ? targetWorkout.day : `${dateKey}_strava_${activity.id}`;
@@ -466,13 +475,12 @@ serve(async (req) => {
 
     const supabaseUrl = Deno.env.get("SUPABASE_URL");
     const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
-    const clientId = Deno.env.get("STRAVA_CLIENT_ID");
-    const clientSecret = Deno.env.get("STRAVA_CLIENT_SECRET");
 
     if (!supabaseUrl) throw new Error("SUPABASE_URL is not configured");
     if (!serviceRoleKey) throw new Error("SUPABASE_SERVICE_ROLE_KEY is not configured");
-    if (!clientId) throw new Error("STRAVA_CLIENT_ID is not configured");
-    if (!clientSecret) throw new Error("STRAVA_CLIENT_SECRET is not configured");
+    const creds = await loadStravaCreds((k) => Deno.env.get(k), createClient(supabaseUrl, serviceRoleKey, { auth: { persistSession: false } }));
+    if (!creds) return jsonResponse({ error: "strava_not_configured" }, 503);
+    const { clientId, clientSecret } = creds;
 
     const authHeader = req.headers.get("Authorization") || "";
     if (!authHeader.startsWith("Bearer ")) {

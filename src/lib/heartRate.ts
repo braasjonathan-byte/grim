@@ -77,7 +77,43 @@ const SERIES_MAX = 4000;
 
 export const getHeartRateRecording = (): HeartRateRecording => recording;
 
+// ---------------- Löpande pulslogg (styrkepass m.m.) ----------------
+// Varje ansluten pulsmätare loggar ett värde per ~5 s i en rullande buffert (4 h),
+// så att ett helt pass kan få en pulsserie utan att användaren trycker "spela in".
+export type HrSample = { t: number; bpm: number };
+const HR_LOG_KEY = "grim_hr_log_v1";
+const HR_LOG_WINDOW_MS = 4 * 60 * 60 * 1000;
+let hrLog: HrSample[] = (() => {
+  try {
+    const raw = typeof localStorage !== "undefined" ? localStorage.getItem(HR_LOG_KEY) : null;
+    const arr = raw ? JSON.parse(raw) : [];
+    const cutoff = Date.now() - HR_LOG_WINDOW_MS;
+    return Array.isArray(arr) ? arr.filter((x: any) => x && x.t > cutoff && x.bpm > 0) : [];
+  } catch { return []; }
+})();
+let hrLogLastPersist = 0;
+
+const addLogSample = (bpm: number, now = Date.now()) => {
+  const last = hrLog[hrLog.length - 1];
+  if (last && now - last.t < SERIES_INTERVAL_MS) return;
+  hrLog.push({ t: now, bpm });
+  const cutoff = now - HR_LOG_WINDOW_MS;
+  if (hrLog.length && hrLog[0].t < cutoff) hrLog = hrLog.filter((x) => x.t >= cutoff);
+  if (now - hrLogLastPersist > 30000) {
+    hrLogLastPersist = now;
+    try { localStorage.setItem(HR_LOG_KEY, JSON.stringify(hrLog)); } catch { /* full */ }
+  }
+};
+
+/** Pulsvärden (≈1 per 5 s) mellan två tidpunkter (ms). */
+export const getHeartRateSamplesBetween = (fromMs: number, toMs = Date.now()): HrSample[] =>
+  hrLog.filter((x) => x.t >= fromMs && x.t <= toMs);
+
+/** Test-hjälp: lägg in ett pulsvärde med given tid. */
+export const __pushHeartRateSampleForTest = (bpm: number, t: number) => addLogSample(bpm, t);
+
 const addRecordingSample = (bpm: number) => {
+  addLogSample(bpm);
   if (!recording.recording) return;
   recSum += bpm;
   const now = Date.now();

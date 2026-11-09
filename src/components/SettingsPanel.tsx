@@ -1,8 +1,9 @@
 import { lazyRetry } from "@/lib/lazyRetry";
+import StravaExportControls from "@/components/StravaExportControls";
 import { useAccessLevel } from "@/hooks/useAccessLevel";
 import { useState, useEffect, useRef, lazy, Suspense, useCallback } from "react";
 import { toast } from "sonner";
-import { Check, Loader2, ShieldQuestion, ChevronDown, Smartphone, Mail, KeyRound, LogOut, Volume2, Link2, Unlink, RefreshCw, Fingerprint, BarChart3, MapPin, Dumbbell, Trash2, Timer } from "lucide-react";
+import { Check, Loader2, ChevronDown, Smartphone, Mail, KeyRound, LogOut, Volume2, Link2, Unlink, RefreshCw, Fingerprint, BarChart3, MapPin, Dumbbell, Trash2, Timer } from "lucide-react";
 import { isFastingEnabled, setFastingEnabled } from "@/components/FastingWidget";
 import { getGpsVoiceIntervalMin, setGpsVoiceIntervalMin, getGpsVoiceIntervalKm, setGpsVoiceIntervalKm, speakPace } from "@/lib/gpsSettings";
 import { Slider } from "@/components/ui/slider";
@@ -32,20 +33,8 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 
-const SHOW_STRAVA_INTEGRATION = false;
 
 
-
-export const SECURITY_QUESTIONS = [
-  "Vad hette ditt första husdjur?",
-  "Vilken stad föddes du i?",
-  "Vad hette din bästa vän i barndomen?",
-  "Vad är din mammas flicknamn?",
-  "Vilken var din första skola?",
-  "Vad heter din favoritfilm?",
-  "Vilken gata växte du upp på?",
-  "Vad är ditt favoritlag?",
-];
 
 export type SettingsCategory = "profile" | "account" | "training" | "appearance" | "stats" | "privacy" | "permissions";
 
@@ -81,12 +70,6 @@ const SettingsPanel = ({ userId, isAdmin, isHonorary = false, category = "all", 
 
 
 
-  const [securityOpen, setSecurityOpen] = useState(false);
-  const [secQuestions, setSecQuestions] = useState<(number | null)[]>([null, null, null, null]);
-  const [secAnswers, setSecAnswers] = useState<string[]>(["", "", "", ""]);
-  const [secSaving, setSecSaving] = useState(false);
-  const [secSaved, setSecSaved] = useState(false);
-  const [secHasExisting, setSecHasExisting] = useState(false);
 
   const [showChangePassword, setShowChangePassword] = useState(false);
   const [confirmStartPlan, setConfirmStartPlan] = useState(false);
@@ -111,6 +94,16 @@ const SettingsPanel = ({ userId, isAdmin, isHonorary = false, category = "all", 
   const [emailDirty, setEmailDirty] = useState(false);
   const [hasEmail, setHasEmail] = useState(false);
   const [emailError, setEmailError] = useState("");
+  // Strava visas bara när kopplingen är aktiverad på servern (client id/secret finns)
+  const [stravaAvailable, setStravaAvailable] = useState(false);
+  useEffect(() => {
+    if (!userId || !(category === "all" || category === "permissions")) return;
+    let cancelled = false;
+    supabase.functions.invoke("strava-oauth-start", { body: { check: true } })
+      .then(({ data }) => { if (!cancelled) setStravaAvailable(!!data?.configured); })
+      .catch(() => {});
+    return () => { cancelled = true; };
+  }, [userId, category]);
   const [stravaLoading, setStravaLoading] = useState(false);
   const [stravaConnecting, setStravaConnecting] = useState(false);
   const [stravaConnected, setStravaConnected] = useState(false);
@@ -149,18 +142,6 @@ const SettingsPanel = ({ userId, isAdmin, isHonorary = false, category = "all", 
 
   useEffect(() => {
     if (!userId) return;
-    supabase
-      .rpc("get_my_security_question_indices")
-      .then(({ data }) => {
-        if (data && data.length > 0) {
-          setSecHasExisting(true);
-          const qs: (number | null)[] = [null, null, null, null];
-          (data as { question_index: number }[]).forEach((row, i) => {
-            if (i < 4) qs[i] = row.question_index;
-          });
-          setSecQuestions(qs);
-        }
-      });
     // Fetch existing email
     supabase
       .from("user_emails")
@@ -173,11 +154,11 @@ const SettingsPanel = ({ userId, isAdmin, isHonorary = false, category = "all", 
           setHasEmail(true);
         }
       });
-    if (SHOW_STRAVA_INTEGRATION) refreshStravaConnection();
-  }, [userId, refreshStravaConnection]);
+    if (stravaAvailable) refreshStravaConnection();
+  }, [userId, refreshStravaConnection, stravaAvailable]);
 
   useEffect(() => {
-    if (!userId || !SHOW_STRAVA_INTEGRATION) return;
+    if (!userId || !stravaAvailable) return;
     const handleFocus = () => refreshStravaConnection();
     const handleVisibility = () => {
       if (document.visibilityState === "visible") refreshStravaConnection();
@@ -188,38 +169,7 @@ const SettingsPanel = ({ userId, isAdmin, isHonorary = false, category = "all", 
       window.removeEventListener("focus", handleFocus);
       document.removeEventListener("visibilitychange", handleVisibility);
     };
-  }, [userId, refreshStravaConnection]);
-
-  const handleSaveSecurityQuestions = async () => {
-    if (!userId) return;
-    for (let i = 0; i < 4; i++) {
-      if (secQuestions[i] === null || !secAnswers[i].trim()) return;
-    }
-    const qSet = new Set(secQuestions);
-    if (qSet.size < 4) return;
-
-    setSecSaving(true);
-    const { data, error } = await supabase.functions.invoke("reset-password", {
-      body: {
-        nickname: "_save_",
-        action: "save-answers",
-        questionIndices: secQuestions,
-        answerTexts: secAnswers.map(a => a.trim()),
-      },
-    });
-
-    if (!error && data?.success) {
-      setSecSaved(true);
-      setSecHasExisting(true);
-      setSecAnswers(["", "", "", ""]);
-      setTimeout(() => setSecSaved(false), 2000);
-    }
-    setSecSaving(false);
-  };
-
-  const allSecFilled = secQuestions.every((q) => q !== null) &&
-    secAnswers.every((a) => a.trim().length > 0) &&
-    new Set(secQuestions).size === 4;
+  }, [userId, refreshStravaConnection, stravaAvailable]);
 
   const handleSaveEmail = async () => {
     if (!userId || !email.trim()) return;
@@ -242,7 +192,7 @@ const SettingsPanel = ({ userId, isAdmin, isHonorary = false, category = "all", 
     setTimeout(() => setEmailSaved(false), 2000);
   };
 
-  const handleConnectStrava = async () => {
+  const handleConnectStrava = async (forcePrompt = false) => {
     if (!userId) return;
     const authWindow = window.open("", "_blank");
     if (authWindow) {
@@ -258,7 +208,7 @@ const SettingsPanel = ({ userId, isAdmin, isHonorary = false, category = "all", 
       return;
     }
     const { data, error } = await supabase.functions.invoke("strava-oauth-start", {
-      body: { redirectOrigin: window.location.origin },
+      body: { redirectOrigin: window.location.origin, forcePrompt },
       headers: { Authorization: `Bearer ${accessToken}` },
     });
     setStravaConnecting(false);
@@ -317,15 +267,6 @@ const SettingsPanel = ({ userId, isAdmin, isHonorary = false, category = "all", 
       hour: "2-digit",
       minute: "2-digit",
     }).format(new Date(value));
-  };
-
-  const getAvailableQuestions = (slotIndex: number) => {
-    const selected = secQuestions.filter((q, i) => i !== slotIndex && q !== null);
-    return SECURITY_QUESTIONS.map((q, idx) => ({
-      idx,
-      text: q,
-      disabled: selected.includes(idx),
-    }));
   };
 
   const inCategory = (target: SettingsCategory) => category === "all" || category === target;
@@ -588,80 +529,6 @@ const SettingsPanel = ({ userId, isAdmin, isHonorary = false, category = "all", 
       </>)}
 
       {inCategory("account") && (<>
-      {userId && SHOW_STRAVA_INTEGRATION && (
-        <div className="border-t border-border pt-2">
-          <button
-            onClick={() => setSecurityOpen(!securityOpen)}
-            className="w-full flex items-center justify-between py-2"
-          >
-            <div className="flex items-center gap-2">
-              <ShieldQuestion className="w-4 h-4 text-primary" />
-              <span className="text-sm font-semibold">Säkerhetsfrågor</span>
-              {secHasExisting && (
-                <span className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded-full">Sparade</span>
-              )}
-            </div>
-            <ChevronDown className={`w-4 h-4 text-muted-foreground transition-transform ${securityOpen ? "rotate-180" : ""}`} />
-          </button>
-          {securityOpen && (
-            <div className="space-y-3 pt-1">
-              <p className="text-xs text-muted-foreground">
-                Välj 4 frågor och fyll i svar. Dessa används vid lösenordsåterställning.
-              </p>
-
-              {[0, 1, 2, 3].map((slot) => (
-                <div key={slot} className="space-y-1">
-                  <select
-                    value={secQuestions[slot] ?? ""}
-                    onChange={(e) => {
-                      const newQs = [...secQuestions];
-                      newQs[slot] = e.target.value === "" ? null : parseInt(e.target.value);
-                      setSecQuestions(newQs);
-                    }}
-                    className="w-full bg-secondary text-secondary-foreground text-sm p-2 rounded-lg border-none outline-none focus:ring-2 focus:ring-primary"
-                  >
-                    <option value="">Välj fråga {slot + 1}...</option>
-                    {getAvailableQuestions(slot).map((q) => (
-                      <option key={q.idx} value={q.idx} disabled={q.disabled}>
-                        {q.text}
-                      </option>
-                    ))}
-                  </select>
-                  {secQuestions[slot] !== null && (
-                    <input
-                      type="text"
-                      value={secAnswers[slot]}
-                      onChange={(e) => {
-                        const newAs = [...secAnswers];
-                        newAs[slot] = e.target.value;
-                        setSecAnswers(newAs);
-                      }}
-                      placeholder="Ditt svar..."
-                      maxLength={100}
-                      className="w-full bg-secondary text-secondary-foreground text-sm p-2 rounded-lg border-none outline-none focus:ring-2 focus:ring-primary placeholder:text-muted-foreground"
-                    />
-                  )}
-                </div>
-              ))}
-
-              <button
-                onClick={handleSaveSecurityQuestions}
-                disabled={!allSecFilled || secSaving}
-                className="w-full py-2 bg-primary text-primary-foreground text-sm font-semibold rounded-lg disabled:opacity-40 hover:opacity-90 transition-opacity flex items-center justify-center gap-1"
-              >
-                {secSaving ? (
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                ) : secSaved ? (
-                  <><Check className="w-4 h-4" /> Sparade!</>
-                ) : (
-                  secHasExisting ? "Uppdatera säkerhetsfrågor" : "Spara säkerhetsfrågor"
-                )}
-              </button>
-            </div>
-          )}
-        </div>
-      )}
-
       {/* Email for password recovery */}
       {userId && (
         <div className="border-t border-border pt-2">
@@ -718,7 +585,7 @@ const SettingsPanel = ({ userId, isAdmin, isHonorary = false, category = "all", 
 
       </>)}
 
-      {inCategory("permissions") && userId && SHOW_STRAVA_INTEGRATION && (
+      {inCategory("permissions") && userId && stravaAvailable && (
         <div className="border-t border-border pt-2">
           <div className="flex flex-col gap-3 py-2 sm:flex-row sm:items-start sm:justify-between">
             <div className="flex min-w-0 items-start gap-2">
@@ -761,7 +628,7 @@ const SettingsPanel = ({ userId, isAdmin, isHonorary = false, category = "all", 
             ) : (
               <button
                 type="button"
-                onClick={handleConnectStrava}
+                onClick={() => handleConnectStrava()}
                 disabled={stravaConnecting || stravaLoading}
                 className="flex min-h-9 w-full items-center justify-center gap-1 rounded-md bg-primary px-2.5 py-2 text-xs font-semibold text-primary-foreground hover:opacity-90 disabled:opacity-50 sm:w-auto"
               >
@@ -798,6 +665,7 @@ const SettingsPanel = ({ userId, isAdmin, isHonorary = false, category = "all", 
           {stravaSyncMessage && (
             <p className="pb-2 text-xs text-muted-foreground">{stravaSyncMessage}</p>
           )}
+          {stravaConnected && <StravaExportControls userId={userId} onReconnect={() => handleConnectStrava(true)} />}
         </div>
       )}
       {inCategory("privacy") && userId && <PrivacySocialSettings userId={userId} />}

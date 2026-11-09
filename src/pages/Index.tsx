@@ -3,6 +3,7 @@ import { listenWidgetLaunch, syncWidgetWeek } from "@/lib/nutritionWidget";
 import AppBanner from "@/components/admin/AppBanner";
 import { lazyRetry } from "@/lib/lazyRetry";
 import { useState, useEffect, useCallback, useRef, lazy, Suspense } from "react";
+import WeeklySummaryCard from "@/components/WeeklySummaryCard";
 import { supabase } from "@/integrations/supabase/client";
 import { Users, LogOut, Bell, BarChart3, MessageCircle, Dumbbell, Calculator, HelpCircle, Apple, Home } from "lucide-react";
 import { APP_VERSION } from "@/lib/version";
@@ -1086,6 +1087,9 @@ const Index = () => {
               />
             ) : (
               <PullToRefresh onRefresh={() => setRefreshKeys((k) => ({ ...k, stats: k.stats + 1 }))}>
+                <div className="mb-4">
+                  <WeeklySummaryCard key={`week-${refreshKeys.stats}`} userId={user.id} />
+                </div>
                 <button
                   onClick={() => setWeeklyReport("latest")}
                   className="w-full mb-4 flex items-center justify-between gap-3 rounded-2xl bg-card shadow-soft px-4 py-3 text-left active:scale-[0.99] transition-transform"

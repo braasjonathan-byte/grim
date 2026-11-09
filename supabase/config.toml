@@ -1,8 +1,5 @@
 project_id = "gnhbkevtoajzdpsengki"
 
-[functions.reset-password]
-verify_jwt = false
-
 [functions.exercise-gif]
 verify_jwt = false
 
@@ -58,6 +55,9 @@ verify_jwt = false
 verify_jwt = false
 
 [functions.strava-sync]
+verify_jwt = false
+
+[functions.strava-upload]
 verify_jwt = false
 [functions.generate-route]
 verify_jwt = true
