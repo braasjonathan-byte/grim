@@ -363,26 +363,8 @@ const SettingsPanel = ({ userId, isAdmin, isHonorary = false, category = "all", 
         </div>
       )}
 
-      {inCategory("appearance") && (<>
-      {/* Spotify widget toggle */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <Music className="w-4 h-4 text-primary" />
-          <span className="text-sm">Visa Spotify i träningsvyn</span>
-        </div>
-        <button
-          onClick={() => {
-            const next = localStorage.getItem("gymberget_spotify_widget") !== "true";
-            localStorage.setItem("gymberget_spotify_widget", next ? "true" : "false");
-            setSpotifyWidget(next);
-          }}
-          className={`relative w-11 h-6 rounded-full transition-colors ${spotifyWidget ? "bg-primary" : "bg-secondary border border-border"}`}
-        >
-          <span className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full transition-transform ${spotifyWidget ? "translate-x-5 bg-primary-foreground" : "translate-x-0 bg-muted-foreground"}`} />
-        </button>
-      </div>
-
       {/* Samlade visningsval för Statistik */}
+      {inCategory("stats") && (
       <section className="rounded-2xl border border-border/60 bg-card p-3 space-y-4">
         <div className="flex items-center gap-3">
           <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
