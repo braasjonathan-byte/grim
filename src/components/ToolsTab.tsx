@@ -30,6 +30,7 @@ import {
   ShieldCheck,
   Bell,
   BarChart3,
+  Dumbbell,
 } from "lucide-react";
 import { useToolLayout, applyOrder, move } from "@/hooks/useToolLayout";
 import type { LucideIcon } from "lucide-react";
@@ -107,7 +108,8 @@ interface ToolGroup {
 const SETTINGS_CATEGORIES: { id: SettingsCategory; title: string; subtitle: string; icon: LucideIcon }[] = [
   { id: "profile", title: "Profil/kroppsdata", subtitle: "Personuppgifter, kroppsvärden och träningsplaner", icon: UserRound },
   { id: "account", title: "Konto", subtitle: "Lösenord, säkerhet, köp och kontouppgifter", icon: KeyRound },
-  { id: "appearance", title: "Tema", subtitle: "Färger, visning, ljud och appens funktioner", icon: Palette },
+  { id: "training", title: "Träning", subtitle: "Periodisk fasta, ljud, GPS och appens moduler", icon: Dumbbell },
+  { id: "appearance", title: "Tema", subtitle: "Färger och appens utseende", icon: Palette },
   { id: "stats", title: "Statistik", subtitle: "Sektioner, viktkurva och konditionsövningar", icon: BarChart3 },
   { id: "privacy", title: "Integritet", subtitle: "Delning, synlighet och blockeringar", icon: ShieldCheck },
   { id: "permissions", title: "Behörigheter", subtitle: "Notiser, biometri och enhetsåtkomst", icon: Bell },
@@ -571,7 +573,7 @@ const ToolsTab = ({ userId, isAdmin, isHonorary, userRole, onViewUserPlan, onLog
               {settingsCategory === "account" && <div data-supporter-section><SupporterButton userId={userId} /></div>}
               <SettingsPanel category={settingsCategory} userId={userId} isAdmin={isAdmin} isHonorary={isHonorary} onStartPlan={onStartPlan} onViewUserPlan={onViewUserPlan} />
               {settingsCategory === "permissions" && <NotificationSettings userId={userId} />}
-              {settingsCategory === "appearance" && <div className="rounded-2xl bg-card border border-border/40 p-4"><ModuleSettings /></div>}
+              {settingsCategory === "training" && <div className="rounded-2xl bg-card border border-border/40 p-4"><ModuleSettings /></div>}
             </div>
           ) : subView === "helpers" ? (
             <div className="space-y-3">
