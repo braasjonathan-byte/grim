@@ -944,15 +944,13 @@ const contrast = (a: number, b: number) => (Math.max(a, b) + 0.05) / (Math.min(a
 /** Säkerställer stark kontrast (≥ 7:1) för text på knappfärgerna i alla teman. */
 export function enforceButtonContrast(root: HTMLElement) {
   const cs = getComputedStyle(root);
-  for (const name of ["secondary", "primary", "accent", "muted"]) {
-    const fgKey = name === "muted" ? "--muted-foreground" : `--${name}-foreground`;
+  for (const name of ["secondary", "primary", "accent"]) {
+    const fgKey = `--${name}-foreground`;
     const bg = tokenLuminance(cs.getPropertyValue(`--${name}`));
     if (bg === null) continue;
     const fg = tokenLuminance(cs.getPropertyValue(fgKey));
-    const needed = name === "muted" ? 4.5 : 7;
-    if (fg !== null && contrast(bg, fg) >= needed) continue;
+    if (fg !== null && contrast(bg, fg) >= 7) continue;
     const dark = contrast(bg, 0) >= contrast(bg, 1);
-    if (name === "muted") continue; // muted-foreground används även på bakgrund; rör ej
     root.style.setProperty(fgKey, dark ? "0 0% 4%" : "0 0% 98%");
   }
 }
