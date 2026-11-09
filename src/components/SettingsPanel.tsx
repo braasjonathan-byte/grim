@@ -47,7 +47,7 @@ export const SECURITY_QUESTIONS = [
   "Vad är ditt favoritlag?",
 ];
 
-export type SettingsCategory = "profile" | "account" | "appearance" | "stats" | "privacy" | "permissions";
+export type SettingsCategory = "profile" | "account" | "training" | "appearance" | "stats" | "privacy" | "permissions";
 
 interface SettingsPanelProps {
   userId?: string;

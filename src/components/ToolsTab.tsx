@@ -30,6 +30,7 @@ import {
   ShieldCheck,
   Bell,
   BarChart3,
+  Dumbbell,
 } from "lucide-react";
 import { useToolLayout, applyOrder, move } from "@/hooks/useToolLayout";
 import type { LucideIcon } from "lucide-react";
