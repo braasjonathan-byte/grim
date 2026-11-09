@@ -3227,6 +3227,7 @@ export type Database = {
       }
       purchase_avatar_item: { Args: { p_item_id: string }; Returns: boolean }
       relock_achievements: { Args: { p_ids: string[] }; Returns: number }
+      resolve_login_user: { Args: { _login: string }; Returns: string }
       search_users_by_nickname: {
         Args: { requesting_user_id: string; search_term: string }
         Returns: {
