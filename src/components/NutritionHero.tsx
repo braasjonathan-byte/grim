@@ -76,7 +76,7 @@ export default function NutritionHero({ kcal, burned, protein, fat, carbs, fiber
             <PopoverTrigger asChild>
               <button type="button" className="text-[10px] text-muted-foreground font-medium">Förbränt ⓘ</button>
             </PopoverTrigger>
-            <PopoverContent className="w-64 text-xs">Uppskattade kalorier från dagens genomförda träningspass. De visas bara som information — ditt dagsmål bygger redan på den aktivitetsnivå du valt under Mål, så träningen räknas inte dubbelt.</PopoverContent>
+            <PopoverContent className="w-64 text-xs">Uppskattade kalorier från dagens genomförda träningspass (samma uppskattning som i Träning; 75 kg används om du inte angett din vikt). Förbränningen räknas INTE in i "kvar" – ditt dagsmål bygger redan på den aktivitetsnivå du valt under Mål, så träningen räknas inte dubbelt.</PopoverContent>
           </Popover>
         </div>
       </div>

@@ -98,6 +98,7 @@ import DayGpsRecorder from "@/components/workout/DayGpsRecorder";
 import { ConditioningEditCard, ConditioningHMSInput, condInputCls, condUnitCls } from "@/components/workout/ConditioningEditCard";
 import { DAYS, addUtcDays, daysBetweenCalendarDates, formatDayDisplay, getBaseDay, getDayIndex, getMonday, getPlanDayDateValue, getSessionColor, getSessionIcon, getTodayInfo, getWeekdayFromDayKey, isAssistedBodyweightExercise, isDailyChallengeLabel, normalizeExerciseKey, parseDateKey, planHasAnyExercise, resolveTodayDayIndex, sameWorkoutDay, sanitizeCopiedLoggedWeights, suggestSessionName, toLocalDateKey, toUtcDateKey } from "@/lib/workoutDayUtils";
 import { estimateCalories, getPlanDayDate } from "@/lib/workoutCalories";
+import { DEFAULT_BURN_WEIGHT_KG, estimateCompletionKcal } from "@/lib/workoutBurned";
 import { type LoggedSetInfo, parseExerciseWeight, getExerciseSetDataFromWeights, collectSetsForExercise, parseCondTempo, formatCondTempo, isStairMachine } from "@/lib/workoutSetData";
 
 const SHOW_STRAVA_INTEGRATION = false;
@@ -5307,29 +5308,23 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
                       </div>
                     {/* Calorie burn estimate */}
                     {isDone && plan.details && (
-                      profileWeight ? (() => {
+                      (() => {
                         const comp = completions[key];
                         const allDetails = plans.filter(p => p.week === plan.week && p.day === plan.day).map(p => p.details).filter(Boolean).join("\n");
-                        const cal = estimateCalories(allDetails || plan.details, comp?.logged_weights as Record<string, any> | null, comp?.logged_pulse || null, profileWeight, profileGender, profileAge);
+                        // Samma uppskattning som Kost → "Förbränt" (75 kg om vikt saknas).
+                        const cal = Math.round(estimateCompletionKcal(allDetails || plan.details, comp as any, profileWeight || DEFAULT_BURN_WEIGHT_KG, profileGender, profileAge));
                         return cal > 0 ? (
                           <div className="bg-destructive/10 border border-destructive/20 rounded-lg px-3 py-2 flex items-center gap-2">
                             <Flame className="w-4 h-4 flex-shrink-0 text-primary" />
                             <div className="flex-1">
-                              <span className="text-xs font-semibold text-primary">~{cal} kcal</span>
+                              <span className="text-xs font-semibold text-primary">≈{cal} kcal</span>
                               <span className="text-[10px] ml-1.5 text-primary">
-                                {comp?.logged_pulse ? "baserat på puls, vikt & kön" : "uppskattning baserat på vikt"}
+                                {!profileWeight ? `uppskattat med ${DEFAULT_BURN_WEIGHT_KG} kg – ange din vikt i Profil för exaktare värde` : comp?.logged_pulse ? "baserat på puls, vikt & kön" : "uppskattning baserat på vikt"}
                               </span>
                             </div>
                           </div>
                         ) : null;
-                      })() : (
-                        <div className="bg-muted/50 border border-border rounded-lg px-3 py-2 flex items-center gap-2">
-                          <Flame className="w-3.5 h-3.5 text-muted-foreground flex-shrink-0" />
-                          <p className="text-[10px] text-muted-foreground">
-                            Lägg till din vikt i profilen för att se kaloriförbrukning
-                          </p>
-                        </div>
-                      )
+                      })()
                     )}
 
                   {/* Passåtgärder längst ned i träningskortet */}
@@ -8896,29 +8891,23 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
                     )}
                     {/* Calorie burn estimate */}
                     {isDone && plan.details && (
-                      profileWeight ? (() => {
+                      (() => {
                         const comp = completions[key];
                         const allDetails = plans.filter(p => p.week === plan.week && sameWorkoutDay(p.day, plan.day)).map(p => p.details).filter(Boolean).join("\n");
-                        const cal = estimateCalories(allDetails || plan.details, comp?.logged_weights as Record<string, any> | null, comp?.logged_pulse || null, profileWeight, profileGender, profileAge);
+                        // Samma uppskattning som Kost → "Förbränt" (75 kg om vikt saknas).
+                        const cal = Math.round(estimateCompletionKcal(allDetails || plan.details, comp as any, profileWeight || DEFAULT_BURN_WEIGHT_KG, profileGender, profileAge));
                         return cal > 0 ? (
                           <div className="bg-destructive/10 border border-destructive/20 rounded-lg px-3 py-2 flex items-center gap-2">
                             <Flame className="w-4 h-4 flex-shrink-0 text-primary" />
                             <div className="flex-1">
-                              <span className="text-xs font-semibold text-primary">~{cal} kcal</span>
+                              <span className="text-xs font-semibold text-primary">≈{cal} kcal</span>
                               <span className="text-[10px] ml-1.5 text-primary">
-                                {comp?.logged_pulse ? "baserat på puls, vikt & kön" : "uppskattning baserat på vikt"}
+                                {!profileWeight ? `uppskattat med ${DEFAULT_BURN_WEIGHT_KG} kg – ange din vikt i Profil för exaktare värde` : comp?.logged_pulse ? "baserat på puls, vikt & kön" : "uppskattning baserat på vikt"}
                               </span>
                             </div>
                           </div>
                         ) : null;
-                      })() : (
-                        <div className="bg-muted/50 border border-border rounded-lg px-3 py-2 flex items-center gap-2">
-                          <Flame className="w-3.5 h-3.5 text-muted-foreground flex-shrink-0" />
-                          <p className="text-[10px] text-muted-foreground">
-                            Lägg till din vikt i profilen för att se kaloriförbrukning
-                          </p>
-                        </div>
-                      )
+                      })()
                     )}
 
                   {/* Passåtgärder längst ned i träningskortet */}
