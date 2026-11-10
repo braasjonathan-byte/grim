@@ -1,4 +1,5 @@
 import StrengthSection from "@/components/StrengthSection";
+import { formatTons, getWeightComparison } from "@/lib/weightComparisons";
 import { sessionVolumeKg } from "@/lib/checkedSets";
 import { WORKOUTS_CHANGED_EVENT } from "@/lib/workoutHistory";
 import NutritionTrendCard from "./NutritionTrendCard";
@@ -91,54 +92,6 @@ const motivationalQuotes = [
 "Sista repet är det som räknas mest 🔥",
 "Träna som ett djur, återhämta som en proffs 🐺"];
 
-
-const weightComparisons: {maxTons: number;text: string;}[] = [
-{ maxTons: 5, text: "en afrikansk elefant 🐘" },
-{ maxTons: 10, text: "en T-Rex 🦖" },
-{ maxTons: 15, text: "en skolbuss 🚌" },
-{ maxTons: 20, text: "en lastbil 🚛" },
-{ maxTons: 25, text: "en stridsvagn 🪖" },
-{ maxTons: 30, text: "en brandbil 🚒" },
-{ maxTons: 35, text: "en knölval 🐋" },
-{ maxTons: 40, text: "en semitrailer 🚛" },
-{ maxTons: 45, text: "en spermaval 🐳" },
-{ maxTons: 50, text: "en grävmaskin 🏗️" },
-{ maxTons: 55, text: "en betongblandare 🏗️" },
-{ maxTons: 60, text: "en vikingaskepp ⛵" },
-{ maxTons: 65, text: "ett rymdskepp Sojuz 🚀" },
-{ maxTons: 70, text: "en blåval 🐳" },
-{ maxTons: 75, text: "ett Boeing 737 ✈️" },
-{ maxTons: 80, text: "en ubåt 🛥️" },
-{ maxTons: 85, text: "ett lokomotiv 🚂" },
-{ maxTons: 90, text: "Frihetsgudinnan 🗽" },
-{ maxTons: 95, text: "ett rymdfärjeprogram 🚀" },
-{ maxTons: 100, text: "ett hus 🏠" },
-{ maxTons: 150, text: "en jumbojet 747 ✈️" },
-{ maxTons: 200, text: "en NASA-raket 🚀" },
-{ maxTons: 250, text: "ett vindkraftverk 🌬️" },
-{ maxTons: 300, text: "en Boeing 777 ✈️" },
-{ maxTons: 350, text: "en järnvägsvagn 🚃" },
-{ maxTons: 400, text: "ett passagerarfartyg ⛴️" },
-{ maxTons: 450, text: "en jättesequoia 🌲" },
-{ maxTons: 500, text: "ett kryssningsfartyg 🚢" },
-{ maxTons: 550, text: "en rymdstation ISS 🛸" },
-{ maxTons: 600, text: "ett Airbus A380 ✈️" },
-{ maxTons: 650, text: "en oljetanker 🛢️" },
-{ maxTons: 700, text: "en ubåt Gotland 🛥️" },
-{ maxTons: 750, text: "ett pansarskepp ⚓" },
-{ maxTons: 800, text: "en pyramid-block × 100 🏛️" },
-{ maxTons: 850, text: "en jättemeteor ☄️" },
-{ maxTons: 900, text: "en kolossalstaty 🗿" },
-{ maxTons: 950, text: "en islandsfärja 🚢" },
-{ maxTons: 1000, text: "Eiffeltornet 🗼" },
-{ maxTons: Infinity, text: "en asteroid 🌑" }];
-
-
-const getWeightComparison = (tons: number): string => {
-  if (tons <= 0) return "";
-  const match = weightComparisons.find((w) => tons <= w.maxTons);
-  return match ? match.text : weightComparisons[weightComparisons.length - 1].text;
-};
 
 const DailyQuoteCard = () => {
   const dayOfYear = Math.floor(
@@ -775,9 +728,9 @@ const WorkoutStats = ({ userId }: WorkoutStatsProps) => {
         </div>
         <div className="rounded-2xl p-3 text-center bg-card shadow-soft">
           <Weight className="w-5 h-5 text-primary mx-auto mb-1" />
-          <p className="text-2xl font-black">{totalLiftedTons} <span className="text-xs font-normal text-muted-foreground">ton</span></p>
+          <p className="text-2xl font-black">{formatTons(totalLiftedTons)} <span className="text-xs font-normal text-muted-foreground">ton</span></p>
           <p className="text-[10px] text-muted-foreground">Lyft totalt</p>
-          {totalLiftedTons > 0 &&
+          {getWeightComparison(totalLiftedTons) &&
           <p className="text-[9px] text-muted-foreground mt-0.5">≈ {getWeightComparison(totalLiftedTons)}</p>
           }
         </div>

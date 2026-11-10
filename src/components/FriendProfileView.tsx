@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
+import { formatTons, getWeightComparison } from "@/lib/weightComparisons";
 import { supabase } from "@/integrations/supabase/client";
 import { Loader2, X, Star, User, CheckCircle, Swords, Footprints, Weight, Instagram, Music, ExternalLink, Crown, Shield, Ban } from "lucide-react";
 import { toast } from "sonner";
@@ -37,34 +38,6 @@ interface CompletionRow {
   day: string;
   updated_at: string;
 }
-
-const weightComparisons: { maxTons: number; text: string }[] = [
-  { maxTons: 0.5, text: "en grand piano 🎹" },
-  { maxTons: 1, text: "en liten häst 🐴" },
-  { maxTons: 1.5, text: "en flodhäst 🦛" },
-  { maxTons: 2, text: "en Fiat 500 🚗" },
-  { maxTons: 3, text: "en noshörning 🦏" },
-  { maxTons: 5, text: "en afrikansk elefant 🐘" },
-  { maxTons: 8, text: "en T-Rex 🦖" },
-  { maxTons: 12, text: "en skolbuss 🚌" },
-  { maxTons: 20, text: "en lastbil 🚛" },
-  { maxTons: 30, text: "en stridsvagn 🪖" },
-  { maxTons: 50, text: "en spermaval 🐋" },
-  { maxTons: 80, text: "en blåval 🐳" },
-  { maxTons: 120, text: "ett Boeing 737 ✈️" },
-  { maxTons: 200, text: "Frihetsgudinnan 🗽" },
-  { maxTons: 500, text: "ett lyxkryssningsfartyg ⛴️" },
-  { maxTons: 1000, text: "Eiffeltornet 🗼" },
-  { maxTons: 5000, text: "ett rymdfärjeprogram 🚀" },
-  { maxTons: 50000, text: "Titanic 🚢" },
-  { maxTons: Infinity, text: "en asteroid 🌑" },
-];
-
-const getWeightComparison = (tons: number): string => {
-  if (tons <= 0) return "";
-  const match = weightComparisons.find((w) => tons <= w.maxTons);
-  return match ? match.text : weightComparisons[weightComparisons.length - 1].text;
-};
 
 const calcTotalLiftedKg = (completions: CompletionRow[]): number => {
   let total = 0;
@@ -443,9 +416,9 @@ const FriendProfileView = ({ friendUserId, nickname, onClose }: FriendProfileVie
               </button>
              <button onClick={cyclePeriod} className="bg-secondary rounded-xl p-3 text-center active:scale-95 transition-transform">
                 <Weight className="w-4 h-4 text-primary mx-auto mb-1" />
-                <p className="text-lg font-bold">{stats.liftedTons} <span className="text-xs font-normal text-muted-foreground">ton</span></p>
+                <p className="text-lg font-bold">{formatTons(stats.liftedTons)} <span className="text-xs font-normal text-muted-foreground">ton</span></p>
                 <p className="text-[10px] text-muted-foreground">Lyft ({periodLabel})</p>
-                {stats.liftedTons > 0 && (
+                {getWeightComparison(stats.liftedTons) && (
                   <p className="text-[11px] text-muted-foreground mt-0.5">≈ {getWeightComparison(stats.liftedTons)}</p>
                 )}
               </button>
