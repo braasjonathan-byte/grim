@@ -30,7 +30,6 @@ if (!/android:screenOrientation="portrait"/.test(xml)) {
 const PERMS = [
   "android.permission.ACCESS_FINE_LOCATION",
   "android.permission.ACCESS_COARSE_LOCATION",
-  "android.permission.ACCESS_BACKGROUND_LOCATION",
   "android.permission.FOREGROUND_SERVICE",
   "android.permission.FOREGROUND_SERVICE_LOCATION",
   "android.permission.POST_NOTIFICATIONS",
@@ -51,6 +50,39 @@ const FEATURES = [
 ];
 
 let changed = false;
+
+// Play-granskning (åtgärd 26): GPS-pass körs som foreground service (GrimGpsService,
+// foregroundServiceType="location") och behöver inte bakgrundsplats.
+{
+  const bg = /\s*<uses-permission\b[^>]*android:name="android\.permission\.ACCESS_BACKGROUND_LOCATION"[^>]*\/>/g;
+  if (bg.test(xml)) {
+    xml = xml.replace(bg, "");
+    changed = true;
+    console.log("[patch-android-manifest] Removed ACCESS_BACKGROUND_LOCATION");
+  }
+}
+if (!/xmlns:tools=/.test(xml)) {
+  xml = xml.replace(/<manifest\b([^>]*)>/, `<manifest$1 xmlns:tools="http://schemas.android.com/tools">`);
+  changed = true;
+}
+// Legacy Bluetooth bara upp till Android 11, och BLE-scan används inte för plats.
+const PERM_ATTRS = {
+  "android.permission.BLUETOOTH": 'android:maxSdkVersion="30"',
+  "android.permission.BLUETOOTH_ADMIN": 'android:maxSdkVersion="30"',
+  "android.permission.BLUETOOTH_SCAN": 'android:usesPermissionFlags="neverForLocation" tools:targetApi="s"',
+};
+for (const [name, attrs] of Object.entries(PERM_ATTRS)) {
+  const re = new RegExp(`<uses-permission\\b[^>]*android:name="${name.replace(/\./g, "\\.")}"[^>]*\\/>`, "g");
+  const tag = `<uses-permission android:name="${name}" ${attrs} />`;
+  if (re.test(xml)) {
+    const next = xml.replace(re, tag);
+    if (next !== xml) { xml = next; changed = true; }
+  } else {
+    xml = xml.replace(/<\/manifest>/, `    ${tag}\n</manifest>`);
+    changed = true;
+  }
+}
+
 for (const p of PERMS) {
   if (!xml.includes(`android:name="${p}"`)) {
     const tag = `    <uses-permission android:name="${p}" />`;

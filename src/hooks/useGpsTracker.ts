@@ -247,14 +247,9 @@ const startTracking = async (ownerId?: string): Promise<boolean> => {
         });
         return false;
       }
-      // After foreground is granted, nudge the OS to prompt for "Allow all the time"
-      // (background location) so recording survives the screen turning off.
-      // Requires ACCESS_BACKGROUND_LOCATION in AndroidManifest.xml.
-      try {
-        await Geolocation.requestPermissions({ permissions: ["location"] });
-      } catch (err) {
-        console.warn("Background geolocation request failed:", err);
-      }
+      // Ingen begäran om bakgrundsplats: GPS-pass körs via GrimGpsService
+      // (foreground service, foregroundServiceType="location") som fortsätter
+      // med skärmen avstängd utan ACCESS_BACKGROUND_LOCATION.
     } catch (err) {
       console.error("Native geolocation permission error:", err);
     }

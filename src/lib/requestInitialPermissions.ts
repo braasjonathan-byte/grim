@@ -28,20 +28,11 @@ export async function requestInitialPermissions(): Promise<void> {
       console.warn("Camera permission request failed:", err);
     }
 
-    // Geolocation — request foreground first, then background ("Allow all the time")
-    // so workouts can keep recording with the screen off.
+    // Geolocation — bara förgrundsplats. GPS-pass körs via en foreground service
+    // (GrimGpsService) och behöver inte "Tillåt alltid"/ACCESS_BACKGROUND_LOCATION.
     try {
       const { Geolocation } = await import("@capacitor/geolocation");
-      const fg = await Geolocation.requestPermissions({ permissions: ["location", "coarseLocation"] });
-      if (fg.location === "granted" || fg.coarseLocation === "granted") {
-        // A second call after foreground grant triggers the OS "Allow all the time"
-        // prompt on Android 10+ (requires ACCESS_BACKGROUND_LOCATION in AndroidManifest).
-        try {
-          await Geolocation.requestPermissions({ permissions: ["location"] });
-        } catch (err) {
-          console.warn("Background geolocation permission request failed:", err);
-        }
-      }
+      await Geolocation.requestPermissions({ permissions: ["location", "coarseLocation"] });
     } catch (err) {
       console.warn("Geolocation permission request failed:", err);
     }
