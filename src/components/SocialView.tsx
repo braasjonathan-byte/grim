@@ -24,6 +24,7 @@ import FriendChallenges from "@/components/FriendChallenges";
 import ReportDialog from "@/components/ReportDialog";
 import { blockUser, muteUser, loadMutedIds, loadPrivacySettings } from "@/lib/socialPrivacy";
 import { Flag, VolumeX, Ban, Eye } from "lucide-react";
+import { SocialImage } from "@/components/SocialImage";
 
 const FriendsView = lazyRetry(() => import("./FriendsView"));
 const ChatView = lazyRetry(() => import("./ChatView"));
@@ -1071,7 +1072,7 @@ const SocialView = ({ userId, isAdmin, isHonorary = false, friendActivities, unr
                 if (post.image_url) {
                   return (
                     <div className="px-3 pb-3">
-                      <img src={post.image_url} alt="" className="max-h-96 w-full rounded-2xl object-cover" loading="lazy" />
+                      <SocialImage src={post.image_url} alt="" className="max-h-96 w-full rounded-2xl object-cover" loading="lazy" />
                     </div>
                   );
                 }

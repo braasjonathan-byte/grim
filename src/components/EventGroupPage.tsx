@@ -7,6 +7,7 @@ import { sv } from "date-fns/locale";
 import { toast } from "sonner";
 import HonoraryBadge from "./HonoraryBadge";
 import FriendProfileView from "./FriendProfileView";
+import { SocialImage } from "@/components/SocialImage";
 
 interface EventGroupPageProps {
   groupId: string;
@@ -435,7 +436,7 @@ const EventGroupPage = ({ groupId, userId, isAdmin, onBack, onDeleted }: EventGr
               </div>
 
               {post.image_url && (
-                <img src={post.image_url} alt="" className="w-full max-h-96 object-cover" loading="lazy" />
+                <SocialImage src={post.image_url} alt="" className="w-full max-h-96 object-cover" loading="lazy" />
               )}
 
               {post.caption && <RenderCaption text={post.caption} />}

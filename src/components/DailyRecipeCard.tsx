@@ -8,6 +8,7 @@ import { toLocalDateKey } from "@/lib/dateUtils";
 import CuratedRecipesDialog from "@/components/CuratedRecipesDialog";
 import type { PickedItem } from "@/components/FoodPickerDialog";
 import { useToast } from "@/hooks/use-toast";
+import { SocialImage } from "@/components/SocialImage";
 
 type R = CuratedRecipe & { own?: boolean };
 
@@ -93,7 +94,7 @@ export default function DailyRecipeCard({ userId, isHonorary }: { userId: string
         <p className="text-xs text-muted-foreground">Inget recept matchar ditt mål ({GOAL_LABEL[goal as GoalType] ?? goal}) än. Spara egna recept under Kost → Recept så föreslår jag ett här.</p>
       ) : (
         <button type="button" onClick={() => setDetailOpen(true)} className="w-full text-left flex gap-3 items-center">
-          {pick.image_url && <img src={pick.image_url} alt={pick.name} className="w-20 h-20 rounded-xl object-cover shrink-0" loading="lazy" />}
+          {pick.image_url && <SocialImage src={pick.image_url} alt={pick.name} className="w-20 h-20 rounded-xl object-cover shrink-0" loading="lazy" />}
           <div className="min-w-0 space-y-0.5">
             <p className="text-sm font-semibold">{pick.name}</p>
             <p className="text-[11px] text-muted-foreground tabular-nums">{pick.kcal_per_serving} kcal · {pick.protein_g_per_serving} g protein · {pick.carbs_g_per_serving} g kolh. · {pick.fat_g_per_serving} g fett</p>

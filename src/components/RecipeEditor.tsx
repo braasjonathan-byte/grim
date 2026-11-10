@@ -11,6 +11,7 @@ import { useToast } from "@/hooks/use-toast";
 import { RECIPE_CATEGORIES, type CuratedRecipe } from "@/data/curatedRecipes";
 import { gramsForFood } from "@/lib/nutritionCalc";
 import { convertedIngredient, ingredientUnitOptions, type FoodMeasure } from "@/lib/recipeIngredientUnits";
+import { SocialImage } from "@/components/SocialImage";
 
 interface RecipeEditorProps {
   open: boolean;
@@ -278,7 +279,7 @@ export default function RecipeEditor({ open, onOpenChange, userId, onSaved, init
             <label className="text-xs font-medium">Bild</label>
             {imageUrl ? (
               <div className="relative mt-1">
-                <img src={imageUrl} alt="Receptbild" className="w-full h-40 object-cover rounded-xl" />
+                <SocialImage src={imageUrl} alt="Receptbild" className="w-full h-40 object-cover rounded-xl" />
                 <button type="button" onClick={() => setImageUrl(null)} aria-label="Ta bort bild"
                   className="absolute top-2 right-2 w-8 h-8 rounded-full bg-background/80 flex items-center justify-center"><X className="w-4 h-4" /></button>
               </div>

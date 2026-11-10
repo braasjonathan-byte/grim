@@ -8,6 +8,7 @@ import { PickedItem } from "./FoodPickerDialog";
 import { supabase } from "@/integrations/supabase/client";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ingredientAmountIn, ingredientUnitOptions, type FoodMeasure } from "@/lib/recipeIngredientUnits";
+import { SocialImage } from "@/components/SocialImage";
 
 interface Props {
   open: boolean;
@@ -197,7 +198,7 @@ export default function CuratedRecipesDialog({ open, onOpenChange, isHonorary, u
               ) : filtered.map((r) => (
                 <li key={r.id}>
                   <button onClick={() => pick(r)} className="w-full text-left p-3 hover:bg-accent flex justify-between gap-2 items-center">
-                    {(r as any).image_url && <img src={(r as any).image_url} alt="" className="w-10 h-10 rounded-lg object-cover shrink-0" />}
+                    {(r as any).image_url && <SocialImage src={(r as any).image_url} alt="" className="w-10 h-10 rounded-lg object-cover shrink-0" />}
                     <div className="min-w-0 flex-1">
                       <p className="text-sm font-medium truncate">{r.name}</p>
                       <p className="text-[10px] text-muted-foreground">{r.servings} port · {r.kcal_per_serving} kcal · {r.protein_g_per_serving}g protein</p>
@@ -223,7 +224,7 @@ export default function CuratedRecipesDialog({ open, onOpenChange, isHonorary, u
                 </button>
               </div>
             </div>
-            {(selected as any).image_url && <img src={(selected as any).image_url} alt={selected.name} className="w-full h-44 object-cover rounded-2xl" />}
+            {(selected as any).image_url && <SocialImage src={(selected as any).image_url} alt={selected.name} className="w-full h-44 object-cover rounded-2xl" />}
             {selected.image_credit && <p className="text-[9px] text-muted-foreground -mt-1 break-all">Foto: {selected.image_credit}</p>}
             <div className="bg-muted/40 rounded-2xl p-2 grid grid-cols-4 gap-1 text-center">
               <div><p className="text-[9px] text-muted-foreground">Kcal/p</p><p className="text-sm font-bold tabular-nums">{selected.kcal_per_serving}</p></div>

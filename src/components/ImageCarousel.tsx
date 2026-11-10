@@ -1,5 +1,6 @@
 import { useState, useRef } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
+import { SocialImage } from "@/components/SocialImage";
 
 interface CarouselImage {
   image_url: string;
@@ -18,7 +19,7 @@ const ImageCarousel = ({ images }: ImageCarouselProps) => {
   if (images.length === 1) {
     return (
       <div>
-        <img src={images[0].image_url} alt="" className="w-full max-h-96 object-cover" loading="lazy" />
+        <SocialImage src={images[0].image_url} alt="" className="w-full max-h-96 object-cover" loading="lazy" />
         {images[0].caption && (
           <p className="px-4 py-1.5 text-xs text-muted-foreground italic">{images[0].caption}</p>
         )}
@@ -42,7 +43,7 @@ const ImageCarousel = ({ images }: ImageCarouselProps) => {
           touchRef.current = null;
         }}
       >
-        <img
+        <SocialImage
           src={images[activeIdx].image_url}
           alt=""
           className="w-full max-h-96 object-cover transition-opacity duration-200"

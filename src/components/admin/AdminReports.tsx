@@ -3,6 +3,7 @@ import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
+import { SocialImage } from "@/components/SocialImage";
 
 type Report = { id: string; post_id: string | null; reported_user_id: string; reason: string; details: string | null; created_at: string };
 
@@ -50,7 +51,7 @@ export default function AdminReports() {
           <li key={r.id} className="rounded-xl bg-muted p-2 space-y-1">
             <p className="font-medium">{names[r.reported_user_id] || "Okänd"} · {r.reason}</p>
             {r.details && <p className="text-xs text-muted-foreground">{r.details}</p>}
-            {post?.image_url && <img src={post.image_url} alt="Rapporterat inlägg" className="w-full max-h-40 object-cover rounded-lg" />}
+            {post?.image_url && <SocialImage src={post.image_url} alt="Rapporterat inlägg" className="w-full max-h-40 object-cover rounded-lg" />}
             {post?.caption && <p className="text-xs">"{post.caption}"</p>}
             {r.post_id && !post && <p className="text-xs text-muted-foreground">Inlägget finns inte längre.</p>}
             <div className="flex gap-2">

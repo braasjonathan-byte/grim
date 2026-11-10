@@ -635,6 +635,7 @@ const ChatView = ({ userId, isAdmin = false, isPremium = false, initialFriendId 
 // Grim Support Conversation component
 import { ArrowLeft, Send, Crown as CrownIcon, ImagePlus } from "lucide-react";
 import { toast } from "sonner";
+import { SocialImage } from "@/components/SocialImage";
 
 const QUICK_REPLIES: { question: string; answer: string }[] = [
   {
@@ -913,7 +914,7 @@ const GrimSupportConversation = ({ userId, isAdmin, targetNickname, targetAvatar
                       </p>
                     )}
                     {msg.message.startsWith("[bild]") ? (
-                      <img src={msg.message.replace("[bild]", "")} alt="Bild" className="max-w-full rounded-lg max-h-60 cursor-pointer" onClick={() => window.open(msg.message.replace("[bild]", ""), "_blank")} />
+                      <SocialImage src={msg.message.replace("[bild]", "")} alt="Bild" className="max-w-full rounded-lg max-h-60 cursor-pointer" onClick={(e) => window.open((e.currentTarget as HTMLImageElement).src, "_blank")} />
                     ) : (
                       <p className="text-sm whitespace-pre-wrap break-words">{msg.message}</p>
                     )}
