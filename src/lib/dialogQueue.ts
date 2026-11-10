@@ -5,9 +5,10 @@ import { useEffect, useState } from "react";
  * Ordning: välkomstflöde → supporterinfo → nyheter (changelog) → admin-nyhet → installationstips.
  * Allt utom välkomstflödet väntar dessutom tills introt är klart (se setIntroReady).
  */
-export type DialogSlot = "tour" | "grim-info" | "whats-new" | "news" | "install";
+export type DialogSlot = "required" | "tour" | "grim-info" | "whats-new" | "news" | "install";
 
-const ORDER: DialogSlot[] = ["tour", "grim-info", "whats-new", "news", "install"];
+// "required" = obligatoriska steg (byt lösenord, återställnings-e-post) – går alltid först.
+const ORDER: DialogSlot[] = ["required", "tour", "grim-info", "whats-new", "news", "install"];
 const wanting = new Set<DialogSlot>();
 let introReady = false;
 const listeners = new Set<() => void>();
@@ -16,7 +17,7 @@ const emit = () => listeners.forEach((fn) => fn());
 const activeSlot = (): DialogSlot | null => {
   for (const slot of ORDER) {
     if (!wanting.has(slot)) continue;
-    if (slot !== "tour" && !introReady) continue;
+    if (slot !== "tour" && slot !== "required" && !introReady) continue;
     return slot;
   }
   return null;

@@ -27,7 +27,7 @@ type Mode = "welcome" | "nutrition" | null;
 const TourPrompt = ({ userId }: TourPromptProps) => {
   const [mode, setMode] = useState<Mode>(null);
   // Välkomstflödet står först i dialogkön; andra automatiska dialoger väntar.
-  useDialogTurn("tour", mode !== null);
+  const myTurn = useDialogTurn("tour", mode !== null);
   const [busy, setBusy] = useState(false);
   const [stage, setStage] = useState<"goal" | "tour">("goal");
   const [goal, setGoalState] = useState<Goal | null>(null);
@@ -91,7 +91,7 @@ const TourPrompt = ({ userId }: TourPromptProps) => {
     }, 200);
   };
 
-  if (!mode) return null;
+  if (!mode || !myTurn) return null;
 
   return (
     <div className="fixed inset-0 z-[160] bg-background/80 backdrop-blur-sm flex items-end sm:items-center justify-center px-4 pb-24 sm:pb-4 animate-fade-in">

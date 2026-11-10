@@ -344,6 +344,8 @@ const Index = () => {
   const recoveryEmailGate = useRecoveryEmailGate(user?.id ?? null);
   const showRequiredEmail =
     Boolean(user?.id) && accessLoadedFor === user?.id && recoveryEmailGate.open && !forceChangePassword;
+  // Obligatoriska steg står först i dialogkön; välkomstflödet m.fl. väntar.
+  useDialogTurn("required", showRequiredEmail || forceChangePassword || showChangePassword);
 
   usePushNotifications(user?.id ?? null);
   useNativePush(user?.id ?? null);
