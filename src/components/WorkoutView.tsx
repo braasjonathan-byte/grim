@@ -4957,8 +4957,9 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
                           }
                           <div className="grid grid-cols-3 gap-2">
                             <div>
-                              <label className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1 block">Set</label>
+                              <label htmlFor="add-ex-sets" className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1 block">Set</label>
                               <input
+                                id="add-ex-sets"
                                 type="text"
                                 inputMode="numeric"
                                 min="1"
@@ -4967,8 +4968,9 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
                                 className="w-full bg-muted/50 text-foreground text-sm px-3 py-2.5 rounded-xl border border-transparent outline-none focus:bg-background focus:border-primary/40 focus:ring-2 focus:ring-primary/20 transition-colors text-center font-bold" />
                             </div>
                             <div>
-                              <label className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1 block cursor-pointer hover:text-primary" onClick={() => setRepsUnit(u => u === "reps" ? "sek" : "reps")}>{repsUnit === "sek" ? "Sek ⇄" : "Reps ⇄"}</label>
+                              <label htmlFor="add-ex-reps" className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1 block cursor-pointer hover:text-primary" onClick={() => setRepsUnit(u => u === "reps" ? "sek" : "reps")}>{repsUnit === "sek" ? "Sek ⇄" : "Reps ⇄"}</label>
                               <input
+                                id="add-ex-reps"
                                 type="text"
                                 inputMode="numeric"
                                 min="1"
@@ -4977,9 +4979,11 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
                                 className="w-full bg-muted/50 text-foreground text-sm px-3 py-2.5 rounded-xl border border-transparent outline-none focus:bg-background focus:border-primary/40 focus:ring-2 focus:ring-primary/20 transition-colors text-center font-bold" />
                             </div>
                             <div>
-                              <label className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1 block">Vikt (kg)</label>
+                              <label htmlFor="add-ex-weight" className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1 block">Vikt (kg)</label>
                               <input
+                                id="add-ex-weight"
                                 type="text"
+                                inputMode="decimal"
                                 value={weightInput}
                                 onChange={(e) => setWeightInput(e.target.value)}
                                 onKeyDown={(e) => e.key === "Enter" && addExerciseWithWeight(weightInput.trim() || null)}
