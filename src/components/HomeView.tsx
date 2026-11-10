@@ -118,18 +118,33 @@ interface HomeViewProps {
   isHonorary?: boolean;
 }
 
+// Senast hämtade Hem-data per användare (åtgärd 23): vid flikbyte visas den direkt
+// i stället för skelett, och uppdateras i bakgrunden när den nya hämtningen är klar.
+type HomeCache = {
+  nickname: string;
+  planStartDate: string | null;
+  plans: PlanRow[];
+  completions: CompletionRow[];
+  achievementCount: number;
+  latestAchievement: { id: string; unlocked_at: string } | null;
+};
+const homeCache = new Map<string, HomeCache>();
+const archivedCache = new Map<string, string[]>();
+const untrainedCache = new Map<string, string[]>();
+
 const HomeView = ({ userId, onNavigate, isHonorary = false }: HomeViewProps) => {
+  const cached = homeCache.get(userId);
   // Visar en ofarlig Samsung Health-demonstration i Lovables förhandsvisning.
   const healthPreview = import.meta.env.DEV;
-  const [loading, setLoading] = useState(true);
-  const [nickname, setNickname] = useState<string>("");
-  const [planStartDate, setPlanStartDate] = useState<string | null>(null);
-  const [plans, setPlans] = useState<PlanRow[]>([]);
-  const [completions, setCompletions] = useState<CompletionRow[]>([]);
-  const [latestAchievement, setLatestAchievement] = useState<{ id: string; unlocked_at: string } | null>(null);
-  const [achievementCount, setAchievementCount] = useState(0);
-  const [untrainedRegions, setUntrainedRegions] = useState<string[] | null>(null);
-  const [archivedDates, setArchivedDates] = useState<string[]>([]);
+  const [loading, setLoading] = useState(!cached);
+  const [nickname, setNickname] = useState<string>(cached?.nickname ?? "");
+  const [planStartDate, setPlanStartDate] = useState<string | null>(cached?.planStartDate ?? null);
+  const [plans, setPlans] = useState<PlanRow[]>(cached?.plans ?? []);
+  const [completions, setCompletions] = useState<CompletionRow[]>(cached?.completions ?? []);
+  const [latestAchievement, setLatestAchievement] = useState<{ id: string; unlocked_at: string } | null>(cached?.latestAchievement ?? null);
+  const [achievementCount, setAchievementCount] = useState(cached?.achievementCount ?? 0);
+  const [untrainedRegions, setUntrainedRegions] = useState<string[] | null>(() => untrainedCache.get(userId) ?? null);
+  const [archivedDates, setArchivedDates] = useState<string[]>(() => archivedCache.get(userId) ?? []);
   const [healthToday, setHealthToday] = useState<HealthDay | null>(null);
   const [healthHistory, setHealthHistory] = useState<HealthDay[]>([]);
   const restingHr = useMemo(() => restingHrSignal(healthHistory, toLocalDateKey(new Date())), [healthHistory]);
@@ -221,6 +236,7 @@ const HomeView = ({ userId, onNavigate, isHonorary = false }: HomeViewProps) => 
             if (d && !Number.isNaN(d.getTime())) dates.push(toLocalDateKey(d));
           }
         }
+        archivedCache.set(userId, dates);
         setArchivedDates(dates);
       });
     return () => { cancelled = true; };
@@ -229,7 +245,7 @@ const HomeView = ({ userId, onNavigate, isHonorary = false }: HomeViewProps) => 
   useEffect(() => {
     let cancelled = false;
     loadUntrainedRegions(userId)
-      .then((regions) => { if (!cancelled) setUntrainedRegions(regions); })
+      .then((regions) => { untrainedCache.set(userId, regions); if (!cancelled) setUntrainedRegions(regions); })
       .catch(() => { if (!cancelled) setUntrainedRegions([]); });
     return () => { cancelled = true; };
   }, [userId]);
@@ -252,12 +268,25 @@ const HomeView = ({ userId, onNavigate, isHonorary = false }: HomeViewProps) => 
         if (p?.plan_start_date) setPlanStartDate(p.plan_start_date);
         setPlans((planData as PlanRow[]) ?? []);
         setCompletions((compData as CompletionRow[]) ?? []);
+        const prev = homeCache.get(userId);
+        let achCount = prev?.achievementCount ?? 0;
+        let latest = prev?.latestAchievement ?? null;
         if (achSync) {
           setAchievementCount(achSync.ids.length);
+          achCount = achSync.ids.length;
           if (achSync.latestId) {
-            setLatestAchievement({ id: achSync.latestId, unlocked_at: achSync.stamps[achSync.latestId] });
+            latest = { id: achSync.latestId, unlocked_at: achSync.stamps[achSync.latestId] };
+            setLatestAchievement(latest);
           }
         }
+        homeCache.set(userId, {
+          nickname: p?.display_name?.trim() || "",
+          planStartDate: p?.plan_start_date ?? prev?.planStartDate ?? null,
+          plans: (planData as PlanRow[]) ?? [],
+          completions: (compData as CompletionRow[]) ?? [],
+          achievementCount: achCount,
+          latestAchievement: latest,
+        });
       })
       .finally(() => {
         if (!cancelled) setLoading(false);
