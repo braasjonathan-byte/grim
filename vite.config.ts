@@ -79,7 +79,18 @@ export default defineConfig(({ mode }) => ({
       injectManifest: {
         maximumFileSizeToCacheInBytes: 5 * 1024 * 1024,
         globPatterns: ["**/*.{js,css,html,ico,png,svg,woff,woff2}"],
-        globIgnores: ["**/version.json"],
+        // Legacy-bundles (bara för gamla webbläsare) och stora bilder hämtas vid behov
+        // i stället för att laddas ner i bakgrunden vid första besöket.
+        globIgnores: [
+          "**/version.json",
+          "**/*-legacy-*.js",
+          "**/polyfills-legacy-*.js",
+          "lovable-uploads/**",
+          "recipes/**",
+          "grim-logo-hires.png",
+          "grim-logo-vector.png",
+          "android-icons-source/**",
+        ],
         rollupFormat: "iife",
       },
       manifest: {

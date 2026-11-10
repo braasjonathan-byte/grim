@@ -30,6 +30,44 @@ const isGpsRecordingActive = () => {
   try { return !!(window as any).__grimGpsActive; } catch { return false; }
 };
 
+// Was this page already controlled by a service worker when it loaded? On the very
+// first visit it is not, and the first SW install's clients.claim() fires
+// controllerchange — that is not an update and must not reload the page.
+const HAD_SW_CONTROLLER_AT_LOAD =
+  !IS_NATIVE_CAPACITOR && "serviceWorker" in navigator && !!navigator.serviceWorker.controller;
+
+// Never reload while the user is typing or has a dialog open (e.g. onboarding).
+const isUserBusy = () => {
+  try {
+    const el = document.activeElement as HTMLElement | null;
+    const tag = el?.tagName;
+    if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT" || el?.isContentEditable) return true;
+    return !!document.querySelector('[role="dialog"], [role="alertdialog"], .fixed.inset-0.z-\\[160\\]');
+  } catch {
+    return false;
+  }
+};
+
+/** Reload now if safe, otherwise when the tab is hidden or the user is no longer busy. */
+const safeReload = (beforeReload?: () => void | Promise<void>) => {
+  const go = async () => {
+    try { await beforeReload?.(); } catch { /* ignore */ }
+    window.location.reload();
+  };
+  if (!isUserBusy() && !isGpsRecordingActive()) { void go(); return; }
+  let done = false;
+  const finish = () => {
+    if (done) return;
+    done = true;
+    clearInterval(id);
+    document.removeEventListener("visibilitychange", onVis);
+    void go();
+  };
+  const onVis = () => { if (document.visibilityState === "hidden" && !isGpsRecordingActive()) finish(); };
+  const id = window.setInterval(() => { if (!isUserBusy() && !isGpsRecordingActive()) finish(); }, 2000);
+  document.addEventListener("visibilitychange", onVis);
+};
+
 const syncAppVersion = async () => {
   const previousVersion = localStorage.getItem(APP_VERSION_STORAGE_KEY);
 
@@ -81,14 +119,15 @@ const checkRemoteVersion = async () => {
     if (Date.now() - lastReload < 30000) return;
     sessionStorage.setItem(REMOTE_VERSION_REFRESH_KEY, String(Date.now()));
 
-    if ("serviceWorker" in navigator) {
-      const regs = await navigator.serviceWorker.getRegistrations();
-      await Promise.all(regs.map((r) => r.update().catch(() => undefined)));
-      await Promise.all(regs.map((r) => r.unregister().catch(() => undefined)));
-    }
-    await clearAllCaches().catch(() => undefined);
-    localStorage.setItem(APP_VERSION_STORAGE_KEY, version);
-    window.location.reload();
+    safeReload(async () => {
+      if ("serviceWorker" in navigator) {
+        const regs = await navigator.serviceWorker.getRegistrations();
+        await Promise.all(regs.map((r) => r.update().catch(() => undefined)));
+        await Promise.all(regs.map((r) => r.unregister().catch(() => undefined)));
+      }
+      await clearAllCaches().catch(() => undefined);
+      localStorage.setItem(APP_VERSION_STORAGE_KEY, version);
+    });
   } catch {
     /* offline or transient — try again later */
   }
@@ -153,6 +192,8 @@ if (!IS_NATIVE_CAPACITOR && "serviceWorker" in navigator) {
   let pendingReload = false;
   navigator.serviceWorker.addEventListener("controllerchange", () => {
     if (refreshing) return;
+    // First install (no controller at load) — not an update, so no reload.
+    if (!HAD_SW_CONTROLLER_AT_LOAD) return;
     const doReload = () => {
       if (isGpsRecordingActive()) {
         // Re-check once GPS stops
@@ -170,7 +211,7 @@ if (!IS_NATIVE_CAPACITOR && "serviceWorker" in navigator) {
       if (!last || now - Number(last) > 10000) {
         refreshing = true;
         sessionStorage.setItem(key, String(now));
-        window.location.reload();
+        safeReload();
       }
     };
     doReload();
