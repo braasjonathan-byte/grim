@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, forwardRef } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Sparkles } from "lucide-react";
+import { useDialogTurn } from "@/lib/dialogQueue";
 
 const WHATS_NEW_KEY = "gymberget_last_seen_changelog";
 
@@ -61,8 +62,11 @@ const changelog = [
 // Unique fingerprint of all changelog content
 const CURRENT_CHANGELOG_ID = changelog.map((e) => e.version).join(",");
 
-const WhatsNewDialog = forwardRef<HTMLDivElement>((_, ref) => {
-  const [open, setOpen] = useState(false);
+interface WhatsNewDialogProps { accountCreatedAt?: string | null }
+
+const WhatsNewDialog = forwardRef<HTMLDivElement, WhatsNewDialogProps>(({ accountCreatedAt }, ref) => {
+  const [wants, setWants] = useState(false);
+  const open = useDialogTurn("whats-new", wants);
   const [unseenEntries, setUnseenEntries] = useState(changelog);
 
   const checkAndShow = useCallback(() => {
@@ -76,7 +80,11 @@ const WhatsNewDialog = forwardRef<HTMLDivElement>((_, ref) => {
 
     // Determine which entries are new
     const lastSeenVersions = (lastSeen || "").split(",").filter(Boolean);
-    const unseen = changelog.filter((e) => !lastSeenVersions.includes(e.version));
+    // Versioner som släpptes innan kontot skapades räknas inte som nyheter.
+    const createdDay = accountCreatedAt ? accountCreatedAt.slice(0, 10) : null;
+    const unseen = changelog.filter(
+      (e) => !lastSeenVersions.includes(e.version) && !(createdDay && e.date < createdDay),
+    );
 
     if (unseen.length === 0) {
       // Edge case: versions match but ID differs — mark as seen
@@ -85,8 +93,8 @@ const WhatsNewDialog = forwardRef<HTMLDivElement>((_, ref) => {
     }
 
     setUnseenEntries(unseen);
-    setOpen(true);
-  }, []);
+    setWants(true);
+  }, [accountCreatedAt]);
 
   useEffect(() => {
     // Show on initial mount (app open / login)
@@ -108,7 +116,7 @@ const WhatsNewDialog = forwardRef<HTMLDivElement>((_, ref) => {
 
   const handleClose = () => {
     localStorage.setItem(WHATS_NEW_KEY, CURRENT_CHANGELOG_ID);
-    setOpen(false);
+    setWants(false);
   };
 
   return (

@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { countTourSteps, startTour, type TourVariant } from "@/lib/tour";
 import { Sparkles, X, Apple } from "lucide-react";
+import { useDialogTurn } from "@/lib/dialogQueue";
 import { defaultModulesFor, getModules, setGoal, setModules, type Goal, type ModuleKey } from "@/lib/modules";
 
 const GOALS: { key: Goal; label: string; emoji: string; hint: string }[] = [
@@ -25,6 +26,8 @@ type Mode = "welcome" | "nutrition" | null;
 
 const TourPrompt = ({ userId }: TourPromptProps) => {
   const [mode, setMode] = useState<Mode>(null);
+  // Välkomstflödet står först i dialogkön; andra automatiska dialoger väntar.
+  useDialogTurn("tour", mode !== null);
   const [busy, setBusy] = useState(false);
   const [stage, setStage] = useState<"goal" | "tour">("goal");
   const [goal, setGoalState] = useState<Goal | null>(null);
@@ -60,6 +63,7 @@ const TourPrompt = ({ userId }: TourPromptProps) => {
     const update: Record<string, boolean> = { tour_prompted: true };
     if (completed) update.tour_completed = true;
     await supabase.from("profiles").update(update).eq("user_id", userId);
+    try { window.dispatchEvent(new CustomEvent("grim:tour-prompted")); } catch { /* ignore */ }
   };
 
   const markNutritionPrompted = () => {

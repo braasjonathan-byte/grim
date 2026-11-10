@@ -2,25 +2,32 @@ import { useEffect, useState } from "react";
 import { Sparkles } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useNewsPopup } from "@/lib/liveContent";
+import { useDialogTurn } from "@/lib/dialogQueue";
 
 const SEEN = "grim_news_seen";
 
 /** Nyhet som admin publicerat. Visas en gång per id, i appen och i webbappen. */
-export default function NewsPopup() {
+export default function NewsPopup({ accountCreatedAt }: { accountCreatedAt?: string | null }) {
   const news = useNewsPopup();
-  const [open, setOpen] = useState(false);
+  const [wants, setWants] = useState(false);
+  const open = useDialogTurn("news", wants);
 
   useEffect(() => {
     if (!news) return;
     if (localStorage.getItem(SEEN) === news.id) return;
-    setOpen(true);
-  }, [news]);
+    // Nyheter som publicerades innan kontot skapades är inte "nya" för den här användaren.
+    if (accountCreatedAt && news.publishedAt && news.publishedAt < accountCreatedAt) {
+      localStorage.setItem(SEEN, news.id);
+      return;
+    }
+    setWants(true);
+  }, [news, accountCreatedAt]);
 
   if (!news) return null;
 
   const close = () => {
     localStorage.setItem(SEEN, news.id);
-    setOpen(false);
+    setWants(false);
   };
 
   return (

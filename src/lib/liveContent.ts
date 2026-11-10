@@ -39,7 +39,7 @@ export const BUNDLED_CHALLENGES = [
   "25 push-up shoulder taps 👋",
 ];
 
-export type NewsPopup = { id: string; title: string; items: string[] };
+export type NewsPopup = { id: string; title: string; items: string[]; publishedAt?: string | null };
 
 const KEYS = ["daily_challenges", "ready_workouts", "help_tips", "news_popup"] as const;
 
@@ -99,7 +99,7 @@ function applyHelp(map: Record<string, string[]>) {
 }
 
 export async function refreshLiveContent() {
-  const { data } = await supabase.from("app_settings").select("key, value").in("key", [...KEYS]);
+  const { data } = await supabase.from("app_settings").select("key, value, updated_at").in("key", [...KEYS]);
   challenges = BUNDLED_CHALLENGES;
   workouts = readyWorkoutCategories;
   applyHelp({});
@@ -115,7 +115,10 @@ export async function refreshLiveContent() {
       }
       applyHelp(map);
     }
-    if (row.key === "news_popup") news = asNews(row.value);
+    if (row.key === "news_popup") {
+      const parsed = asNews(row.value);
+      news = parsed ? { ...parsed, publishedAt: (row as { updated_at?: string | null }).updated_at ?? null } : null;
+    }
   }
   loaded = true;
   emit();

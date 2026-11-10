@@ -28,6 +28,7 @@ import HonoraryBadge from "@/components/HonoraryBadge";
 import MiniTimer from "@/components/MiniTimer";
 import WorkoutCheerListener from "@/components/WorkoutCheerListener";
 import WhatsNewDialog from "@/components/WhatsNewDialog";
+import { getLastReadOrCreatedAt, isAccountYoungerThan24h, setIntroReady, useDialogTurn } from "@/lib/dialogQueue";
 import NewsPopup from "@/components/admin/NewsPopup";
 import OnboardingTutorial from "@/components/OnboardingTutorial";
 import TourPrompt from "@/components/TourPrompt";
@@ -88,11 +89,10 @@ const fallbackNicknameFromUser = (currentUser: User | null | undefined) => {
 };
 
 const GrimInfoDialog = () => {
-  const [open, setOpen] = useState(() => !localStorage.getItem(GRIM_INFO_KEY));
-  const handleClose = () => { localStorage.setItem(GRIM_INFO_KEY, "1"); setOpen(false); };
+  const [unseen, setUnseen] = useState(() => !localStorage.getItem(GRIM_INFO_KEY));
+  const handleClose = () => { localStorage.setItem(GRIM_INFO_KEY, "1"); setUnseen(false); };
   const appSettings = useAppSettings();
-  if (isPreviewEnvironment()) return null;
-  if (!appSettings.supporter_promo) return null;
+  const open = useDialogTurn("grim-info", unseen && !isPreviewEnvironment() && !!appSettings.supporter_promo);
   if (!open) return null;
   return (
     <Dialog open={open} onOpenChange={(v) => { if (!v) handleClose(); }}>
@@ -298,6 +298,7 @@ const Index = () => {
     return window.matchMedia("(display-mode: standalone)").matches || (navigator as any).standalone === true;
   });
   const [showInstallDialog, setShowInstallDialog] = useState(false);
+  const installDialogTurn = useDialogTurn("install", showInstallDialog && !isPreviewEnvironment());
   const [showHelpDialog, setShowHelpDialog] = useState(false);
 
   // Detect if app is installed (standalone mode or native Capacitor app)
@@ -323,6 +324,22 @@ const Index = () => {
     }
   }, [user]);
 
+
+  // Dialogkö: övriga automatiska dialoger (nyheter, supporterinfo, installationstips)
+  // väntar tills välkomstflödet är klart OCH kontot är minst 24 h gammalt.
+  useEffect(() => {
+    if (!user) { setIntroReady(false); return; }
+    let cancelled = false;
+    const check = async () => {
+      const { data } = await supabase.from("profiles").select("tour_prompted").eq("user_id", user.id).maybeSingle();
+      if (cancelled) return;
+      setIntroReady(!!data?.tour_prompted && !isAccountYoungerThan24h(user.created_at));
+    };
+    void check();
+    const onPrompted = () => { void check(); };
+    window.addEventListener("grim:tour-prompted", onPrompted);
+    return () => { cancelled = true; window.removeEventListener("grim:tour-prompted", onPrompted); };
+  }, [user]);
 
   const recoveryEmailGate = useRecoveryEmailGate(user?.id ?? null);
   const showRequiredEmail =
@@ -621,7 +638,7 @@ const Index = () => {
   useEffect(() => {
     if (!user) return;
     const checkUnread = async () => {
-      const lastRead = localStorage.getItem("gymberget_last_read_announcements") || "1970-01-01T00:00:00Z";
+      const lastRead = getLastReadOrCreatedAt("gymberget_last_read_announcements", user.created_at);
 
       // Fetch announcements (serves both count and display — avoids separate head query)
       const { data } = await supabase.
@@ -634,7 +651,7 @@ const Index = () => {
 
         let suggestionCount = 0;
         if (userRole === "admin") {
-          const lastReadSuggestions = localStorage.getItem("grim_last_read_suggestions") || "1970-01-01T00:00:00Z";
+          const lastReadSuggestions = getLastReadOrCreatedAt("grim_last_read_suggestions", user.created_at);
           const { count } = await supabase.
           from("suggestions").
           select("*", { count: "exact", head: true }).
@@ -688,7 +705,7 @@ const Index = () => {
   // Track unread social posts
   useEffect(() => {
     if (!user) return;
-    const lastRead = localStorage.getItem("grim_last_read_posts") || "1970-01-01T00:00:00Z";
+    const lastRead = getLastReadOrCreatedAt("grim_last_read_posts", user.created_at);
 
     const fetchUnread = async () => {
       const { count } = await supabase
@@ -892,10 +909,10 @@ const Index = () => {
           </button>
         </div>
       )}
-      <WhatsNewDialog />
-      <NewsPopup />
+      <WhatsNewDialog accountCreatedAt={user?.created_at} />
+      <NewsPopup accountCreatedAt={user?.created_at} />
       {/* Install prompt dialog */}
-      <Dialog open={showInstallDialog && !isPreviewEnvironment()} onOpenChange={(v) => {
+      <Dialog open={installDialogTurn} onOpenChange={(v) => {
         if (!v) {
           sessionStorage.setItem("grim_install_prompt_dismissed", "1");
           setShowInstallDialog(false);
