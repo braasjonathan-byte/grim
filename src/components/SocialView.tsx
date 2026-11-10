@@ -161,13 +161,21 @@ const SocialView = ({ userId, isAdmin, isHonorary = false, friendActivities, unr
 
   // Live-sync new posts, comments and likes (e.g. when added from a workout card)
   useEffect(() => {
+    // Realtime-händelser kommer i skurar (alla användares gillningar) – slå ihop dem
+    // till en hämtning och hämta inte alls medan appen ligger i bakgrunden (åtgärd 24).
+    let debounce: number | null = null;
+    const scheduleLoad = () => {
+      if (document.hidden) return;
+      if (debounce) window.clearTimeout(debounce);
+      debounce = window.setTimeout(() => { debounce = null; loadFeed(); }, 1500);
+    };
     const channel = supabase
       .channel(`social-feed-interactions-${Math.random().toString(36).slice(2, 8)}`)
-      .on("postgres_changes", { event: "*", schema: "public", table: "social_posts" }, () => loadFeed())
-      .on("postgres_changes", { event: "*", schema: "public", table: "social_post_comments" }, () => loadFeed())
-      .on("postgres_changes", { event: "*", schema: "public", table: "social_post_likes" }, () => loadFeed())
-      .on("postgres_changes", { event: "*", schema: "public", table: "workout_comments" }, () => loadFeed())
-      .on("postgres_changes", { event: "*", schema: "public", table: "workout_likes" }, () => loadFeed())
+      .on("postgres_changes", { event: "*", schema: "public", table: "social_posts" }, () => scheduleLoad())
+      .on("postgres_changes", { event: "*", schema: "public", table: "social_post_comments" }, () => scheduleLoad())
+      .on("postgres_changes", { event: "*", schema: "public", table: "social_post_likes" }, () => scheduleLoad())
+      .on("postgres_changes", { event: "*", schema: "public", table: "workout_comments" }, () => scheduleLoad())
+      .on("postgres_changes", { event: "*", schema: "public", table: "workout_likes" }, () => scheduleLoad())
       .subscribe();
     // Backup: in-app event bus — fires immediately when WorkoutPostThread mutates
     const off = onPostInteraction((pid) => {
@@ -176,17 +184,20 @@ const SocialView = ({ userId, isAdmin, isHonorary = false, friendActivities, unr
     });
     // Refresh whenever the tab regains focus / becomes visible
     const onFocus = () => loadFeed();
-    const onVisibility = () => { if (document.visibilityState === "visible") loadFeed(); };
+    const onVisibility = () => {
+      if (document.visibilityState === "visible") loadFeed();
+    };
     window.addEventListener("focus", onFocus);
     document.addEventListener("visibilitychange", onVisibility);
     // Also poll lightly every 60s as a final safety net
-    const interval = window.setInterval(() => loadFeed(), 60000);
+    const interval = window.setInterval(() => { if (!document.hidden) loadFeed(); }, 60000);
     return () => {
       supabase.removeChannel(channel);
       off();
       window.removeEventListener("focus", onFocus);
       document.removeEventListener("visibilitychange", onVisibility);
       window.clearInterval(interval);
+      if (debounce) window.clearTimeout(debounce);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [userId]);

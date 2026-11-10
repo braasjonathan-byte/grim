@@ -13,7 +13,8 @@ import { formatDecimal, isPlausibleSet, validateNumber } from "@/lib/inputValida
 import { validateCardioEntry } from "@/lib/inputValidation";
 import { fuzzyFilterSort, fuzzyScoreMulti } from "@/lib/fuzzySearch";
 import { parseNum } from "@/lib/inputValidation";
-import { useState, useEffect, useCallback, useRef, useMemo, useId, type ReactNode, type CSSProperties } from "react";
+import { useState, useEffect, useCallback, useRef, useMemo, useId, Suspense, type ReactNode, type CSSProperties } from "react";
+import { lazyRetry } from "@/lib/lazyRetry";
 import { createPortal } from "react-dom";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { toast } from "sonner";
@@ -42,8 +43,6 @@ import { format, getISOWeek } from "date-fns";
 import { sv } from "date-fns/locale";
 import PlanPicker from "@/components/PlanPicker";
 import PlanCalibrationDialog from "@/components/PlanCalibrationDialog";
-import ReplacementWorkoutDialog from "@/components/ReplacementWorkoutDialog";
-import WorkoutLogDialog from "@/components/WorkoutLogDialog";
 import ExercisePickerDialog from "@/components/ExercisePickerDialog";
 import { exerciseLibrary, muscleGroups } from "@/data/exerciseLibrary";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -61,7 +60,6 @@ import { Checkbox } from "@/components/ui/checkbox";
 import DailyChallenge from "@/components/DailyChallenge";
 import WorkoutShareCard from "@/components/WorkoutShareCard";
 import ConfirmValueDialog from "@/components/ConfirmValueDialog";
-import ShareWorkoutPromptDialog from "@/components/ShareWorkoutPromptDialog";
 import { loadPrivacySettings, DEFAULT_PRIVACY, type PrivacySettings } from "@/lib/socialPrivacy";
 import WorkoutCompleteOverlay from "@/components/WorkoutCompleteOverlay";
 import { getRestSecondsFor } from "@/lib/restTimer";
@@ -84,9 +82,6 @@ import SpotifyWidget from "@/components/SpotifyWidget";
 import { playSetDone, playWorkoutComplete } from "@/lib/sounds";
 import { hapticLight, hapticMedium } from "@/lib/haptics";
 import { normalizeImportedDetails, startsWithTimeNotation } from "@/lib/exerciseNormalization";
-import CircuitTimerDialog from "@/components/CircuitTimerDialog";
-import AiWorkoutScanDialog from "@/components/AiWorkoutScanDialog";
-import ActivityFileImportDialog from "@/components/ActivityFileImportDialog";
 import { pendingSharedActivity, subscribeSharedActivity, type ParsedActivity } from "@/lib/sharedActivityBus";
 
 import { useReadyWorkouts } from "@/lib/liveContent";
@@ -94,12 +89,21 @@ import { calculateAchievementMetrics, unlockEarnedAchievements, type Achievement
 import { type WorkoutViewProps, type PlanDay, type Completion, type FriendComment, type AchievementToastState, type CustomExercise, matchesPlanDay, matchesPlanLike } from "@/components/workout/types";
 import { toTitleCase, normalizeTempoInput, toSavedIntervalRows, sanitizePaceInput, derivePlanCardioValues, parsePlanCardioForExercise, buildConditioningIntervalLabel, parseConditioningIntervalLabel, computeIntervalSessionTotals, formatMinutesAsClock } from "@/lib/workoutIntervalUtils";
 import GpsTrackerControl from "@/components/workout/GpsTrackerControl";
+import EmptyDayChoiceDialog from "@/components/workout/EmptyDayChoiceDialog";
 import DayGpsRecorder from "@/components/workout/DayGpsRecorder";
 import { ConditioningEditCard, ConditioningHMSInput, condInputCls, condUnitCls } from "@/components/workout/ConditioningEditCard";
 import { DAYS, addUtcDays, daysBetweenCalendarDates, formatDayDisplay, getBaseDay, getDayIndex, getMonday, getPlanDayDateValue, getSessionColor, getSessionIcon, getTodayInfo, getWeekdayFromDayKey, isAssistedBodyweightExercise, isDailyChallengeLabel, normalizeExerciseKey, parseDateKey, planHasAnyExercise, resolveTodayDayIndex, sameWorkoutDay, sanitizeCopiedLoggedWeights, suggestSessionName, toLocalDateKey, toUtcDateKey } from "@/lib/workoutDayUtils";
 import { estimateCalories, getPlanDayDate } from "@/lib/workoutCalories";
 import { DEFAULT_BURN_WEIGHT_KG, estimateCompletionKcal } from "@/lib/workoutBurned";
 import { type LoggedSetInfo, parseExerciseWeight, getExerciseSetDataFromWeights, collectSetsForExercise, parseCondTempo, formatCondTempo, isStairMachine } from "@/lib/workoutSetData";
+
+// Dialoger som bara behövs ibland laddas i egna chunks (åtgärd 24, ingen beteendeändring).
+const ReplacementWorkoutDialog = lazyRetry(() => import("@/components/ReplacementWorkoutDialog"));
+const WorkoutLogDialog = lazyRetry(() => import("@/components/WorkoutLogDialog"));
+const CircuitTimerDialog = lazyRetry(() => import("@/components/CircuitTimerDialog"));
+const AiWorkoutScanDialog = lazyRetry(() => import("@/components/AiWorkoutScanDialog"));
+const ActivityFileImportDialog = lazyRetry(() => import("@/components/ActivityFileImportDialog"));
+const ShareWorkoutPromptDialog = lazyRetry(() => import("@/components/ShareWorkoutPromptDialog"));
 
 const SHOW_STRAVA_INTEGRATION = false;
 
@@ -5446,17 +5450,17 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
       setShowAddSingle={setShowAddSingle}
     />
       </div>
-      <AiWorkoutScanDialog
+      <Suspense fallback={null}><AiWorkoutScanDialog
         open={showAiScan}
         onClose={() => setShowAiScan(false)}
         onConfirm={(w) => { setShowAiScan(false); aiPresetWeightsRef.current = w.loggedWeights; handleImportWorkout(w); }}
-      />
-      <ActivityFileImportDialog
+      /></Suspense>
+      <Suspense fallback={null}><ActivityFileImportDialog
         open={showFileImport}
         initialActivity={sharedActivity}
         onClose={() => { setShowFileImport(false); setSharedActivity(null); }}
         onConfirm={(w) => { setShowFileImport(false); setSharedActivity(null); aiPresetWeightsRef.current = w.loggedWeights; handleImportWorkout(w); }}
-      />
+      /></Suspense>
 
       {exerciseInfoState && (
         <ExerciseInfoDialog
@@ -5487,7 +5491,7 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
     />
       {/* Circuit timer dialog (single mode) */}
       {circuitTimer && (
-        <CircuitTimerDialog
+        <Suspense fallback={null}><CircuitTimerDialog
           exercises={circuitTimer.exercises}
           workSeconds={circuitTimer.workSeconds}
           exerciseSeconds={circuitTimer.exerciseSeconds}
@@ -5526,7 +5530,7 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
               toast(`Betyg ${rating}/10 sparat ✅`, { duration: 2000 });
             }
           }}
-        />
+        /></Suspense>
       )}
       {shareTarget && (
         <WorkoutShareCard
@@ -5588,7 +5592,7 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
         userId={userId}
         onClose={closeCelebration}
       />
-      <ShareWorkoutPromptDialog
+      <Suspense fallback={null}><ShareWorkoutPromptDialog
         open={!!sharePromptDialog}
         initialCaption={sharePromptDialog?.caption ?? ""}
         loading={!!sharePromptDialog?.loading}
@@ -5626,7 +5630,7 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
         onSkip={() => {
           setSharePromptDialog(null);
         }}
-      />
+      /></Suspense>
       <WorkoutNamePrompt
       namePromptDialog={namePromptDialog}
       setNamePromptDialog={setNamePromptDialog}
@@ -9154,7 +9158,7 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
 
 
       {replacementTarget &&
-      <ReplacementWorkoutDialog
+      <Suspense fallback={null}><ReplacementWorkoutDialog
         userId={userId}
         planId={replacementTarget.planId}
         sessionName={replacementTarget.sessionName}
@@ -9168,13 +9172,13 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
         onSkipOnly={() => {
           setReplacementTarget(null);
           toggleSkipped(replacementTarget.week, replacementTarget.day);
-        }} />
+        }} /></Suspense>
 
       }
 
       {/* Run log dialog */}
       {runLogTarget &&
-      <WorkoutLogDialog
+      <Suspense fallback={null}><WorkoutLogDialog
         userId={userId}
         week={runLogTarget.week}
         day={runLogTarget.day}
@@ -9199,7 +9203,7 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
           if (target) {
             offerShare(target.week, target.day, false);
           }
-        }} />
+        }} /></Suspense>
 
       }
     </div>
@@ -9218,7 +9222,7 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
     )}
     {/* Circuit Timer */}
     {circuitTimer && (
-      <CircuitTimerDialog
+      <Suspense fallback={null}><CircuitTimerDialog
         exercises={circuitTimer.exercises}
         workSeconds={circuitTimer.workSeconds}
         exerciseSeconds={circuitTimer.exerciseSeconds}
@@ -9262,29 +9266,16 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
             toast(`Betyg ${rating}/10 sparat ✅`, { duration: 2000 });
           }
         }}
-      />
+      /></Suspense>
     )}
     {/* Empty / rest day chooser: create empty workout OR import ready workout */}
     {emptyDayChoice && (
-      <div className="fixed inset-0 z-[80] flex items-center justify-center px-4">
-        <div className="absolute inset-0 bg-black/60" onClick={() => setEmptyDayChoice(null)} />
-        <div className="relative bg-card border border-border rounded-2xl p-5 max-w-sm w-full space-y-4 animate-fade-in">
-          <div className="flex items-center justify-between">
-            <h3 className="font-bold text-base">Lägg till pass · {emptyDayChoice.day}</h3>
-            <button onClick={() => setEmptyDayChoice(null)} className="p-1 text-muted-foreground hover:text-foreground"><X className="w-4 h-4" /></button>
-          </div>
-          <div className="space-y-2">
-            <label className="text-xs font-medium text-muted-foreground">Passnamn</label>
-            <input
-              type="text"
-              value={emptyDayName}
-              onChange={(e) => setEmptyDayName(e.target.value)}
-              placeholder="t.ex. Styrka överkropp"
-              className="w-full bg-secondary text-secondary-foreground text-sm p-2 rounded-md border-none outline-none focus:ring-1 focus:ring-primary placeholder:text-muted-foreground"
-              autoFocus
-            />
-            <button
-              onClick={async () => {
+      <EmptyDayChoiceDialog
+        day={emptyDayChoice.day}
+        name={emptyDayName}
+        onNameChange={setEmptyDayName}
+        onClose={() => setEmptyDayChoice(null)}
+        onCreate={async () => {
                 const name = emptyDayName.trim();
                 if (!name) return;
                 const target = emptyDayChoice;
@@ -9303,42 +9294,25 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
                 setEmptyDayName("");
                 toast.success("Tomt pass skapat – lägg till övningar nedan");
                 fetchData();
-              }}
-              disabled={!emptyDayName.trim()}
-              className="w-full py-2.5 bg-primary text-primary-foreground font-bold rounded-lg disabled:opacity-40 text-sm"
-            >
-              Skapa tomt pass
-            </button>
-          </div>
-          <div className="flex items-center gap-2">
-            <div className="flex-1 h-px bg-border" />
-            <span className="text-[10px] uppercase tracking-wide text-muted-foreground">eller</span>
-            <div className="flex-1 h-px bg-border" />
-          </div>
-          <button
-            onClick={() => {
+        }}
+        onImport={() => {
               const t = emptyDayChoice;
               setEmptyDayChoice(null);
               setImportWorkoutTarget({ planId: "__new__", week: t.week, day: t.day });
-            }}
-            className="w-full py-2.5 border border-warning/40 text-warning font-semibold rounded-lg hover:border-warning hover:bg-warning/5 text-sm flex items-center justify-center gap-2"
-          >
-            <Download className="w-3.5 h-3.5" /> Importera färdigt pass
-          </button>
-        </div>
-      </div>
+        }}
+      />
     )}
-    <AiWorkoutScanDialog
+    <Suspense fallback={null}><AiWorkoutScanDialog
       open={showAiScan}
       onClose={() => setShowAiScan(false)}
       onConfirm={(w) => { setShowAiScan(false); aiPresetWeightsRef.current = w.loggedWeights; handleImportWorkout(w); }}
-    />
-    <ActivityFileImportDialog
+    /></Suspense>
+    <Suspense fallback={null}><ActivityFileImportDialog
       open={showFileImport}
       initialActivity={sharedActivity}
       onClose={() => { setShowFileImport(false); setSharedActivity(null); }}
       onConfirm={(w) => { setShowFileImport(false); setSharedActivity(null); aiPresetWeightsRef.current = w.loggedWeights; handleImportWorkout(w); }}
-    />
+    /></Suspense>
 
     {/* Import workout dialog */}
     <WorkoutImportPicker
@@ -9388,7 +9362,7 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
       userId={userId}
       onClose={closeCelebration}
     />
-    <ShareWorkoutPromptDialog
+    <Suspense fallback={null}><ShareWorkoutPromptDialog
       open={!!sharePromptDialog}
       initialCaption={sharePromptDialog?.caption ?? ""}
       loading={!!sharePromptDialog?.loading}
@@ -9426,7 +9400,7 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
       onSkip={() => {
         setSharePromptDialog(null);
       }}
-    />
+    /></Suspense>
     <DeleteExercisePrompt
       deleteExerciseConfirm={deleteExerciseConfirm}
       setDeleteExerciseConfirm={setDeleteExerciseConfirm}
