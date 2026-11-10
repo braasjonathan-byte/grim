@@ -769,7 +769,7 @@ const ToolsTab = ({ userId, isAdmin, isHonorary, userRole, onViewUserPlan, onLog
         <div className="space-y-2 pt-2">
           <button
             onClick={() => setConfirmLogout(true)}
-            className="w-full flex items-center justify-center gap-2 py-2 px-4 text-sm font-semibold text-destructive bg-secondary rounded-full shadow-soft active:scale-[0.97] hover:opacity-90 transition-opacity"
+            className="w-full flex items-center justify-center gap-2 py-2 px-4 text-sm font-semibold text-red-700 dark:text-red-400 bg-secondary rounded-full shadow-soft active:scale-[0.97] hover:opacity-90 transition-opacity"
           >
             <LogOut className="w-4 h-4" />
             Logga ut

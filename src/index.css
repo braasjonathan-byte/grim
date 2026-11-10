@@ -22,7 +22,7 @@
     --secondary-foreground: 0 0% 0%;
 
     --muted: 0 0% 96%;
-    --muted-foreground: 0 0% 45%;
+    --muted-foreground: 0 0% 40%;
 
     --accent: 0 0% 90%;
     --accent-foreground: 0 0% 0%;
@@ -585,3 +585,12 @@ html.theme-bg-image body { background-color: hsl(var(--background)); }
   input.bg-secondary, textarea.bg-secondary, select.bg-secondary { color: hsl(var(--secondary-foreground)); }
   .bg-secondary::placeholder { color: hsl(var(--secondary-foreground) / 0.6); }
 }
+
+/* Kontrast i ljust tema (åtgärd 19): status-chips och text minst 4.5:1 mot ljus bakgrund. */
+html:not(.dark) .text-success,
+html:not(.dark) .text-green-500,
+html:not(.dark) .text-green-400 { color: #15803d; }
+html:not(.dark) .text-warning,
+html:not(.dark) .text-orange-500,
+html:not(.dark) .text-orange-400,
+html:not(.dark) .text-amber-500 { color: #b45309; }

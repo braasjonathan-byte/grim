@@ -761,7 +761,7 @@ const SettingsPanel = ({ userId, isAdmin, isHonorary = false, category = "all", 
         <div className="border-t border-border pt-4">
           <button
             onClick={() => setConfirmDelete1(true)}
-            className="w-full flex items-center justify-center gap-2 py-2.5 px-4 text-sm font-semibold text-destructive bg-secondary rounded-full shadow-soft active:scale-[0.97] hover:opacity-90 transition-opacity"
+            className="w-full flex items-center justify-center gap-2 py-2.5 px-4 text-sm font-semibold text-red-700 dark:text-red-400 bg-secondary rounded-full shadow-soft active:scale-[0.97] hover:opacity-90 transition-opacity"
           >
             <Trash2 className="w-4 h-4" />
             Radera konto
