@@ -14,7 +14,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel,
 import NutritionHero from "./NutritionHero";
 import { syncWidgetNutrition, syncWidgetWeek } from "@/lib/nutritionWidget";
 import FoodPickerDialog, { PickedItem } from "./FoodPickerDialog";
-import AdaptiveTdeeCard, { readAdaptiveEnabled, writeAdaptiveEnabled } from "./AdaptiveTdeeCard";
+import AdaptiveTdeeCard, { ADAPTIVE_CHANGED_EVENT, NUTRITION_GOALS_SAVED_EVENT, readAdaptiveEnabled, setAdaptiveEnabledEverywhere, writeAdaptiveEnabled } from "./AdaptiveTdeeCard";
 import { Switch } from "@/components/ui/switch";
 import MealSuggestions, { slotForNow } from "./MealSuggestions";
 import RecipeEditor from "./RecipeEditor";
@@ -382,6 +382,15 @@ export default function NutritionView({ userId, isHonorary: isHonoraryProp = fal
   }
 
   useEffect(() => { load(); /* eslint-disable-next-line */ }, [userId, dateKey]);
+  // Inställningar → Kost ändrar samma växel/mål – håll Kost i synk.
+  useEffect(() => {
+    const onAdaptive = () => setAdaptiveOn(readAdaptiveEnabled());
+    const onGoals = () => { load(); };
+    window.addEventListener(ADAPTIVE_CHANGED_EVENT, onAdaptive);
+    window.addEventListener(NUTRITION_GOALS_SAVED_EVENT, onGoals);
+    return () => { window.removeEventListener(ADAPTIVE_CHANGED_EVENT, onAdaptive); window.removeEventListener(NUTRITION_GOALS_SAVED_EVENT, onGoals); };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [userId, dateKey]);
 
   const feelKey = `grim-meal-feel:${userId}:${dateKey}`;
   useEffect(() => {
@@ -612,7 +621,7 @@ export default function NutritionView({ userId, isHonorary: isHonoraryProp = fal
             <DropdownMenuItem onClick={() => { hapticLight(); setPastOpen(true); }}><CopyPlus className="w-3.5 h-3.5 mr-2" /> Kopiera från senaste veckan</DropdownMenuItem>
             <DropdownMenuItem onClick={() => setAddNameOpen(true)}><Plus className="w-3.5 h-3.5 mr-2" /> Lägg till måltid</DropdownMenuItem>
             <DropdownMenuSeparator />
-            <DropdownMenuItem onSelect={(e) => { e.preventDefault(); const v = !adaptiveOn; writeAdaptiveEnabled(v); setAdaptiveOn(v); if (hasGoals) void supabase.from("nutrition_goals").update({ adaptive_tdee_enabled: v } as any).eq("user_id", userId).then(({ error }) => { if (error) console.warn("[Grim] adaptiv-växel sparades bara lokalt", error.message); }); }} className="flex items-center gap-2">
+            <DropdownMenuItem onSelect={(e) => { e.preventDefault(); const v = !adaptiveOn; setAdaptiveOn(v); setAdaptiveEnabledEverywhere(userId, v, hasGoals); }} className="flex items-center gap-2">
               <TrendingUp className="w-3.5 h-3.5" /> <span className="flex-1">Adaptiv förbrukning</span>
               <Switch checked={adaptiveOn} aria-label="Adaptiv förbrukning på/av" className="pointer-events-none" />
             </DropdownMenuItem>

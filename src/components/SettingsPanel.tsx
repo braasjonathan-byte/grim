@@ -36,7 +36,7 @@ import {
 
 
 
-export type SettingsCategory = "profile" | "account" | "training" | "appearance" | "stats" | "privacy" | "permissions";
+export type SettingsCategory = "profile" | "account" | "training" | "nutrition" | "appearance" | "stats" | "privacy" | "permissions";
 
 interface SettingsPanelProps {
   userId?: string;
@@ -97,7 +97,7 @@ const SettingsPanel = ({ userId, isAdmin, isHonorary = false, category = "all", 
   // Strava visas bara när kopplingen är aktiverad på servern (client id/secret finns)
   const [stravaAvailable, setStravaAvailable] = useState(false);
   useEffect(() => {
-    if (!userId || !(category === "all" || category === "permissions")) return;
+    if (!userId || !(category === "all" || category === "training")) return;
     let cancelled = false;
     supabase.functions.invoke("strava-oauth-start", { body: { check: true } })
       .then(({ data }) => { if (!cancelled) setStravaAvailable(!!data?.configured); })
@@ -286,7 +286,7 @@ const SettingsPanel = ({ userId, isAdmin, isHonorary = false, category = "all", 
       )}
 
       {/* Wake lock toggle */}
-      {isWakeLockSupported() && inCategory("permissions") && (
+      {isWakeLockSupported() && inCategory("training") && (
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Smartphone className="w-4 h-4 text-primary" />
@@ -390,7 +390,7 @@ const SettingsPanel = ({ userId, isAdmin, isHonorary = false, category = "all", 
       </section>
       )}
 
-      {inCategory("training") && (<>
+      {inCategory("nutrition") && (<>
       {/* Fasting widget toggle */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
@@ -410,6 +410,9 @@ const SettingsPanel = ({ userId, isAdmin, isHonorary = false, category = "all", 
         </button>
       </div>
 
+      </>)}
+
+      {inCategory("training") && (<>
       {/* Sound feedback toggle */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
@@ -491,7 +494,7 @@ const SettingsPanel = ({ userId, isAdmin, isHonorary = false, category = "all", 
 
       </>)}
 
-      {inCategory("permissions") && (<>
+      {inCategory("account") && (<>
       {/* Biometric unlock toggle */}
       {bioSupported && userId && (
         <div className="flex items-center justify-between">
@@ -585,7 +588,7 @@ const SettingsPanel = ({ userId, isAdmin, isHonorary = false, category = "all", 
 
       </>)}
 
-      {inCategory("permissions") && userId && stravaAvailable && (
+      {inCategory("training") && userId && stravaAvailable && (
         <div className="border-t border-border pt-2">
           <div className="flex flex-col gap-3 py-2 sm:flex-row sm:items-start sm:justify-between">
             <div className="flex min-w-0 items-start gap-2">
@@ -690,7 +693,7 @@ const SettingsPanel = ({ userId, isAdmin, isHonorary = false, category = "all", 
       </>)}
 
       {/* Start plan */}
-      {userId && inCategory("profile") && (
+      {userId && inCategory("training") && (
         <div className="border-t border-border pt-2">
           <button
             onClick={() => setConfirmStartPlan(true)}
@@ -721,7 +724,7 @@ const SettingsPanel = ({ userId, isAdmin, isHonorary = false, category = "all", 
       </AlertDialog>
 
       {/* Leave plan */}
-      {userId && inCategory("profile") && (
+      {userId && inCategory("training") && (
         <div className="border-t border-border pt-2">
           <button
             onClick={async () => {

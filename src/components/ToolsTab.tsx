@@ -31,6 +31,7 @@ import {
   Bell,
   BarChart3,
   Dumbbell,
+  Apple,
 } from "lucide-react";
 import { useToolLayout, applyOrder, move } from "@/hooks/useToolLayout";
 import type { LucideIcon } from "lucide-react";
@@ -68,6 +69,7 @@ const NotificationSettings = lazyRetry(() => import("@/components/NotificationSe
 const EventCountdown = lazyRetry(() => import("@/components/EventCountdown"));
 const WorkoutTimer = lazyRetry(() => import("@/components/WorkoutTimer"));
 const RestTimerSettings = lazyRetry(() => import("@/components/RestTimerSettings"));
+const NutritionSettings = lazyRetry(() => import("@/components/NutritionSettings"));
 const OneRMCalculator = lazyRetry(() => import("@/components/OneRMCalculator"));
 const PulseZoneCalculator = lazyRetry(() => import("@/components/PulseZoneCalculator"));
 const CalorieCalculator = lazyRetry(() => import("@/components/CalorieCalculator"));
@@ -106,13 +108,14 @@ interface ToolGroup {
 }
 
 const SETTINGS_CATEGORIES: { id: SettingsCategory; title: string; subtitle: string; icon: LucideIcon }[] = [
-  { id: "profile", title: "Profil/kroppsdata", subtitle: "Personuppgifter, kroppsvärden och träningsplaner", icon: UserRound },
-  { id: "account", title: "Konto", subtitle: "Lösenord, säkerhet, köp och kontouppgifter", icon: KeyRound },
-  { id: "training", title: "Träning", subtitle: "Periodisk fasta, ljud, GPS och appens moduler", icon: Dumbbell },
-  { id: "appearance", title: "Tema", subtitle: "Färger och appens utseende", icon: Palette },
-  { id: "stats", title: "Statistik", subtitle: "Sektioner, viktkurva och konditionsövningar", icon: BarChart3 },
+  { id: "profile", title: "Profil", subtitle: "Kroppsdata, titel och sociala medier", icon: UserRound },
+  { id: "training", title: "Träning", subtitle: "Vilotimer, ljud, GPS, skärm vaken, planer och Strava", icon: Dumbbell },
+  { id: "nutrition", title: "Kost", subtitle: "Kostmål, adaptiv förbrukning och periodisk fasta", icon: Apple },
+  { id: "permissions", title: "Notiser", subtitle: "Push-notiser och påminnelser", icon: Bell },
   { id: "privacy", title: "Integritet", subtitle: "Delning, synlighet och blockeringar", icon: ShieldCheck },
-  { id: "permissions", title: "Behörigheter", subtitle: "Notiser, biometri och enhetsåtkomst", icon: Bell },
+  { id: "appearance", title: "Utseende", subtitle: "Tema och vilka moduler som visas i menyn", icon: Palette },
+  { id: "stats", title: "Statistik", subtitle: "Sektioner, viktkurva och konditionsövningar", icon: BarChart3 },
+  { id: "account", title: "Konto", subtitle: "Lösenord, biometri, köp och kontouppgifter", icon: KeyRound },
 ];
 
 const STORAGE_KEY = "grim:tools-collapsed-groups";
@@ -288,9 +291,9 @@ const ToolsTab = ({ userId, isAdmin, isHonorary, userRole, onViewUserPlan, onLog
           {
             id: "settings-page",
             title: "Inställningar",
-            subtitle: "Profil, tema och notiser",
+            subtitle: "Profil, träning, kost, notiser och utseende",
             icon: SlidersHorizontal,
-            keywords: "profil tema notiser lösenord kroppsvikt",
+            keywords: "profil träning kost notiser utseende tema lösenord kroppsvikt vilotimer fasta moduler",
             featured: true,
             onSelect: () => {
               setSettingsCategory(null);
@@ -573,11 +576,20 @@ const ToolsTab = ({ userId, isAdmin, isHonorary, userRole, onViewUserPlan, onLog
               {settingsCategory === "account" && <div data-supporter-section><SupporterButton userId={userId} /></div>}
               <SettingsPanel category={settingsCategory} userId={userId} isAdmin={isAdmin} isHonorary={isHonorary} onStartPlan={onStartPlan} onViewUserPlan={onViewUserPlan} />
               {settingsCategory === "permissions" && <NotificationSettings userId={userId} />}
-              {settingsCategory === "training" && <div className="rounded-2xl bg-card border border-border/40 p-4"><ModuleSettings /></div>}
+              {settingsCategory === "training" && <RestTimerSettings />}
+              {settingsCategory === "nutrition" && <NutritionSettings userId={userId} />}
+              {settingsCategory === "appearance" && <div className="rounded-2xl bg-card border border-border/40 p-4"><ModuleSettings /></div>}
             </div>
           ) : subView === "helpers" ? (
             <div className="space-y-3">
-              <RestTimerSettings />
+              <button
+                type="button"
+                onClick={() => { setSettingsCategory("training"); setSubView("settings"); }}
+                className="w-full rounded-2xl bg-card border border-border/40 px-4 py-3 text-left text-sm min-h-[44px]"
+              >
+                <span className="font-semibold">Vilotimer efter set</span>
+                <span className="block text-xs text-primary">Ändra i Inställningar → Träning</span>
+              </button>
               <EventCountdown userId={userId} />
               <CalorieCalculator />
               <OneRMCalculator />

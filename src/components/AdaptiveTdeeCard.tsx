@@ -21,6 +21,14 @@ const CHECKIN_KEY = "grim_tdee_checkin_v1";
 export const ADAPTIVE_ENABLED_KEY = "grim_adaptive_tdee_enabled_v1";
 export function readAdaptiveEnabled(): boolean { try { return localStorage.getItem(ADAPTIVE_ENABLED_KEY) !== "0"; } catch { return true; } }
 export function writeAdaptiveEnabled(v: boolean) { try { localStorage.setItem(ADAPTIVE_ENABLED_KEY, v ? "1" : "0"); } catch { /* ignore */ } }
+export const ADAPTIVE_CHANGED_EVENT = "grim:adaptive-changed";
+export const NUTRITION_GOALS_SAVED_EVENT = "grim:nutrition-goals-saved";
+/** Samma växel i Kost → Mer och Inställningar → Kost: lokalt + i molnet om mål finns. */
+export function setAdaptiveEnabledEverywhere(userId: string, v: boolean, hasGoals: boolean) {
+  writeAdaptiveEnabled(v);
+  try { window.dispatchEvent(new CustomEvent(ADAPTIVE_CHANGED_EVENT, { detail: v })); } catch { /* ignore */ }
+  if (hasGoals) void supabase.from("nutrition_goals").update({ adaptive_tdee_enabled: v } as any).eq("user_id", userId).then(({ error }) => { if (error) console.warn("[Grim] adaptiv-växel sparades bara lokalt", error.message); });
+}
 /** Veckovis incheckning: visas om ≥7 dagar sedan senaste (godkänd eller avböjd). */
 export function checkinDue(lastIso: string | null, now = new Date()): boolean {
   if (!lastIso) return true;
