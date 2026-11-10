@@ -1206,13 +1206,13 @@ const Index = () => {
                 localStorage.setItem("grim_last_read_suggestions", latestSug?.created_at || new Date().toISOString());
               }
             }}
-            className={`flex-1 flex flex-col items-center gap-1 pt-2 pb-2 text-xs relative transition-colors duration-300 ease-out ${
+            className={`flex-1 min-w-0 flex flex-col items-center gap-1 pt-2 pb-2 text-xs relative transition-colors duration-300 ease-out ${
             tab === key ?
             "text-primary" :
             "text-muted-foreground hover:text-foreground"}`
             }>
 
-              <div className={`relative flex items-center justify-center h-8 w-14 rounded-full transition-all duration-300 ease-out ${
+              <div className={`relative flex items-center justify-center h-8 w-12 sm:w-14 rounded-full transition-all duration-300 ease-out ${
               tab === key ? "bg-primary/15" : "bg-transparent"} ${
               bouncingTab === key ? "tab-bounce" : ""}`
               }>
@@ -1223,7 +1223,7 @@ const Index = () => {
                   </span>
               }
               </div>
-              <span className="font-medium leading-none">{label}</span>
+              <span className="font-medium leading-none text-[11px] truncate max-w-full">{label}</span>
               <span className={`h-1 w-1 rounded-full transition-all duration-300 ease-out ${
               tab === key ? "bg-primary opacity-100 scale-100" : "bg-transparent opacity-0 scale-50"}`
               } />
