@@ -130,7 +130,7 @@ const SwipeableSetRow = ({ done, onToggle, isPR, celebrationKey, children }: Swi
         {celebrate && <ConfettiBurst count={16} />}
         <div className="flex items-center">
           <div className="flex-1 min-w-0">{children}</div>
-          {isPR && (
+          {isPR && done && (
             <span
               className={`mr-1 flex-shrink-0 inline-flex items-center gap-0.5 rounded-full bg-success/20 text-success text-[9px] font-bold px-1.5 py-0.5 ${
                 prPulse ? "pr-badge-pop" : ""
