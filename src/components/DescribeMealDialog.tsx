@@ -145,7 +145,7 @@ export default function DescribeMealDialog({ open, onOpenChange, onConfirm, init
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-md max-h-[88dvh] overflow-y-auto p-4">
-        <DialogHeader><DialogTitle className="font-serif flex items-center gap-2"><Sparkles className="w-4 h-4 text-primary" /> Beskriv måltiden</DialogTitle></DialogHeader>
+        <DialogHeader><DialogTitle className="flex items-center gap-2"><Sparkles className="w-4 h-4 text-primary" /> Beskriv måltiden</DialogTitle></DialogHeader>
 
         {!rows.length && (
           <div className="space-y-3">

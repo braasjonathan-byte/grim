@@ -39,7 +39,7 @@ export default function WaterTracker({ userId, dateKey, goalMl }: Props) {
     <div className="rounded-2xl bg-card shadow-soft border border-border/40 p-3 space-y-3">
       <div className="flex items-center justify-between gap-2">
         <div>
-          <p className="text-sm font-bold font-serif flex items-center gap-1.5"><Droplet className="w-4 h-4 text-primary" /> Vatten</p>
+          <p className="text-sm font-bold flex items-center gap-1.5"><Droplet className="w-4 h-4 text-primary" /> Vatten</p>
           <p className="text-[11px] text-muted-foreground">Mål: {(goal / 1000).toLocaleString("sv-SE", { maximumFractionDigits: 2 })} l</p>
         </div>
         <p className="text-sm font-bold tabular-nums">{(ml / 1000).toLocaleString("sv-SE", { maximumFractionDigits: 2 })} l</p>

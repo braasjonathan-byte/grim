@@ -66,7 +66,7 @@ export default function VoiceFoodDialog({ open, onOpenChange, onConfirm }: Props
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-md max-h-[85dvh] overflow-y-auto p-4">
-        <DialogHeader><DialogTitle className="font-serif">Logga med rösten</DialogTitle></DialogHeader>
+        <DialogHeader><DialogTitle>Logga med rösten</DialogTitle></DialogHeader>
         <p className="text-xs text-muted-foreground">Säg t.ex. "en skiva bröd med smör och två ägg".</p>
 
         <div className="flex flex-col items-center gap-2 py-2">

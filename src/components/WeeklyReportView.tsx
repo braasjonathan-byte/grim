@@ -201,7 +201,7 @@ export default function WeeklyReportView({ userId, reportId, onClose }: WeeklyRe
         >
           <ArrowLeft className="w-4 h-4" />
         </button>
-        <h2 className="text-lg font-black font-serif text-foreground">📊 Veckorapport</h2>
+        <h2 className="text-lg font-bold text-foreground">📊 Veckorapport</h2>
       </div>
 
       {loading && <p className="text-sm text-muted-foreground px-1">Laddar veckorapport…</p>}

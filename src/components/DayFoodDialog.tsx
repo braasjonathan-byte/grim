@@ -138,7 +138,7 @@ export default function DayFoodDialog({ open, onOpenChange, slots, dateKey, onCo
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-md max-h-[85dvh] overflow-y-auto p-4">
-        <DialogHeader><DialogTitle className="font-serif flex items-center gap-2"><Sparkles className="w-4 h-4 text-primary" /> Beskriv dagens kost</DialogTitle></DialogHeader>
+        <DialogHeader><DialogTitle className="flex items-center gap-2"><Sparkles className="w-4 h-4 text-primary" /> Beskriv dagens kost</DialogTitle></DialogHeader>
         <p className="text-xs text-muted-foreground">
           {editing
             ? 'Vill du ändra något? Säg t.ex. "ta bort smöret", "dubbla laxen" eller "flytta bananen till mellanmål".'

@@ -179,7 +179,7 @@ export default function NutritionGoalsDialog({ open, onOpenChange, userId, onSav
   return (
     <Dialog open={open} onOpenChange={(v) => { if (!v && dirty) { setConfirmClose(true); return; } onOpenChange(v); }}>
       <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto p-4">
-        <DialogHeader><DialogTitle className="font-serif">Mina kostmål</DialogTitle></DialogHeader>
+        <DialogHeader><DialogTitle>Mina kostmål</DialogTitle></DialogHeader>
         <div className="space-y-3">
           <p className="text-[11px] text-muted-foreground">Fyll i ålder, vikt och längd så räknas ditt dagliga behov (TDEE = vad kroppen gör av med en vanlig dag, inkl. aktivitet) ut automatiskt. kcal = energi. Makron: P = protein, F = fett, K = kolhydrater.</p>
           <div className="grid grid-cols-3 gap-2">

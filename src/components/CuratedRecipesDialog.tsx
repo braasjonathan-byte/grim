@@ -139,7 +139,7 @@ export default function CuratedRecipesDialog({ open, onOpenChange, isHonorary, u
     <Dialog open={open} onOpenChange={(v) => { if (!v) { setSelected(null); setQuery(""); } onOpenChange(v); }}>
       <DialogContent className="max-w-md max-h-[90vh] flex flex-col gap-3 p-4">
         <DialogHeader>
-          <DialogTitle className="font-serif flex items-center gap-2">
+          <DialogTitle className="flex items-center gap-2">
             <ChefHat className="w-5 h-5" />
             {selected ? selected.name : "Recept"}
           </DialogTitle>

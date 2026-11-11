@@ -66,7 +66,7 @@ const OnboardingTutorial = () => {
             />
           ))}
         </div>
-        <h3 className="text-base font-black font-serif text-foreground mb-1.5">{cur.title}</h3>
+        <h3 className="text-base font-bold text-foreground mb-1.5">{cur.title}</h3>
         <p className="text-sm text-muted-foreground leading-relaxed">{cur.body}</p>
         <div className="flex items-center justify-between mt-5">
           <button onClick={close} className="text-xs text-muted-foreground font-medium">

@@ -248,7 +248,7 @@ export default function RecipeEditor({ open, onOpenChange, userId, onSaved, init
     <Dialog open={open} onOpenChange={(v) => { if (!v) reset(); onOpenChange(v); }}>
       <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto p-4">
         <DialogHeader>
-          <DialogTitle className="font-serif">{isEditing ? "Redigera recept" : templateRecipe ? "Redigera som eget recept" : "Nytt recept"}</DialogTitle>
+          <DialogTitle>{isEditing ? "Redigera recept" : templateRecipe ? "Redigera som eget recept" : "Nytt recept"}</DialogTitle>
         </DialogHeader>
         {loading ? (
           <div className="flex justify-center py-10"><Loader2 className="w-5 h-5 animate-spin text-muted-foreground" /></div>

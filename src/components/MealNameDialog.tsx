@@ -31,7 +31,7 @@ export default function MealNameDialog({ open, onOpenChange, initial, title, exi
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-sm p-4">
         <DialogHeader>
-          <DialogTitle className="font-serif">{title || "Namn på måltid"}</DialogTitle>
+          <DialogTitle>{title || "Namn på måltid"}</DialogTitle>
         </DialogHeader>
         <div className="space-y-3">
           <Input maxLength={40}

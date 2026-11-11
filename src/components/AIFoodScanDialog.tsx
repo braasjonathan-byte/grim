@@ -184,7 +184,7 @@ export default function AIFoodScanDialog({ open, onOpenChange, onPick }: Props) 
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-md p-4">
         <DialogHeader>
-          <DialogTitle className="font-serif flex items-center gap-2"><Sparkles className="w-4 h-4 text-primary" /> AI-skanna mat</DialogTitle>
+          <DialogTitle className="flex items-center gap-2"><Sparkles className="w-4 h-4 text-primary" /> AI-skanna mat</DialogTitle>
         </DialogHeader>
 
         {!result && (

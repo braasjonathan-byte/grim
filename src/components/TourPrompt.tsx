@@ -110,7 +110,7 @@ const TourPrompt = ({ userId }: TourPromptProps) => {
             <p className="text-[10px] font-bold uppercase tracking-widest text-primary mb-1">Steg 1 av 2</p>
             <div className="flex items-center gap-2 mb-1">
               <Sparkles className="w-5 h-5 text-primary" />
-              <h3 className="text-base font-black font-serif text-foreground">Välkommen till GRIM!</h3>
+              <h3 className="text-base font-bold text-foreground">Välkommen till GRIM!</h3>
             </div>
             <p className="text-sm text-muted-foreground mb-3">Vad vill du främst uppnå? Vi anpassar menyn efter det.</p>
             <div className="grid grid-cols-2 gap-2 mb-3" role="radiogroup" aria-label="Mål">
@@ -157,7 +157,7 @@ const TourPrompt = ({ userId }: TourPromptProps) => {
             <p className="text-[10px] font-bold uppercase tracking-widest text-primary mb-1">Steg 2 av 2</p>
             <div className="flex items-center gap-2 mb-2">
               <Sparkles className="w-5 h-5 text-primary" />
-              <h3 className="text-base font-black font-serif text-foreground">Välkommen till GRIM!</h3>
+              <h3 className="text-base font-bold text-foreground">Välkommen till GRIM!</h3>
             </div>
             <p className="text-sm text-muted-foreground leading-relaxed mb-4">
               Vill du ha en kort rundtur så du snabbt kommer igång? Båda rundturerna täcker även kostfliken.
@@ -192,7 +192,7 @@ const TourPrompt = ({ userId }: TourPromptProps) => {
           <>
             <div className="flex items-center gap-2 mb-2">
               <Apple className="w-5 h-5 text-primary" />
-              <h3 className="text-base font-black font-serif text-foreground">Nyhet: Kost i appen</h3>
+              <h3 className="text-base font-bold text-foreground">Nyhet: Kost i appen</h3>
             </div>
             <p className="text-sm text-muted-foreground leading-relaxed mb-4">
               Du kan nu logga måltider, följa makron och använda 200+ träningsanpassade recept – allt direkt i GRIM. Över 2 600 livsmedel finns tillgängliga i sökningen. Allt direkt i GRIM! Vill du se hur det funkar?

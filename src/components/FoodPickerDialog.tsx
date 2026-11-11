@@ -523,7 +523,7 @@ export default function FoodPickerDialog({ open, onOpenChange, onPick, userId, h
     <Dialog open={open} onOpenChange={(v) => { if (!v) { setSelected(null); setQuery(""); } onOpenChange(v); }}>
       <DialogContent className="max-w-md max-h-[85vh] flex flex-col gap-3 p-4">
         <DialogHeader>
-          <DialogTitle className="font-serif">{selected ? selected.name : "Välj livsmedel"}</DialogTitle>
+          <DialogTitle>{selected ? selected.name : "Välj livsmedel"}</DialogTitle>
         </DialogHeader>
 
         {!selected && addedCount > 0 && (

@@ -30,9 +30,14 @@
     --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 98%;
 
-    --border: 0 0% 0%;
-    --input: 0 0% 0%;
-    --ring: 0 0% 0%;
+    /* Mjuka ljusgrå kanter i stället för hårda svarta konturer */
+    --border: 0 0% 88%;
+    --input: 0 0% 82%;
+    --ring: 0 0% 30%;
+
+    /* Sparsam varumärkesaccent (logopunkt, aktiv flik). Mörkare guld i ljust läge för ≥4.5:1 mot vit bakgrund */
+    --brand: 36 85% 32%;
+    --brand-foreground: 0 0% 100%;
 
     --radius: 1rem;
 
@@ -42,8 +47,8 @@
     --sidebar-primary-foreground: 0 0% 100%;
     --sidebar-accent: 0 0% 90%;
     --sidebar-accent-foreground: 0 0% 0%;
-    --sidebar-border: 0 0% 0%;
-    --sidebar-ring: 0 0% 0%;
+    --sidebar-border: 0 0% 88%;
+    --sidebar-ring: 0 0% 30%;
 
     --success: 142 70% 45%;
     --success-foreground: 220 20% 7%;
@@ -66,7 +71,7 @@
     --shadow-lg: 0 4px 8px -2px hsl(0 0% 0% / 0.08), 0 16px 40px -12px hsl(0 0% 0% / 0.24);
     --shadow-xl: 0 8px 16px -4px hsl(0 0% 0% / 0.10), 0 24px 56px -16px hsl(0 0% 0% / 0.28);
     --shadow-2xl: 0 12px 24px -6px hsl(0 0% 0% / 0.12), 0 36px 80px -20px hsl(0 0% 0% / 0.34);
-    --shadow-soft: 0 1px 2px 0 hsl(0 0% 0% / 0.06), 0 6px 20px -8px hsl(0 0% 0% / 0.18);
+    --shadow-soft: 0 1px 2px 0 hsl(0 0% 0% / 0.05), 0 4px 14px -4px hsl(0 0% 0% / 0.10), 0 10px 28px -14px hsl(0 0% 0% / 0.14);
 
     --tracking-normal: 0em;
     --spacing: 0.25rem;
@@ -88,9 +93,12 @@
     --accent-foreground: 0 0% 100%;
     --destructive: 0 62% 30%;
     --destructive-foreground: 0 0% 100%;
-    --border: 0 0% 100%;
-    --input: 0 0% 100%;
-    --ring: 0 0% 100%;
+    /* Dämpade kanter – inte vita trådar runt allt */
+    --border: 220 15% 22%;
+    --input: 220 15% 26%;
+    --ring: 0 0% 70%;
+    --brand: 40 72% 63%;
+    --brand-foreground: 220 26% 8%;
     --chart-1: 220 70% 50%;
     --chart-2: 160 60% 45%;
     --chart-3: 30 80% 55%;
@@ -102,8 +110,8 @@
     --sidebar-primary-foreground: 0 0% 0%;
     --sidebar-accent: 0 0% 15%;
     --sidebar-accent-foreground: 0 0% 100%;
-    --sidebar-border: 0 0% 100%;
-    --sidebar-ring: 0 0% 100%;
+    --sidebar-border: 220 15% 22%;
+    --sidebar-ring: 0 0% 70%;
     --shadow-2xs: 0 1px 1px 0 hsl(0 0% 0% / 0.25);
     --shadow-xs: 0 1px 2px 0 hsl(0 0% 0% / 0.30), 0 2px 6px -4px hsl(0 0% 0% / 0.40);
     --shadow-sm: 0 1px 2px 0 hsl(0 0% 0% / 0.35), 0 4px 12px -6px hsl(0 0% 0% / 0.50);
@@ -199,8 +207,18 @@
     color-scheme: dark;
   }
 
+  /* Rubriker i vanlig fet sans-serif. Permanent Marker är reserverad för varumärket (.font-brand). */
   h1, h2, h3, h4, h5, h6 {
-    @apply font-serif font-bold tracking-tight;
+    @apply font-sans font-bold tracking-tight;
+  }
+
+  /* Varumärkestypsnitt: bara loggan «Grim.» och hälsningen på Hem.
+     Fonten finns bara i vikt 400 – ingen syntetisk fetstil. */
+  .font-brand {
+    font-family: var(--font-serif);
+    font-weight: 400 !important;
+    font-synthesis: none;
+    letter-spacing: 0;
   }
 }
 
@@ -257,8 +275,8 @@
   font-family: inherit;
 }
 .driver-popover-title {
-  font-family: 'Permanent Marker', cursive;
-  font-weight: 400;
+  font-family: var(--font-sans);
+  font-weight: 700;
   color: hsl(var(--primary)) !important;
   font-size: 1.05rem !important;
 }
@@ -458,7 +476,7 @@ button:not([data-no-press]),
 @layer components {
   /* Soft card: no hard border, rounded 16px, diffuse shadow */
   .card-soft {
-    @apply bg-card rounded-2xl shadow-soft border border-border/40;
+    @apply bg-card rounded-2xl shadow-soft border border-border/70;
   }
   .card-soft-muted {
     @apply bg-secondary/60 rounded-2xl shadow-soft border border-transparent;

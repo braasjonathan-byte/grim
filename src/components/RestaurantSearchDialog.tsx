@@ -135,7 +135,7 @@ export default function RestaurantSearchDialog({ open, onOpenChange, onPick, ini
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-md max-h-[85vh] flex flex-col gap-3 p-4">
         <DialogHeader>
-          <DialogTitle className="font-serif flex items-center gap-2"><Utensils className="w-4 h-4" /> Restaurang</DialogTitle>
+          <DialogTitle className="flex items-center gap-2"><Utensils className="w-4 h-4" /> Restaurang</DialogTitle>
         </DialogHeader>
 
         {!selected && (

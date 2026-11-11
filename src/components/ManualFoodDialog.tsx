@@ -118,7 +118,7 @@ export default function ManualFoodDialog({ open, onOpenChange, onPick, userId, i
       <Dialog open={open} onOpenChange={onOpenChange}>
         <DialogContent className="max-w-md p-4" onOpenAutoFocus={(e) => e.preventDefault()}>
           <DialogHeader>
-            <DialogTitle className="font-serif">Eget livsmedel</DialogTitle>
+            <DialogTitle>Eget livsmedel</DialogTitle>
           </DialogHeader>
 
           {isHonorary && (
