@@ -112,7 +112,7 @@ function SortableMeal({ meal, isCustom, logs, mealKcal, onAdd, onRename, onDelet
     zIndex: isDragging ? 50 : "auto" as const,
   };
   return (
-    <div ref={setNodeRef} style={style} className="rounded-2xl bg-card shadow-soft border border-border/40 overflow-hidden">
+    <div ref={setNodeRef} style={style} className="card-soft overflow-hidden">
       <div className="flex items-center justify-between bg-muted/30 px-2.5 py-2.5 gap-2">
         {isCustom && (
           <button {...attributes} {...listeners} className="p-1 -ml-1 cursor-grab active:cursor-grabbing touch-none text-muted-foreground" aria-label="Dra för att flytta">
@@ -120,7 +120,7 @@ function SortableMeal({ meal, isCustom, logs, mealKcal, onAdd, onRename, onDelet
           </button>
         )}
         <div className="min-w-0 flex-1">
-          <p className="text-sm font-bold first-letter:uppercase font-serif truncate">{meal}</p>
+          <p className="text-sm font-bold first-letter:uppercase truncate">{meal}</p>
           <p className={`text-[10px] tabular-nums ${budget && mealKcal > budget * 1.1 ? "text-destructive font-semibold" : "text-muted-foreground"}`}>
             {Math.round(mealKcal)}{budget ? ` / ${Math.round(budget)}` : ""} kcal
             {logs.length > 0 && <span className="text-muted-foreground font-normal"> · {Math.round(logs.filter((l) => isPlausibleMealLog(l)).reduce((s, l) => s + Number(l.protein_g || 0), 0))}P {Math.round(logs.filter((l) => isPlausibleMealLog(l)).reduce((s, l) => s + Number(l.carbs_g || 0), 0))}K {Math.round(logs.filter((l) => isPlausibleMealLog(l)).reduce((s, l) => s + Number(l.fat_g || 0), 0))}F</span>}
@@ -597,7 +597,7 @@ export default function NutritionView({ userId, isHonorary: isHonoraryProp = fal
       <div className="flex items-center justify-between">
         <button onClick={() => shiftDay(-1)} className="w-9 h-9 icon-round hover:bg-muted/60 transition-colors"><ChevronLeft className="w-5 h-5" /></button>
         <div className="text-center">
-          <p className="font-serif text-lg first-letter:uppercase">{dateLabel}</p>
+          <p className="font-bold text-lg first-letter:uppercase">{dateLabel}</p>
           {!isToday && <button onClick={() => setDate(new Date())} className="text-[10px] text-primary font-bold">Gå till idag</button>}
           {dateKey > toLocalDateKey(new Date()) && <p className="text-[10px] text-destructive font-semibold">Framtida dag – det du loggar här räknas inte förrän dagen kommit</p>}
         </div>
@@ -631,7 +631,7 @@ export default function NutritionView({ userId, isHonorary: isHonoraryProp = fal
       <CopyFromPastDialog open={pastOpen} onOpenChange={setPastOpen} userId={userId} dateKey={dateKey} onCopied={load} />
 
 
-      <div className="rounded-2xl bg-card shadow-soft border border-border/40 p-4 space-y-4">
+      <div className="card-soft p-4 space-y-4">
         <div data-tour="nutrition-rings">
           {!loaded ? <div className="h-64 rounded-2xl bg-muted/40 animate-pulse" aria-label="Laddar kostdata" /> : <NutritionHero kcal={totals.kcal} burned={burned} protein={totals.protein} fat={totals.fat} carbs={totals.carbs} fiber={totals.fiber} targets={targets} micros={microTotals} quality={foodQualityScore(logs)} microTargets={microTargets} />}
           {loaded && activeKcal != null && (
@@ -809,9 +809,9 @@ export default function NutritionView({ userId, isHonorary: isHonoraryProp = fal
 
       {pendingRecipe && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4" onClick={() => setPendingRecipe(null)}>
-          <div className="bg-card rounded-2xl shadow-soft border border-border/40 w-full sm:max-w-sm p-4 space-y-3" onClick={(e) => e.stopPropagation()}>
+          <div className="card-soft w-full sm:max-w-sm p-4 space-y-3" onClick={(e) => e.stopPropagation()}>
             <div>
-              <p className="font-serif text-lg">Lägg till i måltid</p>
+              <p className="font-bold text-lg">Lägg till i måltid</p>
               <p className="text-xs text-muted-foreground truncate">{pendingRecipe.name}</p>
             </div>
             <div className="space-y-2 max-h-[60vh] overflow-y-auto">
@@ -858,9 +858,9 @@ export default function NutritionView({ userId, isHonorary: isHonoraryProp = fal
 
       {editingLog && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4" onClick={() => setEditingLog(null)}>
-          <div className="bg-card rounded-2xl shadow-soft border border-border/40 w-full sm:max-w-sm p-4 space-y-4" onClick={(e) => e.stopPropagation()}>
+          <div className="card-soft w-full sm:max-w-sm p-4 space-y-4" onClick={(e) => e.stopPropagation()}>
             <div>
-              <p className="font-serif text-lg">Redigera livsmedel</p>
+              <p className="font-bold text-lg">Redigera livsmedel</p>
               <p className="text-xs text-muted-foreground truncate">{editingLog.item_name}</p>
             </div>
             <div className="space-y-1">
@@ -916,9 +916,9 @@ export default function NutritionView({ userId, isHonorary: isHonoraryProp = fal
       )}
       {quickMeal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4" onClick={() => setQuickMeal(null)}>
-          <div className="bg-card rounded-2xl shadow-soft border border-border/40 w-full sm:max-w-sm p-4 space-y-3" onClick={(e) => e.stopPropagation()}>
+          <div className="card-soft w-full sm:max-w-sm p-4 space-y-3" onClick={(e) => e.stopPropagation()}>
             <div>
-              <p className="font-serif text-lg flex items-center gap-1.5"><Zap className="w-4 h-4 text-primary" /> Snabbpost</p>
+              <p className="font-bold text-lg flex items-center gap-1.5"><Zap className="w-4 h-4 text-primary" /> Snabbpost</p>
               <p className="text-xs text-muted-foreground first-letter:uppercase">{quickMeal} · Ange bara kalorier om du inte vet mer</p>
             </div>
             <input className="w-full input-soft" placeholder="Anteckning (t.ex. Lunch på stan)" value={quick.name} onChange={(e) => setQuick({ ...quick, name: e.target.value })} />

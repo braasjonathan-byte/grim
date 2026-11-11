@@ -2,6 +2,7 @@ import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { hapticLight } from "@/lib/haptics";
+import { Megaphone } from "lucide-react";
 
 interface WorkoutCheerButtonProps {
   toUserId: string;
@@ -57,7 +58,9 @@ const WorkoutCheerButton = ({ toUserId, fromUserId, week, day, fullWidth = false
         }`}
         aria-label="Skicka hejarop"
       >
-        <span className="text-sm leading-none">{sentEmoji || "💪"}</span>
+        {sentEmoji
+          ? <span className="text-sm leading-none">{sentEmoji}</span>
+          : <Megaphone className="h-4 w-4" aria-hidden="true" />}
         <span>Hejarop</span>
       </button>
       {open && (

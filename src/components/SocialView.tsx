@@ -846,7 +846,7 @@ const SocialView = ({ userId, isAdmin, isHonorary = false, friendActivities, unr
 
           {/* Compose form */}
           {showCompose && (
-            <div className={uiV2 ? "rounded-2xl bg-card p-3 space-y-2.5 shadow-soft" : "border border-border rounded-xl p-4 bg-card space-y-3"}>
+            <div className={uiV2 ? "card-soft p-3 space-y-2.5" : "card-soft p-4 space-y-3"}>
               <div className="flex items-center justify-between">
                 <h4 className="text-sm font-bold">Nytt inlägg</h4>
                 <button onClick={() => { setShowCompose(false); setImageFile(null); setImagePreview(null); setImageFiles([]); }}>
@@ -987,7 +987,7 @@ const SocialView = ({ userId, isAdmin, isHonorary = false, friendActivities, unr
             const totalLikes = likes[post.id] || 0;
             const canManage = isAdmin || post.user_id === userId;
             return (
-            <div key={post.id} data-post-id={post.id} className={`relative overflow-hidden transition-all ${uiV2 ? `rounded-xl bg-card ${post.pinned ? "ring-1 ring-primary/40" : ""}` : `rounded-2xl border bg-card shadow-soft ${post.pinned ? "border-primary/40" : "border-border/50"}`} ${highlightedPostId === post.id ? "ring-2 ring-primary" : ""}`}>
+            <div key={post.id} data-post-id={post.id} className={`relative overflow-hidden transition-all ${uiV2 ? `card-soft ${post.pinned ? "ring-1 ring-primary/40" : ""}` : `card-soft ${post.pinned ? "border-primary/40" : ""}`} ${highlightedPostId === post.id ? "ring-2 ring-primary" : ""}`}>
               {/* Type accent line */}
               {isWorkoutPost && !uiV2 && <span aria-hidden className={`absolute inset-x-0 top-0 h-1 ${kindMeta.accent}`} />}
               {/* Pinned indicator */}
@@ -1318,7 +1318,7 @@ const SocialView = ({ userId, isAdmin, isHonorary = false, friendActivities, unr
           {groups.filter(g => myGroups.includes(g.id)).length > 0 && (
             <div className="space-y-1.5">
               <h3 className="text-sm font-semibold text-muted-foreground">Mina grupper</h3>
-              <div className="rounded-2xl bg-card shadow-soft overflow-hidden divide-y divide-border/50">
+              <div className="card-soft overflow-hidden divide-y divide-border/50">
                 {groups.filter(g => myGroups.includes(g.id)).map(g => (
                   <div key={g.id} className="p-3.5 flex items-center gap-3 transition-colors hover:bg-muted/40">
                     <button onClick={() => setOpenGroupId(g.id)} className="flex flex-1 items-center gap-3 text-left min-w-0">
@@ -1358,7 +1358,7 @@ const SocialView = ({ userId, isAdmin, isHonorary = false, friendActivities, unr
           <div className="space-y-1.5">
             <h3 className="text-sm font-semibold text-muted-foreground">Alla grupper</h3>
             {groups.filter(g => !myGroups.includes(g.id)).length === 0 ? (
-              <div className="rounded-2xl bg-card shadow-soft px-4 py-6 text-center">
+              <div className="card-soft px-4 py-6 text-center">
                 <div className="mx-auto mb-2 flex h-10 w-10 items-center justify-center rounded-full bg-muted">
                   <UsersRound className="h-5 w-5 text-muted-foreground" />
                 </div>
@@ -1367,7 +1367,7 @@ const SocialView = ({ userId, isAdmin, isHonorary = false, friendActivities, unr
                 </p>
               </div>
             ) : (
-              <div className="rounded-2xl bg-card shadow-soft overflow-hidden divide-y divide-border/50">
+              <div className="card-soft overflow-hidden divide-y divide-border/50">
                 {groups.filter(g => !myGroups.includes(g.id)).map(g => (
                   <div key={g.id} className="p-3.5 flex items-center gap-3 transition-colors hover:bg-muted/40">
                     <button onClick={() => setOpenGroupId(g.id)} className="flex flex-1 items-center gap-3 text-left min-w-0">

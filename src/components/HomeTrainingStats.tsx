@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { CheckCircle, SlidersHorizontal, BarChart3 } from "lucide-react";
+import { CheckCircle, SlidersHorizontal, BarChart3, Dumbbell } from "lucide-react";
+import { CARDIO_ICONS } from "@/lib/cardioIcons";
 import { isCompletedWorkout } from "@/lib/completionCounting";
 import { getWorkoutDistanceByCategory } from "@/lib/workoutDistance";
 import { useCardioVisibility, getCardioCategory, CARDIO_CATEGORIES, type CardioCategory } from "@/lib/cardioVisibility";
@@ -18,10 +19,11 @@ const rangeFor = (p: Period) => {
 };
 
 /** Hem: träningsstatistik för vecka/månad/år. Grenar väljs direkt i kortet (delar val med Statistik). */
-export default function HomeTrainingStats({ userId }: { userId: string }) {
+export default function HomeTrainingStats({ userId, onStartWorkout }: { userId: string; onStartWorkout?: () => void }) {
   const [period, setPeriod] = useState<Period>(() => (localStorage.getItem("grim_home_stats_period") as Period) || "week");
   const [editing, setEditing] = useState(false);
   const [rows, setRows] = useState<any[]>([]);
+  const [loaded, setLoaded] = useState(false);
   const [plans, setPlans] = useState<Map<string, string>>(new Map());
   const [planStart, setPlanStart] = useState<Date | null>(null);
   const { state: vis, set: setVis } = useCardioVisibility();
@@ -37,6 +39,7 @@ export default function HomeTrainingStats({ userId }: { userId: string }) {
       const m = new Map<string, string>();
       for (const r of (pl || []) as any[]) { const k = `${r.week}-${r.day}`; m.set(k, `${m.get(k) || ""} ${r.details || ""}`); }
       setPlans(m);
+      setLoaded(true);
     });
     load();
     window.addEventListener(WORKOUTS_CHANGED_EVENT, load);
@@ -63,9 +66,13 @@ export default function HomeTrainingStats({ userId }: { userId: string }) {
 
   const choose = (p: Period) => { setPeriod(p); localStorage.setItem("grim_home_stats_period", p); };
   const shown = CARDIO_CATEGORIES.filter((c) => vis[c.key] !== false);
+  // Bara grenar med aktivitet i perioden visas – inga väggar av nollor och inget ensamt hål.
+  const active = shown.filter((c) => (stats.per.get(c.key)?.passes ?? 0) > 0);
+  const tiles = 1 + active.length; // Pass-rutan + aktiva grenar
+  const isEmpty = loaded && stats.sessions === 0;
 
   return (
-    <section className="rounded-2xl border border-border bg-card p-4 space-y-3" aria-label="Träningsstatistik">
+    <section className="card-soft p-4 space-y-3" aria-label="Träningsstatistik">
       <div className="flex items-center gap-2">
         <BarChart3 className="w-4 h-4 text-primary" />
         <p className="text-sm font-semibold">Din träning</p>
@@ -87,29 +94,46 @@ export default function HomeTrainingStats({ userId }: { userId: string }) {
             return (
               <button key={c.key} type="button" aria-pressed={on} onClick={() => setVis(c.key, !on)}
                 className={`px-3 py-1.5 rounded-full text-xs font-semibold border ${on ? "bg-primary text-primary-foreground border-primary" : "bg-muted/60 text-muted-foreground border-border/40"}`}>
-                {c.icon} {c.label}
+                {(() => { const I = CARDIO_ICONS[c.key]; return <I className="inline w-3.5 h-3.5 mr-1 -mt-0.5" aria-hidden="true" />; })()}{c.label}
               </button>
             );
           })}
         </div>
       )}
+      {isEmpty ? (
+        <div className="rounded-xl bg-muted/40 p-4 flex items-center gap-3">
+          <div className="h-10 w-10 rounded-xl bg-primary/10 text-primary flex items-center justify-center shrink-0">
+            <Dumbbell className="w-5 h-5" />
+          </div>
+          <div className="min-w-0 flex-1">
+            <p className="text-sm font-semibold">Inga pass {period === "week" ? "den här veckan" : period === "month" ? "den här månaden" : "i år"} än</p>
+            <p className="text-xs text-muted-foreground">Logga ett pass så fylls din statistik på här.</p>
+          </div>
+          {onStartWorkout && (
+            <button type="button" onClick={onStartWorkout} className="pill-btn-primary px-3 py-1.5 text-xs shrink-0">Starta pass</button>
+          )}
+        </div>
+      ) : (
       <div className="grid grid-cols-2 gap-2">
-        <div className="rounded-xl bg-muted/40 p-3 text-center">
+        <div className={`rounded-xl bg-muted/40 p-3 text-center ${tiles % 2 === 1 && active.length === 0 ? "col-span-2" : ""}`}>
           <CheckCircle className="w-4 h-4 text-success mx-auto mb-1" />
-          <p className="text-xl font-black tabular-nums">{stats.sessions}</p>
+          <p className="text-xl font-black tabular-nums">{loaded ? stats.sessions : "–"}</p>
           <p className="text-[10px] text-muted-foreground">Pass</p>
         </div>
-        {shown.map((c) => {
+        {active.map((c, i) => {
           const v = stats.per.get(c.key) ?? { km: 0, passes: 0 };
+          const Icon = CARDIO_ICONS[c.key];
+          const lone = tiles % 2 === 1 && i === active.length - 1;
           return (
-            <div key={c.key} className="rounded-xl bg-muted/40 p-3 text-center">
-              <div className="text-lg leading-none mb-1">{c.icon}</div>
+            <div key={c.key} className={`rounded-xl bg-muted/40 p-3 text-center ${lone ? "col-span-2" : ""}`}>
+              <Icon className="w-4 h-4 text-primary mx-auto mb-1" aria-hidden="true" />
               <p className="text-xl font-black tabular-nums">{String(Math.round(v.km * 10) / 10).replace(".", ",")} <span className="text-xs font-normal text-muted-foreground">km</span></p>
               <p className="text-[10px] text-muted-foreground">{c.label} · {v.passes} pass</p>
             </div>
           );
         })}
       </div>
+      )}
     </section>
   );
 }

@@ -1444,7 +1444,7 @@ const FriendsView = ({ userId, isAdmin = false, friendActivities = [], onClearAc
           Dina vänner ({friends.length})
         </h3>
         {friends.length === 0 ? (
-          <EmptyState
+          <EmptyState fill
             icon={Users}
             title="Inga vänner ännu"
             description="Sök efter ett användarnamn så kan ni följa varandras pass och peppa varandra."

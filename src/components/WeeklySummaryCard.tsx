@@ -32,7 +32,7 @@ function Delta({ value, unit = "%", invert = false, decimals = 0 }: { value: num
 }
 
 /** Hem: den här veckan jämfört med förra – pass, volym, nya rekord (e1RM), kost och vikt. */
-export default function WeeklySummaryCard({ userId }: { userId: string }) {
+export default function WeeklySummaryCard({ userId, onStartWorkout }: { userId: string; onStartWorkout?: () => void }) {
   const [completions, setCompletions] = useState<DatedCompletion[]>([]);
   const [meals, setMeals] = useState<MealRow[]>([]);
   const [weights, setWeights] = useState<WeightRow[]>([]);
@@ -78,9 +78,38 @@ export default function WeeklySummaryCard({ userId }: { userId: string }) {
   const { current: cur, previous: prev } = s;
   const weightDelta = cur.avgWeightKg !== null && prev.avgWeightKg !== null ? cur.avgWeightKg - prev.avgWeightKg : null;
   const kcalDelta = cur.avgKcal !== null && prev.avgKcal !== null ? cur.avgKcal - prev.avgKcal : null;
+  // Ingen data alls de senaste två veckorna: visa en kort uppmaning i stället för en vägg av nollor.
+  const isEmpty = loaded && cur.sessions === 0 && prev.sessions === 0 && cur.volumeKg === 0 && prev.volumeKg === 0
+    && cur.avgKcal === null && cur.avgWeightKg === null && cur.prs.length === 0;
+
+  if (isEmpty) {
+    return (
+      <section className="card-soft p-4 space-y-3" aria-label="Veckan i siffror">
+        <div className="flex items-center gap-2">
+          <CalendarRange className="w-4 h-4 text-primary" />
+          <p className="text-sm font-semibold">Veckan i siffror</p>
+          <span className="ml-auto text-[11px] text-muted-foreground tabular-nums">{fmtRange(s.weekStart, s.weekEnd)}</span>
+        </div>
+        <div className="flex items-center gap-3">
+          <div className="h-11 w-11 rounded-2xl bg-primary/10 text-primary flex items-center justify-center shrink-0">
+            <Dumbbell className="w-5 h-5" />
+          </div>
+          <div className="min-w-0 flex-1">
+            <p className="text-sm font-semibold">Din vecka börjar här</p>
+            <p className="text-xs text-muted-foreground leading-relaxed">Logga ditt första pass, en måltid eller din vikt så räknar vi ihop veckan åt dig.</p>
+          </div>
+        </div>
+        {onStartWorkout && (
+          <button type="button" onClick={onStartWorkout} className="w-full pill-btn-primary py-2.5 text-sm">
+            Starta ett pass
+          </button>
+        )}
+      </section>
+    );
+  }
 
   return (
-    <section className="rounded-2xl border border-border bg-card p-4 space-y-3" aria-label="Veckan i siffror">
+    <section className="card-soft p-4 space-y-3" aria-label="Veckan i siffror">
       <div className="flex items-center gap-2">
         <CalendarRange className="w-4 h-4 text-primary" />
         <p className="text-sm font-semibold">Veckan i siffror</p>

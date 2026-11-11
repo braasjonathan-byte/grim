@@ -471,7 +471,7 @@ const HomeView = ({ userId, onNavigate, isHonorary = false }: HomeViewProps) => 
     <div className="space-y-4 animate-fade-in">
       {/* Greeting */}
       <header className="space-y-1">
-        <h1 className="text-2xl font-serif leading-tight">{greeting}</h1>
+        <h1 className="text-2xl font-brand leading-tight">{greeting}</h1>
         <p className="text-xs text-muted-foreground capitalize flex items-center gap-1.5">
           <CalendarDays className="w-3.5 h-3.5" />
           {dateLabel}
@@ -481,7 +481,7 @@ const HomeView = ({ userId, onNavigate, isHonorary = false }: HomeViewProps) => 
 
       {/* 1. Today's workout — most important */}
       <section
-        className={`rounded-2xl border bg-card p-4 space-y-3 ${todayDone ? "border-success/50" : "border-border"}`}
+        className={`card-soft p-4 space-y-3 ${todayDone ? "border-success/50" : ""}`}
         aria-label="Dagens pass"
       >
         <div className="flex items-center justify-between gap-2">
@@ -626,7 +626,7 @@ const HomeView = ({ userId, onNavigate, isHonorary = false }: HomeViewProps) => 
             </div>
           )}
           <div className="grid grid-cols-2 gap-3">
-            <section className="rounded-2xl border border-border bg-card p-4 space-y-1" aria-label="Steg idag">
+            <section className="card-soft p-4 space-y-1" aria-label="Steg idag">
             <div className="flex items-center gap-1.5 text-muted-foreground">
               <Footprints className="w-4 h-4" />
               <span className="text-[11px] uppercase tracking-wider font-semibold">Steg idag</span>
@@ -634,7 +634,7 @@ const HomeView = ({ userId, onNavigate, isHonorary = false }: HomeViewProps) => 
             <p className="text-2xl font-bold leading-none">{healthToday.steps.toLocaleString("sv-SE")}</p>
               <p className="text-[11px] text-muted-foreground">{healthPreview ? "från Samsung Health" : "från din hälsoapp"}</p>
             </section>
-            <section className="rounded-2xl border border-border bg-card p-4 space-y-1" aria-label="Aktiva kalorier idag">
+            <section className="card-soft p-4 space-y-1" aria-label="Aktiva kalorier idag">
             <div className="flex items-center gap-1.5 text-muted-foreground">
               <FlameIcon className="w-4 h-4" />
               <span className="text-[11px] uppercase tracking-wider font-semibold">Aktiva kcal</span>
@@ -674,17 +674,17 @@ const HomeView = ({ userId, onNavigate, isHonorary = false }: HomeViewProps) => 
       )}
 
       {/* 1c. Veckan i siffror: pass, volym, rekord, kost och vikt mot förra veckan */}
-      <WeeklySummaryCard userId={userId} />
+      <WeeklySummaryCard userId={userId} onStartWorkout={() => onNavigate("workout")} />
 
       {/* 1d. Träningsstatistik vecka/månad/år med grenval direkt i kortet */}
-      <HomeTrainingStats userId={userId} />
+      <HomeTrainingStats userId={userId} onStartWorkout={() => onNavigate("workout")} />
 
       {/* 1e. Dagens recept utifrån målet */}
       <DailyRecipeCard userId={userId} isHonorary={isHonorary} />
 
       {/* 2. Streak + weekly progress */}
       <div className="grid grid-cols-2 gap-3">
-        <section className="rounded-2xl border border-border bg-card p-4 space-y-1" aria-label="Streak">
+        <section className="card-soft p-4 space-y-1" aria-label="Streak">
           <div className="flex items-center gap-1.5 text-muted-foreground">
             <Flame className={`w-4 h-4 ${streak > 0 ? "text-warning" : ""}`} />
             <span className="text-[11px] uppercase tracking-wider font-semibold">Streak</span>
@@ -695,7 +695,7 @@ const HomeView = ({ userId, onNavigate, isHonorary = false }: HomeViewProps) => 
           </p>
         </section>
 
-        <section className="rounded-2xl border border-border bg-card p-4 space-y-2" aria-label="Veckans framsteg">
+        <section className="card-soft p-4 space-y-2" aria-label="Veckans framsteg">
           <div className="flex items-center gap-1.5 text-muted-foreground">
             <Target className="w-4 h-4" />
             <span className="text-[11px] uppercase tracking-wider font-semibold">Veckan</span>
@@ -717,7 +717,7 @@ const HomeView = ({ userId, onNavigate, isHonorary = false }: HomeViewProps) => 
       {/* 3. Latest achievement */}
       <button
         onClick={() => onNavigate("stats")}
-        className="w-full text-left rounded-2xl border border-border bg-card p-4 flex items-center gap-3"
+        className="w-full text-left card-soft p-4 flex items-center gap-3"
         aria-label="Visa achievements"
       >
         <div className="h-11 w-11 rounded-xl bg-primary/15 flex items-center justify-center text-xl shrink-0">

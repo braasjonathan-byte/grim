@@ -896,7 +896,7 @@ const Index = () => {
         <div className="fixed inset-0 z-[200] bg-background flex flex-col items-center justify-center gap-6 px-6">
           <img src={grimIcon} alt="Grim app icon" className="w-16 h-16" />
           <div className="text-center space-y-2">
-            <p className="text-xl font-black font-serif">Lås upp Grim</p>
+            <p className="text-xl font-bold">Lås upp Grim</p>
             <p className="text-sm text-muted-foreground">Bekräfta din identitet för att fortsätta.</p>
           </div>
           <button
@@ -990,11 +990,11 @@ const Index = () => {
       </Dialog>
 
       {/* Header */}
-      <header className="fixed top-0 left-0 right-0 z-50 border-b bg-background border-primary" style={{ paddingTop: "var(--grim-header-safe-top, env(safe-area-inset-top, 0px))" }}>
+      <header className="fixed top-0 left-0 right-0 z-50 border-b bg-background border-border/60" style={{ paddingTop: "var(--grim-header-safe-top, env(safe-area-inset-top, 0px))" }}>
         <div className="max-w-lg mx-auto px-4 py-1 flex items-center justify-between text-primary-foreground">
           <button onClick={() => setTab("workout")} className="flex items-center gap-2 cursor-pointer" aria-label="Grim – Din personliga träningspartner">
-            <h1 className="text-2xl font-black tracking-tight font-serif text-foreground">
-              <span aria-hidden="true">Grim<span className="text-accent">.</span></span>
+            <h1 className="text-2xl font-brand text-foreground">
+              <span aria-hidden="true">Grim<span className="text-brand">.</span></span>
               <span className="sr-only">Grim – Din personliga träningspartner</span>
             </h1>
           </button>
@@ -1070,11 +1070,11 @@ const Index = () => {
             ) : (
               <PullToRefresh onRefresh={() => setRefreshKeys((k) => ({ ...k, stats: k.stats + 1 }))}>
                 <div className="mb-4">
-                  <WeeklySummaryCard key={`week-${refreshKeys.stats}`} userId={user.id} />
+                  <WeeklySummaryCard key={`week-${refreshKeys.stats}`} userId={user.id} onStartWorkout={() => setTab("workout")} />
                 </div>
                 <button
                   onClick={() => setWeeklyReport("latest")}
-                  className="w-full mb-4 flex items-center justify-between gap-3 rounded-2xl bg-card shadow-soft px-4 py-3 text-left active:scale-[0.99] transition-transform"
+                  className="w-full mb-4 flex items-center justify-between gap-3 card-soft px-4 py-3 text-left active:scale-[0.99] transition-transform"
                 >
                   <span className="flex items-center gap-2">
                     <span className="text-lg">📊</span>
@@ -1157,7 +1157,7 @@ const Index = () => {
 
       {/* Bottom tab bar */}
       <nav
-        className="fixed left-0 right-0 bottom-0 bg-card border-t border-border z-50"
+        className="fixed left-0 right-0 bottom-0 bg-card border-t border-border/60 z-50"
         style={{
           // Anchor to the visual viewport bottom so the bar never drifts up
           // while the mobile URL bar collapses/expands during scroll.
@@ -1210,12 +1210,12 @@ const Index = () => {
             }}
             className={`flex-1 min-w-0 flex flex-col items-center gap-1 pt-2 pb-2 text-xs relative transition-colors duration-300 ease-out ${
             tab === key ?
-            "text-primary" :
+            "text-foreground" :
             "text-muted-foreground hover:text-foreground"}`
             }>
 
               <div className={`relative flex items-center justify-center h-8 w-12 sm:w-14 rounded-full transition-all duration-300 ease-out ${
-              tab === key ? "bg-primary/15" : "bg-transparent"} ${
+              tab === key ? "bg-brand/15 text-brand" : "bg-transparent"} ${
               bouncingTab === key ? "tab-bounce" : ""}`
               }>
                 <Icon className="w-5 h-5" />
@@ -1226,9 +1226,8 @@ const Index = () => {
               }
               </div>
               <span className="font-medium leading-none text-[11px] truncate max-w-full">{label}</span>
-              <span className={`h-1 w-1 rounded-full transition-all duration-300 ease-out ${
-              tab === key ? "bg-primary opacity-100 scale-100" : "bg-transparent opacity-0 scale-50"}`
-              } />
+              {/* Distans som behåller flikradens höjd – aktiv flik markeras bara av guldpillen */}
+              <span aria-hidden="true" className="h-1 w-1" />
             </button>
           )}
         </div>

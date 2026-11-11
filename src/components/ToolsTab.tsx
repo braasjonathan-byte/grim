@@ -436,7 +436,7 @@ const ToolsTab = ({ userId, isAdmin, isHonorary, userRole, onViewUserPlan, onLog
       return (
         <div
           key={item.id}
-          className="space-y-2 rounded-2xl bg-card shadow-soft border border-dashed border-primary/40 p-3"
+          className="space-y-2 card-soft border border-dashed border-primary/40 p-3"
         >
           <div className="flex items-center gap-2">
             <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
@@ -484,7 +484,7 @@ const ToolsTab = ({ userId, isAdmin, isHonorary, userRole, onViewUserPlan, onLog
         key={item.id}
         id={item.id === "tour" ? "help-section" : undefined}
         data-tour={item.id === "tour" ? "tools-help" : undefined}
-        className="rounded-2xl bg-card shadow-soft border border-border/40 overflow-hidden"
+        className="card-soft overflow-hidden"
       >
         <button
           type="button"
@@ -578,14 +578,14 @@ const ToolsTab = ({ userId, isAdmin, isHonorary, userRole, onViewUserPlan, onLog
               {settingsCategory === "permissions" && <NotificationSettings userId={userId} />}
               {settingsCategory === "training" && <RestTimerSettings />}
               {settingsCategory === "nutrition" && <NutritionSettings userId={userId} />}
-              {settingsCategory === "appearance" && <div className="rounded-2xl bg-card border border-border/40 p-4"><ModuleSettings /></div>}
+              {settingsCategory === "appearance" && <div className="card-soft p-4"><ModuleSettings /></div>}
             </div>
           ) : subView === "helpers" ? (
             <div className="space-y-3">
               <button
                 type="button"
                 onClick={() => { setSettingsCategory("training"); setSubView("settings"); }}
-                className="w-full rounded-2xl bg-card border border-border/40 px-4 py-3 text-left text-sm min-h-[44px]"
+                className="w-full card-soft px-4 py-3 text-left text-sm min-h-[44px]"
               >
                 <span className="font-semibold">Vilotimer efter set</span>
                 <span className="block text-xs text-primary">Ändra i Inställningar → Träning</span>
@@ -641,7 +641,7 @@ const ToolsTab = ({ userId, isAdmin, isHonorary, userRole, onViewUserPlan, onLog
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           placeholder="Sök verktyg och inställningar"
-          className="w-full rounded-2xl bg-card border border-border/40 shadow-soft py-3 pl-10 pr-10 text-sm outline-none focus:border-primary/50"
+          className="w-full card-soft py-3 pl-10 pr-10 text-sm outline-none focus:border-primary/50"
         />
         {query && (
           <button

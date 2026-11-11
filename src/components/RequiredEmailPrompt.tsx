@@ -46,7 +46,7 @@ const RequiredEmailPrompt = ({ userId, onSaved, onSignedOut }: RequiredEmailProm
       aria-modal="true"
       aria-labelledby="required-email-title"
       data-testid="required-email">
-      <div className="w-full max-w-sm bg-card border border-border rounded-xl p-6 space-y-5 shadow-lg">
+      <div className="w-full max-w-sm card-soft p-6 space-y-5">
         <div className="flex items-center gap-2">
           <Mail className="w-5 h-5 text-primary" />
           <h2 id="required-email-title" className="text-lg font-black">Lägg till din e-post</h2>

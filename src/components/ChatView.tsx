@@ -559,7 +559,7 @@ const ChatView = ({ userId, isAdmin = false, isPremium = false, initialFriendId 
 
           {/* Regular friends */}
           {friends.length === 0 && !isPremium && !isAdmin ? (
-            <EmptyState
+            <EmptyState fill
               icon={MessageCircle}
               title="Inga chattar ännu"
               description="Lägg till en vän så kan ni börja skicka meddelanden och dela pass."

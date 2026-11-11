@@ -11,6 +11,8 @@ interface EmptyStateProps {
   /** Optional secondary call-to-action */
   secondaryLabel?: string;
   onSecondary?: () => void;
+  /** Fyll ut tomma vyer (Mina pass, Vänner, Chatt, Grupper) så att innehållet hamnar mitt i skärmen */
+  fill?: boolean;
 }
 
 const EmptyState = ({
@@ -22,11 +24,12 @@ const EmptyState = ({
   onAction,
   secondaryLabel,
   onSecondary,
+  fill = false,
 }: EmptyStateProps) => (
-  <div className="flex flex-col items-center justify-center py-10 px-4 space-y-3">
-    <div className="relative">
-      <div className="w-16 h-16 rounded-2xl bg-secondary flex items-center justify-center">
-        <Icon className="w-7 h-7 text-muted-foreground" />
+  <div className={`flex flex-col items-center justify-center py-12 px-4 space-y-3 ${fill ? "min-h-[50vh]" : ""}`}>
+    <div className="relative mb-1">
+      <div className="w-20 h-20 rounded-3xl bg-primary/10 text-primary flex items-center justify-center">
+        <Icon className="w-9 h-9" strokeWidth={1.75} />
       </div>
       {emoji && (
         <span className="absolute -top-1 -right-2 text-lg" aria-hidden="true">
@@ -34,9 +37,9 @@ const EmptyState = ({
         </span>
       )}
     </div>
-    <h3 className="text-sm font-semibold text-foreground text-center">{title}</h3>
+    <h3 className="text-base font-bold font-sans text-foreground text-center">{title}</h3>
     {description && (
-      <p className="text-xs text-muted-foreground text-center max-w-[240px] leading-relaxed">
+      <p className="text-sm text-muted-foreground text-center max-w-[260px] leading-relaxed">
         {description}
       </p>
     )}
@@ -46,7 +49,7 @@ const EmptyState = ({
           <button
             type="button"
             onClick={onAction}
-            className="pill-btn bg-primary text-primary-foreground px-4 py-2 text-xs font-semibold hover:opacity-90 transition-opacity"
+            className="pill-btn-primary px-5 py-2.5 text-sm font-semibold"
           >
             {actionLabel}
           </button>
@@ -55,7 +58,7 @@ const EmptyState = ({
           <button
             type="button"
             onClick={onSecondary}
-            className="pill-btn-ghost shadow-soft px-4 py-2 text-xs font-semibold"
+            className="pill-btn-ghost px-5 py-2.5 text-sm font-semibold"
           >
             {secondaryLabel}
           </button>

@@ -1,4 +1,5 @@
 import { SingleWorkoutForm } from "@/components/workout/SingleWorkoutForm";
+import EmptyState from "@/components/EmptyState";
 import { maybeAutoExportToStrava, STRAVA_ERROR_TEXT } from "@/lib/stravaExport";
 import { getHeartRateSamplesBetween } from "@/lib/heartRate";
 import { readSessionHr, summarizeSessionHr, SESSION_HR_KEY } from "@/lib/sessionHeartRate";
@@ -26,7 +27,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { queueOfflineUpsert, dequeueOfflineUpsert, getPendingRows, useOfflineStatus, OFFLINE_FLUSHED_EVENT } from "@/hooks/useOfflineSync";
 import { readOfflineWorkoutCache, writeOfflineWorkoutCache, patchOfflineWorkoutCache } from "@/lib/offlineWorkoutCache";
 import { countCheckmarks, detectDestructiveWrite, getKnownCheckmarkCount, rememberCheckmarkCount, seedCheckmarkCounts, logDestructiveWrite } from "@/lib/completionGuard";
-import { Check, MessageSquare, ChevronDown, ChevronUp, Dumbbell, Footprints, Moon, Bike, Waves, ChevronLeft, ChevronRight, LogOut, Plus, Trash2, Search, CalendarIcon, X, TrendingUp, Equal, Weight, MessageCircle, XCircle, Timer, Route, Info, Pencil, Share2, Swords, ArrowLeftRight, Send, Settings, ArrowLeft, Flame, Download, Play, Save, Lock, RefreshCw, MapPin, Square, Maximize2, Minimize2, Pause, Heart, HeartOff, Sparkles, GripVertical, MoreHorizontal } from "lucide-react";
+import { Check, MessageSquare, ChevronDown, ChevronUp, Dumbbell, Footprints, Moon, Bike, Waves, ChevronLeft, ChevronRight, LogOut, Plus, Trash2, Search, CalendarIcon, X, TrendingUp, Equal, Weight, MessageCircle, XCircle, Timer, Route, Info, Pencil, Share2, Swords, ArrowLeftRight, Send, Settings, ArrowLeft, Flame, Download, Play, Save, Lock, RefreshCw, MapPin, Square, Maximize2, Minimize2, Pause, Heart, HeartOff, Sparkles, GripVertical, MoreHorizontal, CalendarRange, History } from "lucide-react";
 import { ExerciseDndContext, SortableLine } from "@/components/workout/ExerciseDnd";
 import { GPS_FIX_MAX_ACCURACY_M, useGpsTracker } from "@/hooks/useGpsTracker";
 import { useHeartRate } from "@/hooks/useHeartRate";
@@ -4001,8 +4002,8 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
 
   const pastWorkoutsUi = (
     <>
-      <button type="button" onClick={() => setShowPastWorkouts(true)} className="w-full flex items-center justify-between rounded-2xl bg-card shadow-soft border border-border/40 px-4 py-3 text-sm font-semibold">
-        <span>📖 Tidigare pass</span><ChevronRight className="w-4 h-4 text-muted-foreground" />
+      <button type="button" onClick={() => setShowPastWorkouts(true)} className="w-full flex items-center justify-between card-soft px-4 py-3 text-sm font-semibold">
+        <span className="flex items-center gap-2"><History className="w-4 h-4 text-primary" aria-hidden="true" />Tidigare pass</span><ChevronRight className="w-4 h-4 text-muted-foreground" />
       </button>
       <PastWorkoutsDialog userId={userId} open={showPastWorkouts} onClose={() => setShowPastWorkouts(false)} />
       <DeleteWorkoutConfirm
@@ -4069,16 +4070,19 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
         <div className="space-y-3">
           <button
             onClick={() => startPlanFromSingles()}
-            className="w-full text-left p-4 rounded-lg border border-border bg-card hover:border-primary/50 transition-all">
+            className="w-full text-left p-4 card-soft hover:border-primary/40 transition-all">
 
-            <div className="flex items-start gap-3">
-              <ChevronRight className="w-5 h-5 mt-0.5 flex-shrink-0 text-primary" />
-              <div>
-                <h3 className="font-bold text-sm">📋 Följ en plan</h3>
+            <div className="flex items-center gap-3">
+              <div className="h-11 w-11 rounded-xl bg-primary/10 text-primary flex items-center justify-center flex-shrink-0">
+                <CalendarRange className="w-5 h-5" aria-hidden="true" />
+              </div>
+              <div className="min-w-0 flex-1">
+                <h3 className="font-bold text-sm">Följ en plan</h3>
                 <p className="text-xs text-muted-foreground mt-1">
                   Välj en färdig plan eller bygg ett schema med veckor och dagar
                 </p>
               </div>
+              <ChevronRight className="w-5 h-5 flex-shrink-0 text-muted-foreground" aria-hidden="true" />
             </div>
           </button>
 
@@ -4088,16 +4092,19 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
               forceWorkoutChoiceRef.current = false;
               setMode("single");
             }}
-            className="w-full text-left p-4 rounded-lg border border-border bg-card hover:border-primary/50 transition-all">
+            className="w-full text-left p-4 card-soft hover:border-primary/40 transition-all">
 
-            <div className="flex items-start gap-3">
-              <Plus className="w-5 h-5 mt-0.5 flex-shrink-0 text-primary" />
-              <div>
-                <h3 className="font-bold text-sm">💪 Enskilda pass</h3>
+            <div className="flex items-center gap-3">
+              <div className="h-11 w-11 rounded-xl bg-primary/10 text-primary flex items-center justify-center flex-shrink-0">
+                <Dumbbell className="w-5 h-5" aria-hidden="true" />
+              </div>
+              <div className="min-w-0 flex-1">
+                <h3 className="font-bold text-sm">Enskilda pass</h3>
                 <p className="text-xs text-muted-foreground mt-1">
                   Skapa och bocka av egna pass utan att följa ett veckoschema
                 </p>
               </div>
+              <ChevronRight className="w-5 h-5 flex-shrink-0 text-muted-foreground" aria-hidden="true" />
             </div>
           </button>
         </div>
@@ -5427,8 +5434,19 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
           })}
         </div>
 
+        {singlePlans.length === 0 && !showAddSingle && (
+          <EmptyState
+            fill
+            icon={Dumbbell}
+            title="Inga pass ännu"
+            description="Lägg till ditt första pass så samlas de här, vecka för vecka."
+            actionLabel="Lägg till pass"
+            onAction={() => setShowAddSingle(true)}
+          />
+        )}
+
         {/* Add single workout form */}
-        <SingleWorkoutForm
+        {(singlePlans.length > 0 || showAddSingle) && <SingleWorkoutForm
       showAddSingle={showAddSingle}
       plans={plans}
       setShowCopyPicker={setShowCopyPicker}
@@ -5448,7 +5466,7 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
       singleCircuitRest={singleCircuitRest}
       setSingleCircuitRest={setSingleCircuitRest}
       setShowAddSingle={setShowAddSingle}
-    />
+    />}
       </div>
       <Suspense fallback={null}><AiWorkoutScanDialog
         open={showAiScan}

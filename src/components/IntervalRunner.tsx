@@ -877,7 +877,7 @@ export const IntervalRunner = ({ open, onClose, exerciseName = "Löpning – Int
   return (
     <>
       <Dialog open={open} onOpenChange={(o) => { if (!o) handleAbort(); }}>
-        <DialogContent className="max-w-none w-screen h-screen sm:rounded-none p-6 flex flex-col overflow-y-auto inset-0 left-0 top-0 translate-x-0 translate-y-0 sm:max-w-none">
+        <DialogContent className="max-w-none w-screen h-screen max-h-none rounded-none border-0 sm:rounded-none p-6 flex flex-col overflow-y-auto inset-0 left-0 top-0 translate-x-0 translate-y-0 sm:inset-0 sm:left-0 sm:top-0 sm:translate-x-0 sm:translate-y-0 sm:max-w-none sm:border-0">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Volume2 className="w-5 h-5 text-primary" />
