@@ -349,7 +349,7 @@ const WorkoutShareCard = ({
         <div className="flex items-center justify-center gap-2">
           <Palette className="w-4 h-4 text-muted-foreground" />
           {(Object.keys(SHARE_CARD_THEMES) as ShareCardVariant[]).map((key) => (
-            <button
+            <Button variant="ghost"
               key={key}
               onClick={() => setVariant(key)}
               className={`px-3 py-1.5 text-xs font-semibold rounded-full transition-all ${
@@ -359,26 +359,26 @@ const WorkoutShareCard = ({
               }`}
             >
               {SHARE_CARD_THEMES[key].label}
-            </button>
+            </Button>
           ))}
         </div>
 
         {/* Photo picker */}
         <div className="flex items-center justify-center gap-2">
-          <button
+          <Button variant="ghost"
             onClick={handlePickPhoto}
-            className="px-3 py-1.5 text-xs font-semibold rounded-full bg-secondary text-secondary-foreground hover:bg-accent transition-colors flex items-center gap-1.5"
+            className="px-3 py-1.5 text-xs font-semibold rounded-full bg-secondary text-secondary-foreground hover:bg-accent hover:text-accent-foreground transition-colors flex items-center gap-1.5"
           >
             <ImageIcon className="w-3.5 h-3.5" />
             {userPhoto ? "Byt foto" : "Lägg till foto"}
-          </button>
+          </Button>
           {userPhoto && (
-            <button
+            <Button variant="ghost"
               onClick={() => setUserPhoto(null)}
               className="px-3 py-1.5 text-xs font-semibold rounded-full bg-secondary text-secondary-foreground hover:bg-destructive/20 transition-colors flex items-center gap-1.5"
             >
               <Trash2 className="w-3.5 h-3.5" /> Ta bort
-            </button>
+            </Button>
           )}
         </div>
 
@@ -407,20 +407,20 @@ const WorkoutShareCard = ({
           <div className="flex gap-2"><Button className="flex-1" variant="ghost" onClick={onClose}><X /> Stäng</Button><Button className="flex-1" variant="ghost" disabled={generating} onClick={handleDownload}><Download /> Ladda ner bild</Button></div>
         </div>
         {onCopyToDate && (
-          <button
+          <Button variant="ghost"
             onClick={onCopyToDate}
             className="w-full py-3 bg-secondary text-secondary-foreground font-semibold rounded-lg hover:bg-muted transition-colors text-sm flex items-center justify-center gap-1.5"
           >
             <Copy className="w-4 h-4" /> Kopiera till datum
-          </button>
+          </Button>
         )}
         {onSaveWorkout && (
-          <button
+          <Button variant="ghost"
             onClick={onSaveWorkout}
             className="w-full py-3 bg-secondary text-secondary-foreground font-semibold rounded-lg hover:bg-muted transition-colors text-sm flex items-center justify-center gap-1.5"
           >
             <Download className="w-4 h-4" /> Spara pass
-          </button>
+          </Button>
         )}
       </div>
     </div>

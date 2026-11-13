@@ -1,14 +1,15 @@
 # Roadmap
 
 ## Social 13 november 2026
-- [ ] 1. Samlad vänsida med profil, träning, meddelande och utmaning; vänförfrågningar före vänlistan.
-- [ ] 2. Skilj gruppchattar från eventgrupper och ge direkt väg till event.
-- [ ] 3. Renodla Meddelanden, senaste samtal först och separat Grim-information.
-- [ ] 4. Tydliga flödesfilter, vänflödet först och målgrupp på varje inlägg.
-- [ ] 5. Destinationsstyrd delning och genväg till befintlig integritet.
-- [ ] 6. Kompakt utmaningsingång med inbjudningar, pågående och avslutade.
-- [ ] 7. Bevara meddelanden vid fel, senaste historik och tydliga fel-/tomlägen.
-- [ ] 8. Gemensamma tryckytor, rubriker, personrader och namngivna sekundära val; mobil-/datorverifiering.
+- [x] 1. Samlad vänsida med profil, träning, meddelande och utmaning; vänförfrågningar före vänlistan.
+- [x] 2. Skilj gruppchattar från eventgrupper och ge direkt väg till event.
+- [x] 3. Renodla Meddelanden, senaste samtal först och separat Grim-information.
+- [x] 4. Tydliga flödesfilter, vänflödet först och målgrupp på varje inlägg; offentligt läsbara inlägg märks Offentligt.
+- [x] 5. Destinationsstyrd delning och genväg till befintlig integritet.
+- [x] 6. Kompakt utmaningsingång med inbjudningar, pågående och avslutade.
+- [x] 7. Bevara meddelanden vid fel, senaste historik och tydliga fel-/tomlägen; bekräftelse, sammanslagning och sessionutkast testade.
+- [x] 8. Gemensamma knappar, tryckytor, personrader och sekundära val; Socials dialoger nedifrån på alla skärmar.
+- [ ] Inloggad mobil-/datorverifiering av Social och tvåkontoflöde: blockerad av saknad tillgänglig session; användaren ombedd att logga in i förhandsvisningen. Endast inloggningssidan har kontrollerats i webbläsaren denna omgång.
 
 ## Tydligare vardag och första start 13 november 2026
 - [x] 1. Välj Träning, Kost eller Båda vid första starten utan att ta bort andra funktioner; användarspecifikt val prioriterar Hem-genvägen.

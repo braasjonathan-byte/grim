@@ -296,17 +296,17 @@ const ChatConversation = ({ userId, friend, onBack, onOpenProfile }: ChatConvers
           <span className="block max-w-full font-semibold text-sm truncate">{friend.nickname}</span>
           {friendIsTyping && <TypingDots className="text-[11px]" />}
         </Button>
-        <button
+        <Button variant="ghost"
           onClick={() => {
             setSearchOpen(v => !v);
             setSearchQuery("");
             setSearchIndex(0);
           }}
-          className="p-1.5 hover:bg-muted rounded-full transition-colors"
+          className="h-11 w-11 shrink-0 p-1.5 hover:bg-muted rounded-full transition-colors"
           aria-label="Sök i chatten"
         >
           {searchOpen ? <X className="w-4 h-4" /> : <Search className="w-4 h-4" />}
-        </button>
+        </Button>
       </div>
 
       {searchOpen && (
@@ -316,18 +316,18 @@ const ChatConversation = ({ userId, friend, onBack, onOpenProfile }: ChatConvers
             value={searchQuery}
             onChange={e => { setSearchQuery(e.target.value); setSearchIndex(0); }}
             onKeyDown={e => { if (e.key === "Enter") { e.preventDefault(); stepSearch(1); } }}
-            placeholder="Sök bland hämtade meddelanden..."
-            className="flex-1 text-sm bg-muted rounded-full px-4 py-2 outline-none focus:ring-2 focus:ring-primary/30"
+            aria-label="Sök bland hämtade meddelanden" placeholder="Sök bland hämtade meddelanden..."
+            className="min-w-0 flex-1 text-sm bg-muted rounded-full px-4 py-2 outline-none focus:ring-2 focus:ring-primary/30"
           />
           <span className="text-[11px] text-muted-foreground tabular-nums min-w-[42px] text-center">
             {searchQuery.trim() ? `${searchMatches.length ? searchIndex + 1 : 0}/${searchMatches.length}` : ""}
           </span>
-          <button onClick={() => stepSearch(-1)} disabled={searchMatches.length === 0} className="p-1.5 rounded-full hover:bg-muted disabled:opacity-30">
+          <Button variant="ghost" aria-label="Föregående sökträff" onClick={() => stepSearch(-1)} disabled={searchMatches.length === 0} className="h-11 w-11 shrink-0 p-1.5 rounded-full hover:bg-muted disabled:opacity-30">
             <ChevronUp className="w-4 h-4" />
-          </button>
-          <button onClick={() => stepSearch(1)} disabled={searchMatches.length === 0} className="p-1.5 rounded-full hover:bg-muted disabled:opacity-30">
+          </Button>
+          <Button variant="ghost" aria-label="Nästa sökträff" onClick={() => stepSearch(1)} disabled={searchMatches.length === 0} className="h-11 w-11 shrink-0 p-1.5 rounded-full hover:bg-muted disabled:opacity-30">
             <ChevronDown className="w-4 h-4" />
-          </button>
+          </Button>
         </div>
       )}
 
@@ -358,20 +358,20 @@ const ChatConversation = ({ userId, friend, onBack, onOpenProfile }: ChatConvers
                   className={`group flex flex-col ${isMine ? 'items-end' : 'items-start'} mb-1.5`}
                 >
                   <div className={`flex items-center gap-1 ${isMine ? 'flex-row' : 'flex-row-reverse'} max-w-[88%]`}>
-                    <button
+                    <Button variant="ghost"
                       onClick={() => { setReplyTo(msg); inputRef.current?.focus(); }}
                       className="p-1.5 rounded-full text-muted-foreground hover:bg-muted opacity-60 hover:opacity-100 shrink-0"
                       aria-label="Svara på meddelandet"
                     >
                       <Reply className="w-3.5 h-3.5" />
-                    </button>
+                    </Button>
                   <div className={`px-3.5 py-2 ${
                     isMine
                       ? 'bg-primary text-primary-foreground rounded-2xl rounded-br-sm'
                       : 'bg-card text-foreground rounded-2xl rounded-bl-sm shadow-soft'
                   } ${highlightId === msg.id ? 'ring-2 ring-primary' : ''}`}>
                     {parent && (
-                      <button
+                      <Button variant="ghost"
                         onClick={() => jumpToMessage(parent.id)}
                         className={`block w-full text-left mb-1.5 border-l-2 pl-2 py-0.5 rounded-r ${
                           isMine ? 'border-primary-foreground/50 bg-primary-foreground/10' : 'border-primary bg-muted/60'
@@ -383,7 +383,7 @@ const ChatConversation = ({ userId, friend, onBack, onOpenProfile }: ChatConvers
                         <span className={`block text-[11px] line-clamp-2 ${isMine ? 'text-primary-foreground/70' : 'text-muted-foreground'}`}>
                           {messagePreview(parent)}
                         </span>
-                      </button>
+                      </Button>
                     )}
                     {msg.message_type === 'route' && msg.shared_workout ? (
                       <RouteBubble payload={msg.shared_workout} isMine={isMine} />
@@ -433,9 +433,9 @@ const ChatConversation = ({ userId, friend, onBack, onOpenProfile }: ChatConvers
                 <Dumbbell className="w-4 h-4 text-primary" />
                 Välj dag i din plan
               </h3>
-              <button onClick={() => setImportingWorkout(null)} className="p-1 text-muted-foreground hover:text-foreground">
+              <Button variant="ghost" onClick={() => setImportingWorkout(null)} className="h-11 w-11 shrink-0 p-1 text-muted-foreground hover:text-foreground">
                 <X className="w-4 h-4" />
-              </button>
+              </Button>
             </div>
 
             {/* Workout preview */}
@@ -452,7 +452,7 @@ const ChatConversation = ({ userId, friend, onBack, onOpenProfile }: ChatConvers
             {planWeeks.length > 0 ? (
               <>
                 <div className="flex items-center justify-between px-4 py-3">
-                  <button
+                  <Button variant="ghost"
                     onClick={() => {
                       const idx = planWeeks.indexOf(selectedImportWeek);
                       if (idx > 0) setSelectedImportWeek(planWeeks[idx - 1]);
@@ -461,9 +461,9 @@ const ChatConversation = ({ userId, friend, onBack, onOpenProfile }: ChatConvers
                     className="p-1.5 rounded-lg hover:bg-muted disabled:opacity-30 transition-colors"
                   >
                     <ChevronLeft className="w-4 h-4" />
-                  </button>
+                  </Button>
                   <span className="text-sm font-bold">Vecka {selectedImportWeek}</span>
-                  <button
+                  <Button variant="ghost"
                     onClick={() => {
                       const idx = planWeeks.indexOf(selectedImportWeek);
                       if (idx < planWeeks.length - 1) setSelectedImportWeek(planWeeks[idx + 1]);
@@ -472,7 +472,7 @@ const ChatConversation = ({ userId, friend, onBack, onOpenProfile }: ChatConvers
                     className="p-1.5 rounded-lg hover:bg-muted disabled:opacity-30 transition-colors"
                   >
                     <ChevronRight className="w-4 h-4" />
-                  </button>
+                  </Button>
                 </div>
 
                 {/* Days grid */}
@@ -485,7 +485,7 @@ const ChatConversation = ({ userId, friend, onBack, onOpenProfile }: ChatConvers
                       : [];
 
                     return (
-                      <button
+                      <Button variant="ghost"
                         key={dayLabel}
                         onClick={() => handleDayClick(selectedImportWeek, dayLabel)}
                         className="w-full text-left p-3 rounded-lg border border-border hover:border-primary/50 hover:bg-primary/5 transition-colors"
@@ -513,7 +513,7 @@ const ChatConversation = ({ userId, friend, onBack, onOpenProfile }: ChatConvers
                             )}
                           </div>
                         )}
-                      </button>
+                      </Button>
                     );
                   })}
                 </div>
@@ -539,9 +539,9 @@ const ChatConversation = ({ userId, friend, onBack, onOpenProfile }: ChatConvers
                 <Dumbbell className="w-4 h-4 text-primary" />
                 Bekräfta import
               </h3>
-              <button onClick={() => setConfirmTarget(null)} className="p-1 text-muted-foreground hover:text-foreground">
+              <Button variant="ghost" onClick={() => setConfirmTarget(null)} className="h-11 w-11 shrink-0 p-1 text-muted-foreground hover:text-foreground">
                 <X className="w-4 h-4" />
-              </button>
+              </Button>
             </div>
 
             <div className="bg-muted rounded-lg p-3 mb-3">
@@ -558,20 +558,20 @@ const ChatConversation = ({ userId, friend, onBack, onOpenProfile }: ChatConvers
             )}
 
             <div className="flex gap-2">
-              <button
+              <Button variant="ghost"
                 onClick={() => setConfirmTarget(null)}
                 className="flex-1 px-3 py-2 text-sm border border-border rounded-lg hover:bg-muted transition-colors"
               >
                 Avbryt
-              </button>
-              <button
+              </Button>
+              <Button variant="ghost"
                 onClick={doImport}
                 disabled={importing}
                 className="flex-1 px-3 py-2 text-sm bg-primary text-primary-foreground rounded-lg font-semibold disabled:opacity-50 flex items-center justify-center gap-2"
               >
                 <Check className="w-4 h-4" />
                 {importing ? "Sparar..." : confirmTarget.hasExisting ? "Ersätt & lägg till" : "Lägg till"}
-              </button>
+              </Button>
             </div>
           </div>
         </>
@@ -590,9 +590,9 @@ const ChatConversation = ({ userId, friend, onBack, onOpenProfile }: ChatConvers
               </p>
               <p className="text-[11px] text-muted-foreground truncate">{messagePreview(replyTo)}</p>
             </div>
-            <button onClick={() => setReplyTo(null)} className="p-1 text-muted-foreground hover:text-foreground" aria-label="Avbryt svar">
+            <Button variant="ghost" onClick={() => setReplyTo(null)} className="h-11 w-11 shrink-0 p-1 text-muted-foreground hover:text-foreground" aria-label="Avbryt svar">
               <X className="w-3.5 h-3.5" />
-            </button>
+            </Button>
           </div>
         )}
         <div className="flex gap-2 items-end">
@@ -636,12 +636,12 @@ const WorkoutBubble = ({ workout, isMine, onImport }: { workout: any; isMine: bo
         )}
       </div>
       {!isMine && (
-        <button
+        <Button variant="ghost"
           onClick={(e) => { e.stopPropagation(); onImport(); }}
           className="text-xs font-semibold underline mt-1"
         >
           📥 Lägg till i min plan
-        </button>
+        </Button>
       )}
     </div>
   );

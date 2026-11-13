@@ -1,3 +1,4 @@
+import { SOCIAL_SHEET_CLASSES } from "@/components/ui/socialSheet";
 import { useEffect, useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -35,21 +36,21 @@ const ReportDialog = ({ open, onOpenChange, reporterId, reportedUserId, postId, 
 
   return (
     <Dialog open={open} onOpenChange={(v) => !busy && onOpenChange(v)}>
-      <DialogContent className="max-w-sm">
+      <DialogContent className={`${SOCIAL_SHEET_CLASSES} max-w-sm`}>
         <DialogHeader>
           <DialogTitle>{title || "Rapportera inlägg"}</DialogTitle>
           <DialogDescription>Välj en orsak.</DialogDescription>
         </DialogHeader>
         <div className="space-y-2">
           {REPORT_REASONS.map((r) => (
-            <button
+            <Button variant="outline" aria-pressed={reason === r.value}
               key={r.value}
               type="button"
               onClick={() => setReason(r.value)}
               className={`w-full text-left rounded-xl border px-3 py-2 text-sm ${reason === r.value ? "border-primary bg-primary/10 font-semibold" : "border-border"}`}
             >
               {r.label}
-            </button>
+            </Button>
           ))}
           {reason === "other" && (
             <div>

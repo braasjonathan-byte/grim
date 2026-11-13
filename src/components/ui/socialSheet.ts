@@ -1,0 +1,2 @@
+/** Social dialogs stay bottom-aligned on mobile and desktop without changing other app dialogs. */
+export const SOCIAL_SHEET_CLASSES = "sm:inset-x-0 sm:bottom-0 sm:top-auto sm:mx-auto sm:translate-x-0 sm:translate-y-0 sm:rounded-t-2xl sm:rounded-b-none sm:data-[state=open]:slide-in-from-bottom-full sm:data-[state=closed]:slide-out-to-bottom-full sm:data-[state=open]:zoom-in-100 sm:data-[state=closed]:zoom-out-100";

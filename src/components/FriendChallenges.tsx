@@ -1,3 +1,4 @@
+import { SOCIAL_SHEET_CLASSES } from "@/components/ui/socialSheet";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { MEDALS } from "@/lib/medals";
 import { supabase } from "@/integrations/supabase/client";
@@ -209,7 +210,7 @@ export default function FriendChallenges({ userId }: Props) {
     const leader = list[0];
     return (
       <div key={c.id} className="bg-card border border-border rounded-2xl overflow-hidden">
-        <button onClick={() => toggle(c)} className="w-full flex items-center gap-2 p-3 text-left">
+        <Button variant="ghost" onClick={() => toggle(c)} className="w-full flex items-center gap-2 p-3 text-left">
           <Trophy className={`w-4 h-4 ${done ? "text-muted-foreground" : "text-warning"}`} />
           <div className="flex-1 min-w-0">
             <div className="text-sm font-bold truncate">{c.title}</div>
@@ -220,7 +221,7 @@ export default function FriendChallenges({ userId }: Props) {
             </div>
           </div>
           <ChevronDown className={`w-4 h-4 text-muted-foreground transition-transform ${expanded === c.id ? "rotate-180" : ""}`} />
-        </button>
+        </Button>
 
         {expanded === c.id && (
           <div className="px-3 pb-3 space-y-1.5 animate-fade-in">
@@ -249,9 +250,9 @@ export default function FriendChallenges({ userId }: Props) {
             )}
             {c.created_by !== userId && <Button variant="ghost" size="sm" disabled={responding !== null} onClick={() => respondInvite(c, false)}>Lämna utmaningen</Button>}
             {c.created_by === userId && (
-              <button onClick={() => removeChallenge(c)} className="flex items-center gap-1 text-[11px] text-destructive pt-1">
+              <Button variant="ghost" onClick={() => removeChallenge(c)} className="flex items-center gap-1 text-[11px] text-destructive pt-1">
                 <Trash2 className="w-3 h-3" /> Ta bort utmaningen
-              </button>
+              </Button>
             )}
           </div>
         )}
@@ -305,7 +306,7 @@ export default function FriendChallenges({ userId }: Props) {
         {!loading && !loadError && ((section === "invites" && invites.length === 0) || (section === "active" && active.length === 0) || (section === "finished" && finished.length === 0)) && <p className="py-2 text-sm text-muted-foreground">{section === "invites" ? "Inga väntande inbjudningar." : section === "active" ? "Inga pågående utmaningar." : "Inga avslutade utmaningar."}</p>}
       </>}
       <Dialog open={createOpen} onOpenChange={setCreateOpen}>
-        <DialogContent className="max-w-md max-h-[85dvh] overflow-y-auto">
+        <DialogContent className={`${SOCIAL_SHEET_CLASSES} max-w-md max-h-[85dvh] overflow-y-auto`}>
           <DialogHeader><DialogTitle className="text-base">Ny utmaning</DialogTitle></DialogHeader>
           <div className="space-y-3">
             <div className="space-y-1">

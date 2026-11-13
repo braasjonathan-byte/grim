@@ -2,6 +2,7 @@
 
 - Direct and group conversations share cursor-paged newest-first history and confirmed writes; preserve user-scoped drafts on failure and deduplicate saved/realtime rows to prevent loss and duplicate messages.
 - Social person navigation reuses FriendsView profile/training and existing message/challenge flows; destination-first sharing and settings intents avoid duplicate editors and publication paths.
+- Social Radix dialogs use the shared social-sheet positioning override; keep bottom alignment consistent without changing unrelated app dialogs.
 - Display public posts as public, not member-only; audience labels must describe deployed access without changing permissions during presentation work.
 
 - Settings search uses a shared catalogue and opens existing category controls; never create a second settings editor.

@@ -13,7 +13,6 @@ import CreateGroupDialog from "./CreateGroupDialog";
 import EmptyState from "@/components/EmptyState";
 import grimIcon from "@/assets/grim-icon.webp";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 
 const GRIM_INFO_KEY = "gymberget_grim_info_seen";
 
@@ -419,7 +418,7 @@ const ChatView = ({ userId, isAdmin = false, isPremium = false, initialFriendId,
           <Button variant="ghost" className="w-full justify-between" aria-expanded={showGrimInfo} onClick={() => setShowGrimInfo(v => !v)}><span className="flex items-center gap-2"><Megaphone /> Grim-information & support</span>{(announcementUnread + (grimLastMessage?.unread_count || 0) + supportConversations.reduce((sum, row) => sum + row.unread_count, 0)) > 0 && <span className="text-primary">Nytt</span>}</Button>
           {showGrimInfo && <div className="space-y-1 border-b border-border pb-2">{infoError && <div role="alert"><p className="text-sm text-muted-foreground">Grim-information kunde inte hämtas.</p><Button variant="outline" onClick={() => void fetchAnnouncementPreview()}>Försök igen</Button></div>}
           {/* Grim — official announcements (always pinned at top, for everyone) */}
-          <button
+          <Button variant="ghost"
             onClick={() => {
               setSelectedFriend({ user_id: GRIM_ANNOUNCEMENT_ID, nickname: "Grim", avatar_url: grimIcon, isGrimAnnouncement: true });
               if (announcementPreview) {
@@ -457,11 +456,11 @@ const ChatView = ({ userId, isAdmin = false, isPremium = false, initialFriendId,
                 {announcementUnread > 9 ? '9+' : announcementUnread}
               </span>
             )}
-          </button>
+          </Button>
 
           {/* Grim support for supporter users */}
           {isPremium && !isAdmin && (
-            <button
+            <Button variant="ghost"
               onClick={() => setSelectedFriend({ user_id: GRIM_SUPPORT_ID, nickname: "Grim", avatar_url: grimIcon, isGrimSupport: true })}
               className="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-muted/50 transition-colors text-left border border-primary/20 bg-primary/5 mb-2"
             >
@@ -493,7 +492,7 @@ const ChatView = ({ userId, isAdmin = false, isPremium = false, initialFriendId,
                   {grimLastMessage.unread_count > 9 ? '9+' : grimLastMessage.unread_count}
                 </span>
               )}
-            </button>
+            </Button>
           )}
 
           {/* Admin: Grim support inbox */}
@@ -504,7 +503,7 @@ const ChatView = ({ userId, isAdmin = false, isPremium = false, initialFriendId,
                 Grim Support
               </p>
               {supportConversations.map(conv => (
-                <button
+                <Button variant="ghost"
                   key={conv.user_id}
                   onClick={() => setSelectedFriend({
                     user_id: conv.user_id,
@@ -542,7 +541,7 @@ const ChatView = ({ userId, isAdmin = false, isPremium = false, initialFriendId,
                       {conv.unread_count > 9 ? '9+' : conv.unread_count}
                     </span>
                   )}
-                </button>
+                </Button>
               ))}
               <div className="border-b border-border my-2" />
             </div>
@@ -568,7 +567,7 @@ const ChatView = ({ userId, isAdmin = false, isPremium = false, initialFriendId,
                 const unread = lastMsg?.unread_count || 0;
                 const av = avatarGradient(friend.nickname);
                 return (
-                  <button
+                  <Button variant="ghost"
                     key={friend.user_id}
                     onClick={() => setSelectedFriend(friend)}
                     className={`w-full flex items-center gap-3 p-3.5 transition-colors text-left active:bg-muted/70 ${unread > 0 ? 'bg-primary/5 hover:bg-primary/10' : 'hover:bg-muted/40'}`}
@@ -614,7 +613,7 @@ const ChatView = ({ userId, isAdmin = false, isPremium = false, initialFriendId,
                         {unread > 9 ? '9+' : unread}
                       </span>
                     )}
-                  </button>
+                  </Button>
                 );
               })}
             </div>
@@ -856,9 +855,9 @@ const GrimSupportConversation = ({ userId, isAdmin, targetNickname, targetAvatar
     <div className="flex h-full min-h-0 flex-col overflow-hidden">
       {/* Header */}
       <div className="flex shrink-0 items-center gap-3 border-b border-border pb-3">
-        <button onClick={onBack} className="p-1.5 hover:bg-muted rounded-lg transition-colors">
+        <Button variant="ghost" onClick={onBack} className="h-11 w-11 shrink-0 p-1.5 hover:bg-muted rounded-lg transition-colors">
           <ArrowLeft className="w-5 h-5" />
-        </button>
+        </Button>
         <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center overflow-hidden">
           {isAdmin && targetAvatar ? (
             <img src={targetAvatar} alt="" className="w-full h-full object-cover" />
@@ -928,9 +927,9 @@ const GrimSupportConversation = ({ userId, isAdmin, targetNickname, targetAvatar
             <p className="text-sm text-muted-foreground">Hej! 👋 Skriv till oss så hjälper vi dig.</p>
             <div className="flex flex-wrap justify-center gap-1.5 px-2">
               {QUICK_REPLIES.map(q => (
-                <button key={q.question} onClick={() => handleQuickReply(q.question)} className="text-xs bg-muted hover:bg-muted/80 text-foreground px-3 py-1.5 rounded-full transition-colors border border-border">
+                <Button variant="ghost" key={q.question} onClick={() => handleQuickReply(q.question)} className="text-xs bg-muted hover:bg-muted/80 text-foreground px-3 py-1.5 rounded-full transition-colors border border-border">
                   {q.question}
-                </button>
+                </Button>
               ))}
             </div>
           </div>
@@ -946,9 +945,9 @@ const GrimSupportConversation = ({ userId, isAdmin, targetNickname, targetAvatar
         {messages.length > 0 && !isAdmin && (
           <div className="flex flex-wrap gap-1.5 px-1 pt-2">
             {QUICK_REPLIES.map(q => (
-              <button key={q.question} onClick={() => handleQuickReply(q.question)} className="text-[11px] bg-muted/60 hover:bg-muted text-muted-foreground hover:text-foreground px-2.5 py-1 rounded-full transition-colors border border-border/50">
+              <Button variant="ghost" key={q.question} onClick={() => handleQuickReply(q.question)} className="text-[11px] bg-muted/60 hover:bg-muted text-muted-foreground hover:text-foreground px-2.5 py-1 rounded-full transition-colors border border-border/50">
                 {q.question}
-              </button>
+              </Button>
             ))}
           </div>
         )}
@@ -961,13 +960,13 @@ const GrimSupportConversation = ({ userId, isAdmin, targetNickname, targetAvatar
       >
         <input type="file" ref={fileInputRef} accept="image/*" className="hidden" onChange={handleImageUpload} />
         {!isAdmin && (
-          <button
+          <Button variant="ghost"
             onClick={() => fileInputRef.current?.click()}
             disabled={uploading || sending}
             className="p-2.5 text-muted-foreground hover:text-foreground transition-colors disabled:opacity-50 flex-shrink-0"
           >
             <ImagePlus className="w-5 h-5" />
-          </button>
+          </Button>
         )}
         <input
           ref={inputRef}
@@ -975,16 +974,16 @@ const GrimSupportConversation = ({ userId, isAdmin, targetNickname, targetAvatar
           onChange={e => setNewMessage(e.target.value)}
           onKeyDown={handleKeyDown}
           placeholder={isAdmin ? "Svara som Grim..." : "Skriv till Grim..."}
-          className="flex-1 text-sm bg-muted rounded-full px-4 py-2.5 outline-none focus:ring-2 focus:ring-primary/30"
+          className="min-w-0 flex-1 text-sm bg-muted rounded-full px-4 py-2.5 outline-none focus:ring-2 focus:ring-primary/30"
           disabled={sending || uploading}
         />
-        <button
+        <Button variant="ghost"
           onClick={sendMessage}
           disabled={!newMessage.trim() || sending || uploading}
           className="p-2.5 bg-primary text-primary-foreground rounded-full disabled:opacity-50 transition-colors hover:bg-primary/90 flex-shrink-0"
         >
           <Send className="w-4 h-4" />
-        </button>
+        </Button>
       </ChatComposerPortal>
     </div>
   );
@@ -1081,9 +1080,9 @@ const GrimAnnouncementConversation = ({ currentUserId, isAdmin, onBack }: GrimAn
   return (
     <div className="flex h-full min-h-0 flex-col overflow-hidden">
       <div className="flex shrink-0 items-center gap-3 border-b border-border pb-3">
-        <button onClick={onBack} className="p-1.5 hover:bg-muted rounded-lg transition-colors">
+        <Button variant="ghost" onClick={onBack} className="h-11 w-11 shrink-0 p-1.5 hover:bg-muted rounded-lg transition-colors">
           <ArrowLeft className="w-5 h-5" />
-        </button>
+        </Button>
         <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center overflow-hidden">
           <img src={grimIcon} alt="Grim" className="w-full h-full object-cover" />
         </div>
@@ -1126,13 +1125,13 @@ const GrimAnnouncementConversation = ({ currentUserId, isAdmin, onBack }: GrimAn
                         {new Date(a.created_at).toLocaleTimeString("sv-SE", { hour: "2-digit", minute: "2-digit" })}
                       </p>
                       {isAdmin && (
-                        <button
+                        <Button variant="ghost"
                           onClick={() => handleDelete(a.id)}
                           className="p-0.5 text-destructive hover:opacity-70 transition-opacity opacity-60 group-hover:opacity-100"
                           title="Ta bort"
                         >
                           <Trash2 className="w-3 h-3" />
-                        </button>
+                        </Button>
                       )}
                     </div>
                   </div>
@@ -1165,7 +1164,7 @@ const GrimAnnouncementConversation = ({ currentUserId, isAdmin, onBack }: GrimAn
               rows={2}
               className="flex-1 bg-muted text-foreground text-sm px-4 py-2 rounded-2xl outline-none focus:ring-2 focus:ring-primary/30 resize-none"
             />
-            <button
+            <Button variant="ghost"
               onClick={handlePublish}
               disabled={!title.trim() || !message.trim() || sending}
               className="p-2.5 bg-primary text-primary-foreground rounded-full disabled:opacity-50 transition-colors hover:bg-primary/90 flex-shrink-0"
@@ -1178,7 +1177,7 @@ const GrimAnnouncementConversation = ({ currentUserId, isAdmin, onBack }: GrimAn
               ) : (
                 <Send className="w-4 h-4" />
               )}
-            </button>
+            </Button>
           </div>
         </ChatComposerPortal>
       )}

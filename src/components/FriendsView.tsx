@@ -856,15 +856,15 @@ const FriendsView = ({ userId, isAdmin = false, friendActivities = [], onClearAc
 
     return (
       <div className="space-y-4 animate-fade-in">
-        <button
+        <Button variant="ghost"
           onClick={() => { unlockTheme("friend-view"); applyTheme(originalThemeRef.current); setViewingFriend(null); setExpandedDay(null); }}
           className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors"
         >
           <ChevronLeft className="w-4 h-4" /> Tillbaka till vänner
-        </button>
+        </Button>
 
         <div className="text-center space-y-2">
-          <button
+          <Button variant="ghost"
             onClick={() => viewingFriend.profile.avatar_url && setShowFullFriendAvatar(true)}
             className={`w-14 h-14 rounded-full bg-primary/20 flex items-center justify-center overflow-hidden mx-auto ${viewingFriend.profile.avatar_url ? "cursor-pointer active:scale-95 transition-transform" : ""}`}
           >
@@ -873,7 +873,7 @@ const FriendsView = ({ userId, isAdmin = false, friendActivities = [], onClearAc
             ) : (
               <span className="text-xl font-bold text-primary">{viewingFriend.profile.nickname[0]?.toUpperCase()}</span>
             )}
-          </button>
+          </Button>
           <h2 className="text-xl font-black">{viewingFriend.profile.nickname}</h2>
         </div>
         <div className="flex gap-1" role="group" aria-label="Vänsida">
@@ -890,15 +890,15 @@ const FriendsView = ({ userId, isAdmin = false, friendActivities = [], onClearAc
         {/* Fullscreen avatar overlay */}
         {showFullFriendAvatar && viewingFriend.profile.avatar_url && (
           <div
-            className="fixed inset-0 z-[80] bg-black/90 flex items-center justify-center p-6"
+            className="fixed inset-0 z-[80] bg-background/95 flex items-center justify-center p-6"
             onClick={() => setShowFullFriendAvatar(false)}
           >
-            <button
+            <Button variant="ghost"
               onClick={() => setShowFullFriendAvatar(false)}
-              className="absolute top-4 right-4 p-2 text-white/70 hover:text-white"
+              className="absolute top-4 right-4 p-2 text-foreground/80 hover:text-foreground"
             >
               <X className="w-6 h-6" />
-            </button>
+            </Button>
             <img
               src={viewingFriend.profile.avatar_url}
               alt={viewingFriend.profile.nickname}
@@ -917,24 +917,24 @@ const FriendsView = ({ userId, isAdmin = false, friendActivities = [], onClearAc
           <>
             {/* Week navigation */}
             <div className="flex items-center justify-between">
-              <button
+              <Button variant="ghost"
                 onClick={() => weekIdx > 0 && setFriendCurrentWeek(friendWeeks[weekIdx - 1])}
                 disabled={weekIdx <= 0}
                 className="p-2 rounded-lg bg-secondary text-secondary-foreground disabled:opacity-30 hover:bg-muted transition-colors"
               >
                 <ChevronLeft className="w-5 h-5" />
-              </button>
+              </Button>
               <div className="text-center">
                 <h3 className="text-lg font-black">Vecka {friendCurrentWeek}</h3>
                 <p className="text-xs text-muted-foreground">av {friendWeeks.length} veckor</p>
               </div>
-              <button
+              <Button variant="ghost"
                 onClick={() => weekIdx < friendWeeks.length - 1 && setFriendCurrentWeek(friendWeeks[weekIdx + 1])}
                 disabled={weekIdx >= friendWeeks.length - 1}
                 className="p-2 rounded-lg bg-secondary text-secondary-foreground disabled:opacity-30 hover:bg-muted transition-colors"
               >
                 <ChevronRight className="w-5 h-5" />
-              </button>
+              </Button>
             </div>
 
             {/* Progress bar */}
@@ -948,7 +948,7 @@ const FriendsView = ({ userId, isAdmin = false, friendActivities = [], onClearAc
             {/* Week overview */}
             <div className="grid grid-cols-6 gap-1.5">
               {friendWeeks.map((w) => (
-                <button
+                <Button variant="ghost"
                   key={w}
                   onClick={() => setFriendCurrentWeek(w)}
                   className={`flex flex-col items-center p-2 rounded-md text-xs transition-all ${
@@ -958,7 +958,7 @@ const FriendsView = ({ userId, isAdmin = false, friendActivities = [], onClearAc
                   }`}
                 >
                   <span className="font-bold">V{w}</span>
-                </button>
+                </Button>
               ))}
             </div>
 
@@ -1029,7 +1029,7 @@ const FriendsView = ({ userId, isAdmin = false, friendActivities = [], onClearAc
                         {/* Admin actions */}
                         {isAdmin && editingPlanId !== plan.id && (
                           <div className="flex items-center gap-3">
-                            <button
+                            <Button variant="ghost"
                               onClick={() => adminToggleDone(plan)}
                               disabled={togglingDone === key}
                               className={`flex items-center gap-1.5 text-xs font-semibold hover:underline ${
@@ -1037,13 +1037,13 @@ const FriendsView = ({ userId, isAdmin = false, friendActivities = [], onClearAc
                               }`}
                             >
                               <Check className="w-3.5 h-3.5" /> {isDone ? "Ångra klarmarkering" : "Klarmarkera"}
-                            </button>
-                            <button
+                            </Button>
+                            <Button variant="ghost"
                               onClick={() => startEditing(plan)}
                               className="flex items-center gap-1.5 text-xs text-primary font-semibold hover:underline"
                             >
                               <Pencil className="w-3.5 h-3.5" /> Redigera pass
-                            </button>
+                            </Button>
                           </div>
                         )}
 
@@ -1067,13 +1067,13 @@ const FriendsView = ({ userId, isAdmin = false, friendActivities = [], onClearAc
                                 {getEditDetailsParts().map((part, i) => (
                                   <div key={i} className="flex items-center gap-2 bg-secondary/50 rounded-md px-2 py-1.5">
                                     <span className="flex-1 text-sm text-foreground">{part}</span>
-                                    <button
+                                    <Button variant="ghost"
                                       onClick={() => removeEditExercise(i)}
                                       className="flex-shrink-0 p-0.5 text-muted-foreground hover:text-destructive transition-colors"
                                       title="Ta bort övning"
                                     >
                                       <X className="w-3.5 h-3.5" />
-                                    </button>
+                                    </Button>
                                   </div>
                                 ))}
                               </div>
@@ -1084,9 +1084,9 @@ const FriendsView = ({ userId, isAdmin = false, friendActivities = [], onClearAc
                               <div className="bg-secondary/50 rounded-lg p-3 space-y-2 animate-fade-in">
                                 <div className="flex items-center justify-between">
                                   <h4 className="text-xs font-semibold">Lägg till övning</h4>
-                                  <button onClick={() => { setShowAdminExercisePicker(false); setAdminExerciseSearch(""); }} className="text-muted-foreground hover:text-foreground">
+                                  <Button variant="ghost" onClick={() => { setShowAdminExercisePicker(false); setAdminExerciseSearch(""); }} className="text-muted-foreground hover:text-foreground">
                                     <X className="w-4 h-4" />
-                                  </button>
+                                  </Button>
                                 </div>
                                 <input
                                   type="text"
@@ -1097,35 +1097,35 @@ const FriendsView = ({ userId, isAdmin = false, friendActivities = [], onClearAc
                                 />
                                 <div className="flex flex-wrap gap-1">
                                   {muscleGroups.map((mg) => (
-                                    <button
+                                    <Button variant="ghost"
                                       key={mg}
                                       onClick={() => setAdminSelectedMuscle(adminSelectedMuscle === mg ? null : mg)}
                                       className={`text-[10px] px-2 py-0.5 rounded-full transition-colors ${adminSelectedMuscle === mg ? "bg-primary text-primary-foreground" : "bg-secondary text-muted-foreground hover:text-foreground"}`}
                                     >
                                       {mg}
-                                    </button>
+                                    </Button>
                                   ))}
                                 </div>
                                 <div className="max-h-40 overflow-y-auto space-y-0.5">
                                   {filteredAdminExercises.slice(0, 30).map((ex) => (
-                                    <button
+                                    <Button variant="ghost"
                                       key={ex.name}
                                       onClick={() => handleAdminExerciseSelect(ex.name)}
                                       className="w-full text-left text-xs px-2 py-1.5 rounded-md hover:bg-primary/10 text-foreground transition-colors"
                                     >
                                       {ex.name}
                                       <span className="text-muted-foreground ml-1">({ex.muscleGroup})</span>
-                                    </button>
+                                    </Button>
                                   ))}
                                 </div>
                               </div>
                             ) : (
-                              <button
+                              <Button variant="ghost"
                                 onClick={() => { setShowAdminExercisePicker(true); setAdminExerciseSearch(""); setAdminSelectedMuscle(null); }}
                                 className="w-full py-2 border border-dashed border-border rounded-md text-xs text-muted-foreground hover:text-foreground hover:border-primary transition-colors flex items-center justify-center gap-1"
                               >
                                 <Plus className="w-3 h-3" /> Lägg till övning
-                              </button>
+                              </Button>
                             )}
 
                             {/* Weight/reps/sets dialog */}
@@ -1150,12 +1150,12 @@ const FriendsView = ({ userId, isAdmin = false, friendActivities = [], onClearAc
                                   </div>
                                 </div>
                                 <div className="flex gap-2">
-                                  <button onClick={addAdminExerciseWithWeight} className="flex-1 flex items-center justify-center gap-1.5 py-2 bg-primary text-primary-foreground rounded-md text-xs font-semibold">
+                                  <Button variant="ghost" onClick={addAdminExerciseWithWeight} className="flex-1 flex items-center justify-center gap-1.5 py-2 bg-primary text-primary-foreground rounded-md text-xs font-semibold">
                                     <Plus className="w-3.5 h-3.5" /> Lägg till
-                                  </button>
-                                  <button onClick={() => setAdminWeightDialog(null)} className="px-3 py-2 text-muted-foreground hover:text-foreground text-xs bg-secondary rounded-md">
+                                  </Button>
+                                  <Button variant="ghost" onClick={() => setAdminWeightDialog(null)} className="px-3 py-2 text-muted-foreground hover:text-foreground text-xs bg-secondary rounded-md">
                                     Avbryt
-                                  </button>
+                                  </Button>
                                 </div>
                               </div>
                             )}
@@ -1194,30 +1194,30 @@ const FriendsView = ({ userId, isAdmin = false, friendActivities = [], onClearAc
                                   }} placeholder="t.ex. 5" className="w-full bg-background text-foreground text-sm px-3 py-2 rounded-md border border-border outline-none focus:ring-1 focus:ring-primary text-center font-bold placeholder:text-muted-foreground placeholder:font-normal" />
                                 </div>
                                 <div className="flex gap-2">
-                                  <button onClick={addAdminCondExercise} className="flex-1 flex items-center justify-center gap-1.5 py-2 bg-primary text-primary-foreground rounded-md text-xs font-semibold">
+                                  <Button variant="ghost" onClick={addAdminCondExercise} className="flex-1 flex items-center justify-center gap-1.5 py-2 bg-primary text-primary-foreground rounded-md text-xs font-semibold">
                                     <Plus className="w-3.5 h-3.5" /> Lägg till
-                                  </button>
-                                  <button onClick={() => setAdminCondDialog(null)} className="px-3 py-2 text-muted-foreground hover:text-foreground text-xs bg-secondary rounded-md">
+                                  </Button>
+                                  <Button variant="ghost" onClick={() => setAdminCondDialog(null)} className="px-3 py-2 text-muted-foreground hover:text-foreground text-xs bg-secondary rounded-md">
                                     Avbryt
-                                  </button>
+                                  </Button>
                                 </div>
                               </div>
                             )}
 
                             <div className="flex gap-2">
-                              <button
+                              <Button variant="ghost"
                                 onClick={() => saveEdit(plan.id)}
                                 disabled={savingEdit}
                                 className="flex items-center gap-1.5 px-3 py-1.5 bg-primary text-primary-foreground text-xs font-semibold rounded-md disabled:opacity-40"
                               >
                                 <Save className="w-3.5 h-3.5" /> Spara
-                              </button>
-                              <button
+                              </Button>
+                              <Button variant="ghost"
                                 onClick={() => setEditingPlanId(null)}
                                 className="px-3 py-1.5 bg-secondary text-muted-foreground text-xs font-semibold rounded-md hover:text-foreground"
                               >
                                 Avbryt
-                              </button>
+                              </Button>
                             </div>
                           </div>
                         ) : (
@@ -1333,7 +1333,7 @@ const FriendsView = ({ userId, isAdmin = false, friendActivities = [], onClearAc
                               className="w-full bg-secondary text-secondary-foreground text-sm pl-9 pr-3 py-2 rounded-md border-none outline-none focus:ring-1 focus:ring-primary placeholder:text-muted-foreground"
                             />
                           </div>
-                          <button
+                          <Button variant="ghost"
                             onClick={(e) => { e.stopPropagation(); toggleLike(plan.week, plan.day, plan.id); }}
                             disabled={likingKey === key}
                             className={`px-3 py-2 rounded-md text-sm font-semibold transition-all ${
@@ -1343,14 +1343,14 @@ const FriendsView = ({ userId, isAdmin = false, friendActivities = [], onClearAc
                             }`}
                           >
                             🔥{likeCount > 0 ? ` ${likeCount}` : ""}
-                          </button>
-                          <button
+                          </Button>
+                          <Button variant="ghost"
                             onClick={() => postComment(plan.week, plan.day, plan.id)}
                             disabled={!newComment[key]?.trim()}
                             className="px-3 py-2 bg-primary text-primary-foreground rounded-md disabled:opacity-40"
                           >
                             <Send className="w-4 h-4" />
-                          </button>
+                          </Button>
                         </div>
                       </div>
                     )}
@@ -1377,20 +1377,20 @@ const FriendsView = ({ userId, isAdmin = false, friendActivities = [], onClearAc
             <div key={req.id} className="flex items-center justify-between p-3 bg-card border border-primary/30 rounded-lg">
               <span className="font-semibold text-sm">{req.profile.nickname}</span>
               <div className="flex gap-2">
-                <button
+                <Button variant="ghost"
                   aria-label={`Acceptera ${req.profile.nickname}s vänförfrågan`} disabled={requestBusy !== null}
                   onClick={() => acceptRequest(req.id)}
                   className="h-11 w-11 flex items-center justify-center bg-success text-success-foreground rounded-md"
                 >
                   <Check className="w-4 h-4" />
-                </button>
-                <button
+                </Button>
+                <Button variant="ghost"
                   aria-label={`Avböj ${req.profile.nickname}s vänförfrågan`} disabled={requestBusy !== null}
                   onClick={() => rejectRequest(req.id)}
                   className="h-11 w-11 flex items-center justify-center bg-destructive text-destructive-foreground rounded-md"
                 >
                   <X className="w-4 h-4" />
-                </button>
+                </Button>
               </div>
             </div>
           ))}
@@ -1411,14 +1411,14 @@ const FriendsView = ({ userId, isAdmin = false, friendActivities = [], onClearAc
             placeholder="Sök efter användarnamn..."
             className="w-full bg-muted/50 text-foreground text-sm pl-4 pr-12 py-2.5 rounded-2xl border-none outline-none focus:ring-2 focus:ring-primary/40 placeholder:text-muted-foreground"
           />
-          <button
+          <Button variant="ghost"
             onClick={searchUsers}
             disabled={searching}
             aria-label="Sök"
             className="absolute right-1.5 top-1/2 -translate-y-1/2 h-9 w-9 rounded-full bg-primary text-primary-foreground flex items-center justify-center transition-transform active:scale-95 disabled:opacity-60"
           >
             <Search className="w-4 h-4" />
-          </button>
+          </Button>
         </div>
 
 
@@ -1433,12 +1433,12 @@ const FriendsView = ({ userId, isAdmin = false, friendActivities = [], onClearAc
                 {isAlreadyFriend(profile.user_id) ? (
                   <span className="text-xs text-muted-foreground">Redan tillagd</span>
                 ) : (
-                  <button
+                  <Button variant="ghost"
                     onClick={() => sendRequest(profile.user_id)}
                     className="flex items-center gap-1 text-xs px-3 py-1.5 bg-primary text-primary-foreground rounded-md"
                   >
                     <UserPlus className="w-3 h-3" /> Lägg till
-                  </button>
+                  </Button>
                 )}
               </div>
             ))}
@@ -1513,13 +1513,13 @@ const FriendsView = ({ userId, isAdmin = false, friendActivities = [], onClearAc
                     {isAdmin ? (
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
-                          <button
+                          <Button variant="ghost"
                             onClick={(e) => e.stopPropagation()}
                             aria-label="Fler val"
                             className="p-1.5 rounded-full text-muted-foreground hover:bg-muted transition-colors"
                           >
                             <MoreHorizontal className="w-4 h-4" />
-                          </button>
+                          </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
                           <DropdownMenuItem onClick={(e) => { e.stopPropagation(); viewFriendWorkouts(friend); }}>
@@ -1537,13 +1537,13 @@ const FriendsView = ({ userId, isAdmin = false, friendActivities = [], onClearAc
             {friends.length > 15 && (
               <div className="pointer-events-auto absolute right-0 top-0 flex h-full flex-col justify-center gap-[1px] pr-0.5 text-[9px] font-semibold text-muted-foreground">
                 {Array.from(new Set(friends.map(f => (f.profile.nickname[0] || "?").toUpperCase()))).sort().map(letter => (
-                  <button
+                  <Button variant="ghost"
                     key={letter}
                     onClick={() => document.getElementById(`friend-${letter}`)?.scrollIntoView({ behavior: "smooth", block: "center" })}
                     className="leading-none hover:text-primary"
                   >
                     {letter}
-                  </button>
+                  </Button>
                 ))}
               </div>
             )}
@@ -1574,12 +1574,12 @@ const FriendsView = ({ userId, isAdmin = false, friendActivities = [], onClearAc
                   </span>
                 </div>
               </div>
-              <button
+              <Button variant="ghost"
                 onClick={() => sendRequest(suggestion.user_id)}
                 className="flex items-center gap-1 text-xs px-3 py-1.5 bg-primary text-primary-foreground rounded-md"
               >
                 <UserPlus className="w-3 h-3" /> Lägg till
-              </button>
+              </Button>
             </div>
           ))}
         </div>

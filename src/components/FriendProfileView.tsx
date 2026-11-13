@@ -325,7 +325,7 @@ const FriendProfileView = ({ friendUserId, nickname, onClose, embedded = false }
       <div className={embedded ? "flex flex-col" : "fixed inset-x-3 bottom-3 z-[70] max-w-sm mx-auto bg-card border border-border rounded-2xl overflow-hidden flex flex-col max-h-[85dvh]"}>
          <div className="flex items-center justify-between p-4 border-b border-border">
            <div className="flex items-center gap-3">
-             <button
+             <Button variant="ghost"
                onClick={() => avatarUrl && setShowFullAvatar(true)}
                className={`w-10 h-10 rounded-full bg-secondary border-2 border-border overflow-hidden flex items-center justify-center shrink-0 ${avatarUrl ? "cursor-pointer active:scale-95 transition-transform" : ""}`}
              >
@@ -334,7 +334,7 @@ const FriendProfileView = ({ friendUserId, nickname, onClose, embedded = false }
                ) : (
                  <User className="w-5 h-5 text-muted-foreground" />
                )}
-             </button>
+             </Button>
               <div>
                 <h3 className="text-sm font-bold">{nickname}</h3>
                 {isAdmin ? (
@@ -498,15 +498,15 @@ const FriendProfileView = ({ friendUserId, nickname, onClose, embedded = false }
       {/* Fullscreen avatar overlay */}
       {showFullAvatar && avatarUrl && (
         <div
-          className="fixed inset-0 z-[80] bg-black/90 flex items-center justify-center p-6"
+          className="fixed inset-0 z-[80] bg-background/95 flex items-center justify-center p-6"
           onClick={() => setShowFullAvatar(false)}
         >
-          <button
+          <Button variant="ghost"
             onClick={() => setShowFullAvatar(false)}
-            className="absolute top-4 right-4 p-2 text-white/70 hover:text-white"
+            className="absolute top-4 right-4 p-2 text-foreground/80 hover:text-foreground"
           >
             <X className="w-6 h-6" />
-          </button>
+          </Button>
           <img
             src={avatarUrl}
             alt={nickname}

@@ -1,3 +1,4 @@
+import { Button } from "@/components/ui/button";
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { X, Users, Check, Loader2 } from "lucide-react";
@@ -22,27 +23,32 @@ const CreateGroupDialog = ({ userId, onClose, onCreated }: CreateGroupDialogProp
   const [name, setName] = useState("");
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [creating, setCreating] = useState(false);
+  const [loadError, setLoadError] = useState(false);
+  const [reloadKey, setReloadKey] = useState(0);
 
   useEffect(() => {
     (async () => {
-      const { data: friendships } = await supabase
+      setLoading(true); setLoadError(false);
+      const { data: friendships, error: friendshipError } = await supabase
         .from("friendships")
         .select("user_id, friend_id")
         .eq("status", "accepted")
         .or(`user_id.eq.${userId},friend_id.eq.${userId}`);
+      if (friendshipError) { setLoadError(true); setLoading(false); return; }
       if (!friendships || friendships.length === 0) {
         setLoading(false);
         return;
       }
       const ids = friendships.map((f) => (f.user_id === userId ? f.friend_id : f.user_id));
-      const { data: profiles } = await supabase
+      const { data: profiles, error: profileError } = await supabase
         .from("profiles")
         .select("user_id, nickname, avatar_url")
         .in("user_id", ids);
+      if (profileError) { setLoadError(true); setLoading(false); return; }
       setFriends(((profiles || []) as Friend[]).sort((a, b) => a.nickname.localeCompare(b.nickname)));
       setLoading(false);
     })();
-  }, [userId]);
+  }, [userId, reloadKey]);
 
   const toggle = (id: string) => {
     setSelected((prev) => {
@@ -54,6 +60,7 @@ const CreateGroupDialog = ({ userId, onClose, onCreated }: CreateGroupDialogProp
   };
 
   const create = async () => {
+    if (creating) return;
     if (!name.trim()) {
       toast.error("Ge gruppen ett namn");
       return;
@@ -74,16 +81,16 @@ const CreateGroupDialog = ({ userId, onClose, onCreated }: CreateGroupDialogProp
   };
 
   return (
-    <div className="fixed inset-0 z-[80] bg-background/80 backdrop-blur-sm flex items-end sm:items-center justify-center px-3 pb-3 sm:pb-3">
-      <div className="w-full max-w-md bg-card border border-border max-h-[85vh] flex flex-col">
+    <div className="fixed inset-0 z-[80] bg-background/80 backdrop-blur-sm flex items-end justify-center px-3 pb-3 sm:pb-3">
+      <div role="dialog" aria-modal="true" aria-label="Skapa gruppchatt" className="w-full max-w-md rounded-t-2xl bg-card border border-border max-h-[85vh] flex flex-col">
         <div className="flex items-center justify-between p-4 border-b border-border">
           <h3 className="text-sm font-bold flex items-center gap-2">
             <Users className="w-4 h-4 text-primary" />
             Skapa gruppchatt
           </h3>
-          <button onClick={onClose} className="p-1 text-muted-foreground hover:text-foreground">
+          <Button variant="ghost" aria-label="Stäng gruppchatt" onClick={onClose} className="h-11 w-11 shrink-0 p-1 text-muted-foreground hover:text-foreground">
             <X className="w-4 h-4" />
-          </button>
+          </Button>
         </div>
 
         <div className="p-4 border-b border-border">
@@ -110,7 +117,7 @@ const CreateGroupDialog = ({ userId, onClose, onCreated }: CreateGroupDialogProp
             <div className="flex items-center justify-center py-8">
               <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
             </div>
-          ) : friends.length === 0 ? (
+          ) : loadError ? <div role="alert" className="space-y-2"><p className="text-sm text-muted-foreground">Vännerna kunde inte hämtas.</p><Button variant="outline" onClick={() => setReloadKey(k => k + 1)}>Försök igen</Button></div> : friends.length === 0 ? (
             <p className="text-xs text-muted-foreground text-center py-6">
               Lägg till vänner först för att kunna skapa grupp.
             </p>
@@ -119,7 +126,7 @@ const CreateGroupDialog = ({ userId, onClose, onCreated }: CreateGroupDialogProp
               {friends.map((f) => {
                 const isSelected = selected.has(f.user_id);
                 return (
-                  <button
+                  <Button variant="ghost"
                     key={f.user_id}
                     onClick={() => toggle(f.user_id)}
                     className={`w-full flex items-center gap-3 p-2 transition-colors text-left ${
@@ -135,7 +142,7 @@ const CreateGroupDialog = ({ userId, onClose, onCreated }: CreateGroupDialogProp
                     </div>
                     <span className="text-sm font-medium flex-1">{f.nickname}</span>
                     {isSelected && <Check className="w-4 h-4 text-primary" />}
-                  </button>
+                  </Button>
                 );
               })}
             </div>
@@ -143,20 +150,20 @@ const CreateGroupDialog = ({ userId, onClose, onCreated }: CreateGroupDialogProp
         </div>
 
         <div className="p-4 border-t border-border flex gap-2">
-          <button
+          <Button variant="ghost"
             onClick={onClose}
             disabled={creating}
             className="flex-1 px-3 py-2 text-sm border border-border hover:bg-muted transition-colors"
           >
             Avbryt
-          </button>
-          <button
+          </Button>
+          <Button variant="ghost"
             onClick={create}
             disabled={creating || !name.trim() || selected.size === 0}
             className="flex-1 px-3 py-2 text-sm bg-primary text-primary-foreground font-bold disabled:opacity-50"
           >
             {creating ? "Skapar..." : "Skapa grupp"}
-          </button>
+          </Button>
         </div>
       </div>
     </div>

@@ -156,9 +156,9 @@ const GroupChatConversation = ({ userId, groupId, groupName, onBack, onLeft }: G
   return (
     <div className="flex h-full min-h-0 flex-col overflow-hidden">
       <div className="flex shrink-0 items-center gap-3 border-b border-border pb-3 relative">
-        <button onClick={onBack} className="p-1.5 hover:bg-muted transition-colors">
+        <Button variant="ghost" aria-label="Tillbaka till meddelanden" onClick={onBack} className="h-11 w-11 shrink-0 p-1.5 hover:bg-muted transition-colors">
           <ArrowLeft className="w-5 h-5" />
-        </button>
+        </Button>
         <div className="w-8 h-8 bg-primary/10 flex items-center justify-center">
           <Users className="w-4 h-4 text-primary" />
         </div>
@@ -168,23 +168,23 @@ const GroupChatConversation = ({ userId, groupId, groupName, onBack, onLeft }: G
             {Object.keys(members).length} medlemmar
           </span>
         </div>
-        <button
+        <Button variant="ghost"
           onClick={() => { setSearchOpen((v) => !v); setSearchQuery(""); setSearchIndex(0); }}
-          className="p-1.5 hover:bg-muted transition-colors"
+          className="h-11 w-11 shrink-0 p-1.5 hover:bg-muted transition-colors"
           aria-label="Sök i chatten"
         >
           {searchOpen ? <X className="w-4 h-4" /> : <Search className="w-4 h-4" />}
-        </button>
-        <button
+        </Button>
+        <Button variant="ghost"
           onClick={() => setShowMenu((v) => !v)}
-          className="p-1.5 hover:bg-muted transition-colors"
+          className="h-11 w-11 shrink-0 p-1.5 hover:bg-muted transition-colors"
           aria-label="Mer"
         >
           <MoreVertical className="w-4 h-4" />
-        </button>
+        </Button>
         {showMenu && (
           <div className="absolute right-2 top-12 z-30 bg-card border border-border min-w-[160px]">
-            <button
+            <Button variant="ghost"
               onClick={() => {
                 setShowMenu(false);
                 setShowMembers(true);
@@ -193,8 +193,8 @@ const GroupChatConversation = ({ userId, groupId, groupName, onBack, onLeft }: G
             >
               <Users className="w-3.5 h-3.5" />
               Visa medlemmar
-            </button>
-            <button
+            </Button>
+            <Button variant="ghost"
               onClick={() => {
                 setShowMenu(false);
                 leaveGroup();
@@ -203,7 +203,7 @@ const GroupChatConversation = ({ userId, groupId, groupName, onBack, onLeft }: G
             >
               <LogOut className="w-3.5 h-3.5" />
               Lämna grupp
-            </button>
+            </Button>
           </div>
         )}
       </div>
@@ -216,23 +216,23 @@ const GroupChatConversation = ({ userId, groupId, groupName, onBack, onLeft }: G
             onChange={(e) => { setSearchQuery(e.target.value); setSearchIndex(0); }}
             onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); stepSearch(1); } }}
             placeholder="Sök bland hämtade meddelanden..."
-            className="flex-1 text-sm bg-muted rounded-full px-4 py-2 outline-none focus:ring-2 focus:ring-primary/30"
+            className="min-w-0 flex-1 text-sm bg-muted rounded-full px-4 py-2 outline-none focus:ring-2 focus:ring-primary/30"
           />
           <span className="text-[11px] text-muted-foreground tabular-nums min-w-[42px] text-center">
             {searchQuery.trim() ? `${searchMatches.length ? searchIndex + 1 : 0}/${searchMatches.length}` : ""}
           </span>
-          <button onClick={() => stepSearch(-1)} disabled={searchMatches.length === 0} className="p-1.5 rounded-full hover:bg-muted disabled:opacity-30">
+          <Button variant="ghost" aria-label="Föregående sökträff" onClick={() => stepSearch(-1)} disabled={searchMatches.length === 0} className="h-11 w-11 shrink-0 p-1.5 rounded-full hover:bg-muted disabled:opacity-30">
             <ChevronUp className="w-4 h-4" />
-          </button>
-          <button onClick={() => stepSearch(1)} disabled={searchMatches.length === 0} className="p-1.5 rounded-full hover:bg-muted disabled:opacity-30">
+          </Button>
+          <Button variant="ghost" aria-label="Nästa sökträff" onClick={() => stepSearch(1)} disabled={searchMatches.length === 0} className="h-11 w-11 shrink-0 p-1.5 rounded-full hover:bg-muted disabled:opacity-30">
             <ChevronDown className="w-4 h-4" />
-          </button>
+          </Button>
         </div>
       )}
 
       {showMembers && (
         <div
-          className="fixed inset-0 z-[80] bg-background/80 backdrop-blur-sm flex items-end sm:items-center justify-center px-3 pb-3"
+          className="fixed inset-0 z-[80] bg-background/80 backdrop-blur-sm flex items-end justify-center px-3 pb-3"
           onClick={() => setShowMembers(false)}
         >
           <div
@@ -244,12 +244,12 @@ const GroupChatConversation = ({ userId, groupId, groupName, onBack, onLeft }: G
                 <Users className="w-4 h-4 text-primary" />
                 Medlemmar ({Object.keys(members).length})
               </h3>
-              <button
+              <Button variant="ghost"
                 onClick={() => setShowMembers(false)}
-                className="p-1 text-muted-foreground hover:text-foreground"
+                className="h-11 w-11 shrink-0 p-1 text-muted-foreground hover:text-foreground"
               >
                 <X className="w-4 h-4" />
-              </button>
+              </Button>
             </div>
             <div
               className="flex-1 min-h-0 overflow-y-auto p-2"
@@ -306,20 +306,20 @@ const GroupChatConversation = ({ userId, groupId, groupName, onBack, onLeft }: G
                     ref={(el) => { msgRefs.current[m.id] = el; }}
                     className={`flex items-center gap-1 ${isMine ? "justify-end" : "justify-end flex-row-reverse"} mb-1`}
                   >
-                    <button
+                    <Button variant="ghost"
                       onClick={() => { setReplyTo(m); inputRef.current?.focus(); }}
                       className="p-1.5 rounded-full text-muted-foreground hover:bg-muted opacity-60 shrink-0"
                       aria-label="Svara på meddelandet"
                     >
                       <Reply className="w-3.5 h-3.5" />
-                    </button>
+                    </Button>
                     <div
                       className={`max-w-[80%] px-3 py-2 ${
                         isMine ? "bg-primary text-primary-foreground" : "bg-muted text-foreground"
                       } ${highlightId === m.id ? "ring-2 ring-primary" : ""}`}
                     >
                       {parent && (
-                        <button
+                        <Button variant="ghost"
                           onClick={() => jumpToMessage(parent.id)}
                           className={`block w-full text-left mb-1.5 border-l-2 pl-2 py-0.5 ${
                             isMine ? "border-primary-foreground/50 bg-primary-foreground/10" : "border-primary bg-background/50"
@@ -331,7 +331,7 @@ const GroupChatConversation = ({ userId, groupId, groupName, onBack, onLeft }: G
                           <span className={`block text-[11px] line-clamp-2 ${isMine ? "text-primary-foreground/70" : "text-muted-foreground"}`}>
                             {parent.message}
                           </span>
-                        </button>
+                        </Button>
                       )}
                       {!isMine && sender && (
                         <p className="text-[10px] font-bold text-primary mb-0.5">{sender.nickname}</p>
@@ -368,9 +368,9 @@ const GroupChatConversation = ({ userId, groupId, groupName, onBack, onLeft }: G
               </p>
               <p className="text-[11px] text-muted-foreground truncate">{replyTo.message}</p>
             </div>
-            <button onClick={() => setReplyTo(null)} className="p-1 text-muted-foreground hover:text-foreground" aria-label="Avbryt svar">
+            <Button variant="ghost" onClick={() => setReplyTo(null)} className="h-11 w-11 shrink-0 p-1 text-muted-foreground hover:text-foreground" aria-label="Avbryt svar">
               <X className="w-3.5 h-3.5" />
-            </button>
+            </Button>
           </div>
         )}
         <div className="flex gap-2 items-end">

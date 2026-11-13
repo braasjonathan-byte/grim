@@ -315,9 +315,9 @@ const EventGroupPage = ({ groupId, userId, isAdmin, onBack, onDeleted }: EventGr
     <div className="space-y-4">
       {/* Header */}
       <div className="flex items-center gap-2">
-        <button onClick={onBack} className="p-1.5 rounded-lg hover:bg-muted transition-colors">
+        <Button variant="ghost" aria-label="Tillbaka till eventgrupper" onClick={onBack} className="p-1.5 rounded-lg hover:bg-muted transition-colors">
           <ArrowLeft className="w-5 h-5" />
-        </button>
+        </Button>
         <div className="flex-1 min-w-0">
           <h3 className="text-base font-bold truncate">{group.event_name}</h3>
           <div className="flex items-center gap-2 text-[11px] text-muted-foreground">
@@ -344,18 +344,18 @@ const EventGroupPage = ({ groupId, userId, isAdmin, onBack, onDeleted }: EventGr
       <p className="text-xs text-muted-foreground">{isMember ? "Du är medlem · Inlägg syns för eventgruppens medlemmar" : "Du är inte medlem i eventgruppen"}</p>
       {/* Tab switcher */}
       <div className="flex gap-1 bg-muted/50 rounded-lg p-1">
-        <button
+        <Button variant="ghost"
           onClick={() => setActiveTab("feed")}
           className={`flex-1 py-2 rounded-md text-xs font-semibold transition-colors ${activeTab === "feed" ? "bg-card text-foreground shadow-sm" : "text-muted-foreground"}`}
         >
           Flöde
-        </button>
-        <button
+        </Button>
+        <Button variant="ghost"
           onClick={() => setActiveTab("members")}
           className={`flex-1 py-2 rounded-md text-xs font-semibold transition-colors ${activeTab === "members" ? "bg-card text-foreground shadow-sm" : "text-muted-foreground"}`}
         >
           Medlemmar ({members.length})
-        </button>
+        </Button>
       </div>
 
       {/* FEED TAB */}
@@ -363,7 +363,7 @@ const EventGroupPage = ({ groupId, userId, isAdmin, onBack, onDeleted }: EventGr
         <div className="space-y-4">
           {/* Compose button */}
           {!isMember && !isAdmin ? <p className="text-sm text-muted-foreground">Gå med från Eventgrupper för att delta.</p> : !showCompose ? (
-            <button
+            <Button variant="ghost"
               onClick={() => setShowCompose(true)}
               className="w-full flex items-center gap-3 p-3 rounded-xl border border-border bg-card hover:bg-muted/50 transition-colors"
             >
@@ -375,14 +375,14 @@ const EventGroupPage = ({ groupId, userId, isAdmin, onBack, onDeleted }: EventGr
                 )}
               </div>
               <span className="text-sm text-muted-foreground">Skriv något till gruppen...</span>
-            </button>
+            </Button>
           ) : (
             <div className="border rounded-xl p-4 bg-card space-y-3">
               <div className="flex items-center justify-between">
                 <span className="text-sm font-semibold">Nytt inlägg</span>
-                <button onClick={() => { setShowCompose(false); setCaption(""); setImageFile(null); setImagePreview(null); }}>
+                <Button variant="ghost" onClick={() => { setShowCompose(false); setCaption(""); setImageFile(null); setImagePreview(null); }}>
                   <X className="w-4 h-4 text-muted-foreground" />
-                </button>
+                </Button>
               </div>
               <p className="text-xs text-muted-foreground">Synligt för: {group.event_name}</p>
               <textarea
@@ -395,22 +395,22 @@ const EventGroupPage = ({ groupId, userId, isAdmin, onBack, onDeleted }: EventGr
               {imagePreview && (
                 <div className="relative">
                   <img src={imagePreview} alt="Preview" className="w-full max-h-48 object-cover rounded-lg" />
-                  <button
+                  <Button variant="ghost"
                     onClick={() => { setImageFile(null); setImagePreview(null); }}
-                    className="absolute top-2 right-2 w-6 h-6 rounded-full bg-black/60 text-white flex items-center justify-center"
+                    className="absolute top-2 right-2 w-6 h-6 rounded-full bg-background/90 text-white flex items-center justify-center"
                   >
                     <X className="w-3.5 h-3.5" />
-                  </button>
+                  </Button>
                 </div>
               )}
               <div className="flex items-center justify-between">
                 <div className="flex gap-2">
-                  <button
+                  <Button variant="ghost"
                     onClick={() => fileRef.current?.click()}
                     className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors p-2 rounded-lg hover:bg-muted"
                   >
                     <ImagePlus className="w-4 h-4" /> Bild
-                  </button>
+                  </Button>
                   <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={handleImageSelect} />
                 </div>
                 <Button
@@ -451,9 +451,9 @@ const EventGroupPage = ({ groupId, userId, isAdmin, onBack, onDeleted }: EventGr
                   </div>
                 </div>
                 {(post.user_id === userId || isAdmin) && (
-                  <button onClick={() => deletePost(post.id)} className="text-muted-foreground hover:text-destructive p-1">
+                  <Button variant="ghost" aria-label="Ta bort inlägg" onClick={() => deletePost(post.id)} className="text-muted-foreground hover:text-destructive p-1">
                     <Trash2 className="w-4 h-4" />
-                  </button>
+                  </Button>
                 )}
               </div>
 
@@ -464,10 +464,10 @@ const EventGroupPage = ({ groupId, userId, isAdmin, onBack, onDeleted }: EventGr
               {post.caption && <RenderCaption text={post.caption} />}
 
               <div className="px-4 py-2 border-t border-border/50 flex items-center gap-4">
-                <button onClick={() => toggleLike(post.id)} className="flex items-center gap-1.5 text-sm">
+                <Button variant="ghost" aria-label={myLikes.has(post.id) ? "Ta bort gilla" : "Gilla inlägg"} onClick={() => toggleLike(post.id)} className="flex items-center gap-1.5 text-sm">
                   <Heart className={`w-4 h-4 transition-colors ${myLikes.has(post.id) ? "fill-primary text-primary" : "text-muted-foreground"}`} />
                   <span className="text-xs text-muted-foreground">{likes[post.id] || 0}</span>
-                </button>
+                </Button>
               </div>
             </div>
           ))}
@@ -478,7 +478,7 @@ const EventGroupPage = ({ groupId, userId, isAdmin, onBack, onDeleted }: EventGr
       {activeTab === "members" && (
         <div className="space-y-1">
           {members.map(m => (
-            <button
+            <Button variant="ghost"
               key={m.user_id}
               onClick={() => m.user_id !== userId && setViewingProfile({ id: m.user_id, nickname: m.nickname })}
               className="w-full flex items-center gap-3 p-3 rounded-lg hover:bg-muted/50 transition-colors text-left"
@@ -502,7 +502,7 @@ const EventGroupPage = ({ groupId, userId, isAdmin, onBack, onDeleted }: EventGr
                   Gick med {format(new Date(m.joined_at), "d MMM yyyy", { locale: sv })}
                 </p>
               </div>
-            </button>
+            </Button>
           ))}
           {members.length === 0 && (
             <p className="text-xs text-muted-foreground text-center py-4">Inga medlemmar ännu.</p>

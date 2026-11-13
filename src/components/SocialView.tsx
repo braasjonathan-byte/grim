@@ -762,19 +762,19 @@ const SocialView = ({ userId, isAdmin, isHonorary = false, friendActivities, unr
                   key={st.key}
                   onClick={() => setSubTab(st.key)}
                   data-tour={st.key === "friends" ? "social-friends" : st.key === "groups" ? "social-groups" : undefined}
-                  className={`min-w-0 flex-1 h-14 flex-col items-center justify-center gap-1 px-0 text-[11px] font-semibold transition-colors ${
+                  className={`relative min-w-0 flex-1 h-14 flex-col items-center justify-center gap-1 px-0 text-[11px] font-semibold transition-colors ${
                     subTab === st.key ? "text-foreground" : "text-muted-foreground"
                   }`}
                 >
                   <st.icon className="w-3.5 h-3.5" />
                   {st.label}
                   {!uiV2 && st.key === "friends" && friendActivities.length > 0 && (
-                    <span className="w-4 h-4 bg-destructive text-destructive-foreground text-[10px] font-bold rounded-full flex items-center justify-center">
+                    <span className="absolute top-1 right-2 w-4 h-4 bg-destructive text-destructive-foreground text-[10px] font-bold rounded-full flex items-center justify-center">
                       {friendActivities.length > 9 ? "9+" : friendActivities.length}
                     </span>
                   )}
                   {st.key === "chat" && (st.badge || 0) > 0 && (
-                    <span className="w-4 h-4 bg-destructive text-destructive-foreground text-[10px] font-bold rounded-full flex items-center justify-center">
+                    <span className="absolute top-1 right-2 w-4 h-4 bg-destructive text-destructive-foreground text-[10px] font-bold rounded-full flex items-center justify-center">
                       {(st.badge || 0) > 9 ? "9+" : st.badge}
                     </span>
                   )}
@@ -816,19 +816,19 @@ const SocialView = ({ userId, isAdmin, isHonorary = false, friendActivities, unr
                   (nicknames[userId] || "?")[0]?.toUpperCase()
                 )}
               </div>
-              <button
+              <Button variant="ghost"
                 onClick={() => setShowCompose(true)}
                 className="flex-1 rounded-full border border-border/60 bg-muted/40 px-4 py-2 text-left text-sm text-muted-foreground transition-colors hover:bg-muted/70"
               >
                 Vad tränade du idag?
-              </button>
-              <button
+              </Button>
+              <Button variant="ghost"
                 onClick={() => setShowCompose(true)}
                 aria-label="Skapa inlägg med bild"
-                className="h-9 w-9 shrink-0 rounded-full bg-primary/10 text-primary flex items-center justify-center transition-colors hover:bg-primary/20"
+                className="h-11 w-11 shrink-0 rounded-full bg-primary/10 text-primary flex items-center justify-center transition-colors hover:bg-primary/20"
               >
                 <Camera className="h-4 w-4" />
-              </button>
+              </Button>
             </div>
           )}
 
@@ -837,9 +837,9 @@ const SocialView = ({ userId, isAdmin, isHonorary = false, friendActivities, unr
             <div className={uiV2 ? "card-soft p-3 space-y-2.5" : "card-soft p-4 space-y-3"}>
               <div className="flex items-center justify-between">
                 <h4 className="text-sm font-bold">Nytt inlägg</h4>
-                <button onClick={() => { setShowCompose(false); setImageFile(null); setImagePreview(null); setImageFiles([]); }}>
+                <Button variant="ghost" aria-label="Stäng nytt inlägg" onClick={() => { setShowCompose(false); setImageFile(null); setImagePreview(null); setImageFiles([]); }}>
                   <X className="w-4 h-4 text-muted-foreground" />
-                </button>
+                </Button>
               </div>
 
               {/* Admin multi-image previews */}
@@ -859,10 +859,10 @@ const SocialView = ({ userId, isAdmin, isHonorary = false, friendActivities, unr
                           />
                           <p className="text-[10px] text-muted-foreground">Bild {idx + 1} av {imageFiles.length}</p>
                         </div>
-                        <button onClick={() => { URL.revokeObjectURL(img.preview); setImageFiles(prev => prev.filter((_, i) => i !== idx)); }}
-                          className="p-1 text-muted-foreground hover:text-destructive self-start">
+                        <Button variant="ghost" onClick={() => { URL.revokeObjectURL(img.preview); setImageFiles(prev => prev.filter((_, i) => i !== idx)); }}
+                          className="h-11 w-11 shrink-0 p-1 text-muted-foreground hover:text-destructive self-start">
                           <X className="w-3.5 h-3.5" />
-                        </button>
+                        </Button>
                       </div>
                     </div>
                   ))}
@@ -873,10 +873,10 @@ const SocialView = ({ userId, isAdmin, isHonorary = false, friendActivities, unr
               {!isAdmin && imagePreview && (
                 <div className="relative">
                   <img src={imagePreview} alt="" className="w-full rounded-lg max-h-64 object-cover" />
-                  <button onClick={() => { setImageFile(null); setImagePreview(null); }}
-                    className="absolute top-2 right-2 bg-black/60 text-white rounded-full p-1">
+                  <Button variant="ghost" onClick={() => { setImageFile(null); setImagePreview(null); }}
+                    className="absolute top-2 right-2 bg-background/90 text-white rounded-full p-1">
                     <X className="w-3.5 h-3.5" />
-                  </button>
+                  </Button>
                 </div>
               )}
 
@@ -986,7 +986,7 @@ const SocialView = ({ userId, isAdmin, isHonorary = false, friendActivities, unr
               )}
               {/* Post header */}
               <div className={`px-4 flex items-center justify-between ${isWorkoutPost && !post.pinned ? "pt-3.5" : "pt-3"} pb-2.5`}>
-                <button
+                <Button variant="ghost"
                   type="button"
                   onClick={() => {
                     if (post.user_id === userId) return;
@@ -1014,13 +1014,13 @@ const SocialView = ({ userId, isAdmin, isHonorary = false, friendActivities, unr
                       <span className="block text-xs text-muted-foreground">{socialAudience(post.visibility, groups.find(g => g.id === post.group_id)?.event_name)}</span>
                     </span>
                   </div>
-                </button>
+                </Button>
                 {(
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
-                      <button aria-label="Fler alternativ" className="rounded-full p-1.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground">
+                      <Button variant="ghost" aria-label="Fler alternativ" className="rounded-full p-1.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground">
                         <MoreHorizontal className="h-4 w-4" />
-                      </button>
+                      </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end" className="w-56">
                       {isAdmin && (
@@ -1169,7 +1169,7 @@ const SocialView = ({ userId, isAdmin, isHonorary = false, friendActivities, unr
                   count={likes[post.id] || 0}
                   onToggle={() => toggleLike(post.id)}
                 />
-                <button
+                <Button variant="ghost"
                   onClick={() => toggleComments(post.id)}
                   aria-pressed={openComments.has(post.id)}
                   className={uiV2 ? `inline-flex items-center gap-1.5 rounded-full px-2.5 py-1.5 text-xs font-semibold transition-all active:scale-95 ${openComments.has(post.id) ? "text-primary" : "text-muted-foreground hover:text-foreground"}` : `inline-flex flex-1 items-center justify-center gap-1.5 rounded-full border px-3 py-2 text-xs font-semibold transition-all active:scale-95 ${
@@ -1180,7 +1180,7 @@ const SocialView = ({ userId, isAdmin, isHonorary = false, friendActivities, unr
                 >
                   <MessageCircle className="h-4 w-4" />
                   <span className="tabular-nums">{commentCounts[post.id] || 0}</span>
-                </button>
+                </Button>
                 {post.user_id !== userId && (
                   <WorkoutCheerButton
                     fullWidth={!uiV2}
@@ -1221,13 +1221,13 @@ const SocialView = ({ userId, isAdmin, isHonorary = false, friendActivities, unr
                         </p>
                       </div>
                       {(c.user_id === userId || isAdmin) && (
-                        <button
+                        <Button variant="ghost"
                           onClick={() => deleteComment(post.id, c.id)}
-                          className="p-1 text-muted-foreground hover:text-destructive opacity-60 group-hover:opacity-100"
+                          className="h-11 w-11 shrink-0 p-1 text-muted-foreground hover:text-destructive opacity-60 group-hover:opacity-100"
                           title="Ta bort"
                         >
                           <Trash2 className="w-3 h-3" />
-                        </button>
+                        </Button>
                       )}
                     </div>
                     );
@@ -1241,14 +1241,14 @@ const SocialView = ({ userId, isAdmin, isHonorary = false, friendActivities, unr
                       rows={1}
                       className="flex-1 bg-card text-foreground text-sm px-3 py-2 rounded-lg border border-border outline-none focus:ring-2 focus:ring-primary/30 placeholder:text-muted-foreground resize-none"
                     />
-                    <button
+                    <Button variant="ghost"
                       onClick={() => submitComment(post.id)}
                       disabled={!(commentDrafts[post.id] || "").trim()}
-                      className="h-9 w-9 flex items-center justify-center bg-primary text-primary-foreground rounded-full disabled:opacity-40 hover:opacity-90 flex-shrink-0"
+                      className="h-11 w-11 flex items-center justify-center bg-primary text-primary-foreground rounded-full disabled:opacity-40 hover:opacity-90 flex-shrink-0"
                       title="Skicka"
                     >
                       <Send className="w-4 h-4" />
-                    </button>
+                    </Button>
                   </div>
                 </div>
               )}
@@ -1310,7 +1310,7 @@ const SocialView = ({ userId, isAdmin, isHonorary = false, friendActivities, unr
               <div className="card-soft overflow-hidden divide-y divide-border/50">
                 {groups.filter(g => myGroups.includes(g.id)).map(g => (
                   <div key={g.id} className="p-3.5 flex items-center gap-3 transition-colors hover:bg-muted/40">
-                    <button onClick={() => setOpenGroupId(g.id)} className="flex flex-1 items-center gap-3 text-left min-w-0">
+                    <Button variant="ghost" onClick={() => setOpenGroupId(g.id)} className="flex flex-1 items-center gap-3 text-left min-w-0">
                       <div className="h-10 w-10 shrink-0 rounded-full bg-primary/10 flex items-center justify-center">
                         <UsersRound className="h-4 w-4 text-primary" />
                       </div>
@@ -1321,12 +1321,12 @@ const SocialView = ({ userId, isAdmin, isHonorary = false, friendActivities, unr
                           {" • "}{g.member_count || 0} {(g.member_count || 0) === 1 ? "medlem" : "medlemmar"}
                         </p>
                       </div>
-                    </button>
+                    </Button>
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
-                        <button aria-label="Fler val" className="p-1.5 rounded-full text-muted-foreground hover:bg-muted transition-colors">
+                        <Button variant="ghost" aria-label="Fler val" className="p-1.5 rounded-full text-muted-foreground hover:bg-muted transition-colors">
                           <MoreHorizontal className="w-4 h-4" />
-                        </button>
+                        </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
                         <DropdownMenuItem onClick={() => leaveGroup(g.id)}>Lämna grupp</DropdownMenuItem>
@@ -1345,7 +1345,7 @@ const SocialView = ({ userId, isAdmin, isHonorary = false, friendActivities, unr
 
           {/* All groups */}
           <div className="space-y-1.5">
-            <div className="flex items-center justify-between"><h3 className="text-sm font-semibold text-muted-foreground">Tillgängliga eventgrupper</h3><Button variant="outline" onClick={() => { sessionStorage.setItem("grim_tools_open", "event"); window.dispatchEvent(new CustomEvent("grim:set-tab", { detail: "calc" })); window.dispatchEvent(new CustomEvent("grim:open-event")); }}>Lägg till event</Button></div>
+            <div className="flex flex-wrap items-center justify-between gap-2"><h3 className="text-sm font-semibold text-muted-foreground">Tillgängliga eventgrupper</h3><Button variant="outline" onClick={() => { sessionStorage.setItem("grim_tools_open", "event"); window.dispatchEvent(new CustomEvent("grim:set-tab", { detail: "calc" })); window.dispatchEvent(new CustomEvent("grim:open-event")); }}>Lägg till event</Button></div>
             {groups.filter(g => !myGroups.includes(g.id)).length === 0 ? (
               <div className="card-soft px-4 py-6 text-center">
                 <div className="mx-auto mb-2 flex h-10 w-10 items-center justify-center rounded-full bg-muted">
@@ -1359,7 +1359,7 @@ const SocialView = ({ userId, isAdmin, isHonorary = false, friendActivities, unr
               <div className="card-soft overflow-hidden divide-y divide-border/50">
                 {groups.filter(g => !myGroups.includes(g.id)).map(g => (
                   <div key={g.id} className="p-3.5 flex items-center gap-3 transition-colors hover:bg-muted/40">
-                    <button onClick={() => setOpenGroupId(g.id)} className="flex flex-1 items-center gap-3 text-left min-w-0">
+                    <Button variant="ghost" onClick={() => setOpenGroupId(g.id)} className="flex flex-1 items-center gap-3 text-left min-w-0">
                       <div className="h-10 w-10 shrink-0 rounded-full bg-muted flex items-center justify-center">
                         <UsersRound className="h-4 w-4 text-muted-foreground" />
                       </div>
@@ -1370,16 +1370,16 @@ const SocialView = ({ userId, isAdmin, isHonorary = false, friendActivities, unr
                           {" • "}{g.member_count || 0} {(g.member_count || 0) === 1 ? "medlem" : "medlemmar"}
                         </p>
                       </div>
-                    </button>
+                    </Button>
                     <Button disabled={membershipBusy !== null} onClick={(e) => { e.stopPropagation(); joinGroup(g.id); }} size="sm" className="rounded-full text-xs">
                       Gå med
                     </Button>
                     {isAdmin && (
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
-                          <button aria-label="Fler val" className="p-1.5 rounded-full text-muted-foreground hover:bg-muted transition-colors">
+                          <Button variant="ghost" aria-label="Fler val" className="p-1.5 rounded-full text-muted-foreground hover:bg-muted transition-colors">
                             <MoreHorizontal className="w-4 h-4" />
-                          </button>
+                          </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
                           <DropdownMenuItem className="text-destructive focus:text-destructive" onClick={() => deleteGroup(g.id)}>
