@@ -12,6 +12,7 @@ import { ChevronLeft, ChevronRight, Plus, Target, Trash2, Pencil, GripVertical, 
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 
 import NutritionHero from "./NutritionHero";
+import { Button } from "@/components/ui/button";
 import { syncWidgetNutrition, syncWidgetWeek } from "@/lib/nutritionWidget";
 import FoodPickerDialog, { PickedItem } from "./FoodPickerDialog";
 import AdaptiveTdeeCard, { ADAPTIVE_CHANGED_EVENT, NUTRITION_GOALS_SAVED_EVENT, readAdaptiveEnabled, setAdaptiveEnabledEverywhere, writeAdaptiveEnabled } from "./AdaptiveTdeeCard";
@@ -599,7 +600,7 @@ export default function NutritionView({ userId, isHonorary: isHonoraryProp = fal
       <div className="flex items-center justify-between">
         <button onClick={() => shiftDay(-1)} className="w-9 h-9 icon-round hover:bg-muted/60 transition-colors"><ChevronLeft className="w-5 h-5" /></button>
         <div className="text-center">
-          <p className="font-bold text-lg first-letter:uppercase">{dateLabel}</p>
+          <p className="font-serif font-bold text-lg first-letter:uppercase">{dateLabel}</p>
           {!isToday && <button onClick={() => setDate(new Date())} className="text-[10px] text-primary font-bold">Gå till idag</button>}
           {dateKey > toLocalDateKey(new Date()) && <p className="text-[10px] text-destructive font-semibold">Framtida dag – det du loggar här räknas inte förrän dagen kommit</p>}
         </div>
@@ -610,9 +611,9 @@ export default function NutritionView({ userId, isHonorary: isHonoraryProp = fal
       <div>
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <button data-tour="nutrition-add-meal" className="w-full pill-btn-outline py-2 text-xs">
+            <Button data-tour="nutrition-add-meal" className="w-full rounded-full text-xs">
               <MoreHorizontal className="w-3 h-3" /> Mer
-            </button>
+            </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="center" className="rounded-xl">
             <DropdownMenuItem data-tour="nutrition-goals" onClick={() => setGoalsOpen(true)}><Target className="w-3.5 h-3.5 mr-2" /> Mål</DropdownMenuItem>
@@ -655,20 +656,6 @@ export default function NutritionView({ userId, isHonorary: isHonoraryProp = fal
           const quickSlot = allSlots.find((m) => m.toLowerCase() === want) || allSlots[0] || want;
           return (
             <div className="tile-soft p-3 space-y-2" data-tour="nutrition-quick-repeat">
-              {/* Ett enda tomläge: texten bor i snabbvalsrutan i stället för ett separat kort. */}
-              {logs.length === 0 && (
-                <div className="space-y-0.5">
-                  <p className="text-sm font-semibold">Inget loggat {isToday ? "idag" : "denna dag"} än</p>
-                  <p className="text-xs text-muted-foreground">Lägg till din första måltid så räknar vi kalorier och makros åt dig.</p>
-                  <div className="flex flex-wrap gap-1.5 pt-1.5">
-                    {allSlots.map((m) => (
-                      <button key={m} onClick={() => { hapticLight(); setPicker(m); }} className="pill-btn-outline px-3 py-1.5 text-xs first-letter:uppercase">
-                        <Plus className="w-3 h-3" /> {m}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              )}
               <MealSuggestions
                 key={`${dateKey}:${quickSlot}:${logs.length}`}
                 userId={userId}

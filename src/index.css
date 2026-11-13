@@ -29,6 +29,10 @@
 
     --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 98%;
+    --nutrition-fat: 45 93% 47%;
+    --nutrition-protein: 0 84% 60%;
+    --nutrition-carbs: 199 89% 48%;
+    --nutrition-fiber: 25 60% 50%;
 
     /* Mjuka ljusgrå kanter i stället för hårda svarta konturer */
     --border: 0 0% 88%;

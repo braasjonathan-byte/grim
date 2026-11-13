@@ -49,6 +49,10 @@ export default {
 			]
   		},
   		colors: {
+            'nutrition-fat': 'hsl(var(--nutrition-fat))',
+            'nutrition-protein': 'hsl(var(--nutrition-protein))',
+            'nutrition-carbs': 'hsl(var(--nutrition-carbs))',
+            'nutrition-fiber': 'hsl(var(--nutrition-fiber))',
   			border: 'hsl(var(--border))',
   			input: 'hsl(var(--input))',
   			ring: 'hsl(var(--ring))',
