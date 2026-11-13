@@ -3127,6 +3127,7 @@ export type Database = {
         }
         Returns: string
       }
+      can_read_social_image: { Args: { object_name: string }; Returns: boolean }
       can_view_post: { Args: { _post_id: string }; Returns: boolean }
       complete_forced_password_change: { Args: never; Returns: undefined }
       count_implausible_sets: { Args: { lw: Json }; Returns: number }
