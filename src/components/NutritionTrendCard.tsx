@@ -78,7 +78,7 @@ export default function NutritionTrendCard({ userId }: { userId: string }) {
         Snitt: <span className="font-bold text-foreground tabular-nums">{avg ?? "–"} {m.unit}</span>
         {goal ? <> · Mål: <span className="tabular-nums">{goal} {m.unit}</span></> : null}
       </p>
-      <div className="h-48 -ml-4">
+      <div className="h-56 -ml-4">
         <ResponsiveContainer width="100%" height="100%">
           <LineChart data={data}>
             <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />

@@ -129,7 +129,7 @@ export default function BodyWeightChart({ userId }: { userId: string }) {
       </div>
       {view === "graph" ? (
         <>
-          <div className="h-44">
+          <div className="h-56">
             <ResponsiveContainer width="100%" height="100%">
               <ComposedChart data={chart.pts} margin={{ top: 5, right: 5, left: -20, bottom: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />

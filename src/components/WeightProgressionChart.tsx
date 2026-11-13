@@ -139,7 +139,7 @@ const WeightProgressionChart = ({ userId }: WeightProgressionChartProps) => {
       {/* Chart */}
       {chartData.length > 1 ? (
         <div className="bg-card border border-border rounded-lg p-3">
-          <ResponsiveContainer width="100%" height={200}>
+          <ResponsiveContainer width="100%" height={240}>
             <LineChart data={chartData}>
               <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
               <XAxis

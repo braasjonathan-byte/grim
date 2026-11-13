@@ -67,7 +67,7 @@ const StrengthSection = ({ userId, completions }: { userId: string; completions:
               ))}
             </div>
             {chartData.length > 1 && (
-              <div className="h-40">
+              <div className="h-52">
                 <ResponsiveContainer width="100%" height="100%">
                   <LineChart data={chartData} margin={{ top: 5, right: 5, left: -20, bottom: 0 }}>
                     <XAxis dataKey="week" tick={{ fontSize: 10 }} />

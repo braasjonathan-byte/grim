@@ -34,12 +34,12 @@ export const weightRangeFrom = (days: number, end: Date = new Date()): string | 
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 };
 
-// Nybörjarstandard (vanebyggare). Synligt: sammanfattning (pass + km per gren), citat,
+// Nybörjarstandard (vanebyggare). Synligt: sammanfattning (pass + km per gren),
 // topplista, träningskalender, målvikt, intagna kalorier.
 // Viktkurvan är dold tills användaren vägt sig mer än en gång (se autoShowBodyWeight).
 export const DEFAULT_HIDDEN: StatsSection[] = [
   "nutrition", "weightProgression", "muscleBalance", "untrained",
-  "achievements", "periodList", "strength", "bodyWeight",
+  "achievements", "periodList", "strength", "bodyWeight", "quote",
 ];
 
 const KEY = "grim_stats_settings";

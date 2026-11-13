@@ -224,7 +224,7 @@ export default function FriendChallenges({ userId }: Props) {
     const list = standings[c.id] || [];
     const leader = list[0];
     return (
-      <div key={c.id} className="bg-card border border-border rounded-2xl overflow-hidden">
+      <div key={c.id} className="card-soft overflow-hidden">
         <button onClick={() => toggle(c)} className="w-full flex items-center gap-2 p-3 text-left">
           <Trophy className={`w-4 h-4 ${done ? "text-muted-foreground" : "text-warning"}`} />
           <div className="flex-1 min-w-0">
@@ -277,7 +277,7 @@ export default function FriendChallenges({ userId }: Props) {
         <h3 className="text-sm font-bold flex items-center gap-1.5">
           <Trophy className="w-4 h-4 text-warning" /> Utmaningar
         </h3>
-        <button onClick={() => setCreateOpen(true)} className="flex items-center gap-1 rounded-full bg-secondary px-3 py-1.5 text-[11px] font-semibold">
+        <button onClick={() => setCreateOpen(true)} className="pill-btn-outline px-3 py-1.5 text-[11px]">
           <Plus className="w-3.5 h-3.5" /> Ny
         </button>
       </div>
@@ -285,9 +285,13 @@ export default function FriendChallenges({ userId }: Props) {
       {loading ? (
         <p className="text-xs text-muted-foreground">Laddar…</p>
       ) : (active.length + finished.length + invites.length) === 0 ? (
-        <div className="bg-card border border-border rounded-2xl p-4 text-center space-y-1">
-          <p className="text-xs font-semibold">Inga utmaningar än</p>
-          <p className="text-[11px] text-muted-foreground">Utmana dina vänner på flest pass, längst sträcka eller mest lyft.</p>
+        <div className="card-soft p-4 text-center space-y-2" data-testid="challenges-empty">
+          <Trophy className="w-6 h-6 text-warning mx-auto" aria-hidden="true" />
+          <p className="text-sm font-semibold">Inga utmaningar än</p>
+          <p className="text-xs text-muted-foreground">Utmana dina vänner på flest pass, längst sträcka eller mest lyft – t.ex. «Flest pass i november».</p>
+          <button onClick={() => setCreateOpen(true)} className="pill-btn bg-primary text-primary-foreground px-4 py-2 text-xs font-semibold">
+            <Plus className="w-3.5 h-3.5" /> Starta en utmaning
+          </button>
         </div>
       ) : (
         <div className="space-y-2">
