@@ -608,7 +608,7 @@ export default function NutritionView({ userId, isHonorary: isHonoraryProp = fal
       <div>
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <button data-tour="nutrition-add-meal" className="w-full pill-btn-ghost shadow-soft py-2 text-xs">
+            <button data-tour="nutrition-add-meal" className="w-full pill-btn-outline py-2 text-xs">
               <MoreHorizontal className="w-3 h-3" /> Mer
             </button>
           </DropdownMenuTrigger>

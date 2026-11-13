@@ -40,6 +40,10 @@
     --brand-foreground: 0 0% 100%;
 
     --radius: 1rem;
+    /* Tre rundningsnivåer så att hierarkin syns: huvudkort, små kort/rutor, knappar/fält. */
+    --radius-card: 1.25rem;
+    --radius-tile: 0.875rem;
+    --radius-control: 0.625rem;
 
     --sidebar-background: 220 18% 10%;
     --sidebar-foreground: 0 0% 0%;
@@ -476,10 +480,14 @@ button:not([data-no-press]),
 @layer components {
   /* Soft card: no hard border, rounded 16px, diffuse shadow */
   .card-soft {
-    @apply bg-card rounded-2xl shadow-soft border border-border/70;
+    @apply bg-card rounded-card shadow-soft border border-border/70;
   }
   .card-soft-muted {
-    @apply bg-secondary/60 rounded-2xl shadow-soft border border-transparent;
+    @apply bg-secondary/60 rounded-tile shadow-soft border border-transparent;
+  }
+  /* Liten ruta inne i ett kort – ingen egen skugga eller kant (färre kort-i-kort). */
+  .tile-soft {
+    @apply bg-muted/40 rounded-tile;
   }
 
   /* Round icon container – single consistent shape app-wide */
@@ -489,7 +497,7 @@ button:not([data-no-press]),
 
   /* Pill buttons */
   .pill-btn {
-    @apply inline-flex items-center justify-center gap-1.5 rounded-full font-semibold
+    @apply inline-flex items-center justify-center gap-1.5 rounded-control font-semibold
            transition-all active:scale-[0.97];
   }
   .pill-btn-primary {
@@ -501,10 +509,19 @@ button:not([data-no-press]),
   .pill-btn-soft {
     @apply pill-btn bg-primary/10 text-primary hover:bg-primary/20;
   }
+  /* Sekundär åtgärd: kontur, ingen fyllning – primära knappar får tyngden. */
+  .pill-btn-outline {
+    @apply pill-btn border border-border bg-transparent text-foreground hover:bg-muted/60;
+  }
+  /* Diskret textlänk för sällan använda/destruktiva val (t.ex. Logga ut). */
+  .link-quiet {
+    @apply inline-flex items-center justify-center gap-1.5 rounded-control px-3 py-2 text-sm font-semibold
+           underline-offset-4 hover:underline min-h-[44px];
+  }
 
   /* Rounded soft input */
   .input-soft {
-    @apply bg-muted/50 rounded-xl border border-transparent px-3 py-2 text-sm outline-none
+    @apply bg-muted/50 rounded-control border border-transparent px-3 py-2 text-sm outline-none
            focus:border-primary/40 focus:bg-background focus:ring-2 focus:ring-primary/20
            transition-colors placeholder:text-muted-foreground;
   }

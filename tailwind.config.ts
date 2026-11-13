@@ -108,7 +108,11 @@ export default {
   		borderRadius: {
   			lg: 'var(--radius)',
   			md: 'calc(var(--radius) - 2px)',
-  			sm: 'calc(var(--radius) - 4px)'
+  			sm: 'calc(var(--radius) - 4px)',
+  			/* Tre rundningsnivåer: huvudkort > små kort/rutor > knappar och fält */
+  			card: 'var(--radius-card)',
+  			tile: 'var(--radius-tile)',
+  			control: 'var(--radius-control)'
   		},
   		keyframes: {
   			'accordion-down': {

@@ -38,7 +38,7 @@ import type { LucideIcon } from "lucide-react";
 
 import { updateApp } from "@/lib/appUpdate";
 import { openMiniTimer } from "@/components/MiniTimer";
-import { APP_VERSION } from "@/lib/version";
+import { APP_VERSION, formatAppVersion } from "@/lib/version";
 import HonoraryBadge from "@/components/HonoraryBadge";
 import { type HelpCategory } from "@/data/helpTopics";
 import { useHelpCategories } from "@/lib/liveContent";
@@ -669,9 +669,7 @@ const ToolsTab = ({ userId, isAdmin, isHonorary, userRole, onViewUserPlan, onLog
         <button
           type="button"
           onClick={() => setEditLayout((v) => !v)}
-          className={`w-full flex items-center justify-center gap-2 py-2 px-4 text-sm font-semibold rounded-full shadow-soft active:scale-[0.97] transition-all ${
-            editLayout ? "bg-primary text-primary-foreground" : "bg-secondary text-secondary-foreground"
-          }`}
+          className={`w-full py-2 px-4 text-sm ${editLayout ? "pill-btn-primary" : "pill-btn-outline"}`}
         >
           {editLayout ? <Check className="w-4 h-4" /> : <Move className="w-4 h-4" />}
           {editLayout ? "Klar med ordningen" : "Ändra ordning (syns för alla)"}
@@ -786,18 +784,6 @@ const ToolsTab = ({ userId, isAdmin, isHonorary, userRole, onViewUserPlan, onLog
         })
       )}
 
-      {onLogout && (
-        <div className="space-y-2 pt-2">
-          <button
-            onClick={() => setConfirmLogout(true)}
-            className="w-full flex items-center justify-center gap-2 py-2 px-4 text-sm font-semibold text-red-700 dark:text-red-400 bg-secondary rounded-full shadow-soft active:scale-[0.97] hover:opacity-90 transition-opacity"
-          >
-            <LogOut className="w-4 h-4" />
-            Logga ut
-          </button>
-        </div>
-      )}
-
       <AlertDialog open={confirmLogout} onOpenChange={setConfirmLogout}>
         <AlertDialogContent>
           <AlertDialogHeader>
@@ -825,13 +811,26 @@ const ToolsTab = ({ userId, isAdmin, isHonorary, userRole, onViewUserPlan, onLog
       <button
         type="button"
         onClick={updateApp}
-        className="w-full flex items-center justify-center gap-2 py-2 px-4 text-sm font-semibold bg-secondary text-secondary-foreground rounded-full shadow-soft active:scale-[0.97] hover:opacity-90 transition-opacity"
+        className="w-full pill-btn-outline py-2 px-4 text-sm"
       >
         <RefreshCw className="w-4 h-4" />
         Uppdatera appen
       </button>
 
-      <p className="text-center text-[11px] text-muted-foreground pt-2 pb-4">Version {APP_VERSION}</p>
+      <p className="text-center text-[11px] text-muted-foreground pt-2">Version {formatAppVersion(APP_VERSION)}</p>
+
+      {onLogout && (
+        <div className="flex justify-center pb-4">
+          <button
+            type="button"
+            onClick={() => setConfirmLogout(true)}
+            className="link-quiet text-red-700 dark:text-red-400"
+          >
+            <LogOut className="w-4 h-4" />
+            Logga ut
+          </button>
+        </div>
+      )}
     </div>
   );
 };

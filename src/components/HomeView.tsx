@@ -16,6 +16,9 @@ import {
   Plus,
   Footprints,
   Moon,
+  Apple,
+  Timer,
+  Route,
   Flame as FlameIcon,
 } from "lucide-react";
 import {
@@ -45,6 +48,10 @@ import HomeHealthTrends from "@/components/HomeHealthTrends";
 import WeeklySummaryCard from "@/components/WeeklySummaryCard";
 import DailyRecipeCard from "@/components/DailyRecipeCard";
 import { getCardioModes, getStoredCardioMode } from "@/lib/cardioUnits";
+import { computeWeekProgress } from "@/lib/homeDashboard";
+import { isPlausibleMealLog } from "@/lib/inputValidation";
+import { getModules } from "@/lib/modules";
+import { formatDurationMin } from "@/lib/workoutSummary";
 
 const DAYS = ["Mån", "Tis", "Ons", "Tors", "Fre", "Lör", "Sön"];
 
@@ -162,6 +169,30 @@ const HomeView = ({ userId, onNavigate, isHonorary = false }: HomeViewProps) => 
   const [healthToday, setHealthToday] = useState<HealthDay | null>(null);
   const [healthHistory, setHealthHistory] = useState<HealthDay[]>([]);
   const restingHr = useMemo(() => restingHrSignal(healthHistory, toLocalDateKey(new Date())), [healthHistory]);
+  const nutritionOn = getModules().nutrition;
+  const [nutritionToday, setNutritionToday] = useState<{ kcal: number; protein: number; kcalGoal: number; proteinGoal: number; logged: boolean } | null>(null);
+
+  // Dagens kost (kalorier + protein) – samma mål och rimlighetsregler som Kost-fliken.
+  useEffect(() => {
+    if (!nutritionOn) return;
+    let cancelled = false;
+    const day = toLocalDateKey(new Date());
+    Promise.all([
+      supabase.from("meal_logs").select("amount, unit, kcal, protein_g, fat_g, carbs_g").eq("user_id", userId).eq("log_date", day),
+      supabase.from("nutrition_goals").select("daily_kcal, protein_g").eq("user_id", userId).maybeSingle(),
+    ]).then(([{ data: logs }, { data: goals }]) => {
+      if (cancelled) return;
+      const rows = ((logs || []) as any[]).filter(isPlausibleMealLog);
+      setNutritionToday({
+        kcal: Math.round(rows.reduce((sum, r) => sum + Number(r.kcal || 0), 0)),
+        protein: Math.round(rows.reduce((sum, r) => sum + Number(r.protein_g || 0), 0)),
+        kcalGoal: Number((goals as any)?.daily_kcal) || 2000,
+        proteinGoal: Number((goals as any)?.protein_g) || 100,
+        logged: rows.length > 0,
+      });
+    }).catch(() => { /* kortet visas inte utan data */ });
+    return () => { cancelled = true; };
+  }, [userId, nutritionOn]);
 
   // Steg och aktiva kalorier från hälsoappen (sparad data visas även i webben).
   useEffect(() => {
@@ -424,6 +455,14 @@ const HomeView = ({ userId, onNavigate, isHonorary = false }: HomeViewProps) => 
 
   const goal = weekPlanned > 0 ? weekPlanned : 3;
   const progressPct = goal > 0 ? Math.min(100, Math.round((weekCompleted / goal) * 100)) : 0;
+  const weekProgress = useMemo(() => {
+    const detailsByKey = new Map<string, string>();
+    for (const p of plans) {
+      const k = `${p.week}-${normalizeDay(p.day)}`;
+      detailsByKey.set(k, `${detailsByKey.get(k) ?? ""}\n${p.details ?? ""}`);
+    }
+    return computeWeekProgress(completions, (w, d) => detailsByKey.get(`${w}-${normalizeDay(d)}`));
+  }, [completions, plans]);
 
   const planStartMonday = useMemo(() => {
     if (planStartDate) {
@@ -467,7 +506,9 @@ const HomeView = ({ userId, onNavigate, isHonorary = false }: HomeViewProps) => 
 
   const greeting = `${greetingFor(now.getHours())}${nickname ? `, ${nickname}` : ""}!`;
 
-  const dateLabel = now.toLocaleDateString("sv-SE", { weekday: "long", day: "numeric", month: "long" });
+  // «Fredag 13 november» – bara första bokstaven versal (CSS capitalize gav «13 November»).
+  const dateRaw = now.toLocaleDateString("sv-SE", { weekday: "long", day: "numeric", month: "long" });
+  const dateLabel = dateRaw.charAt(0).toUpperCase() + dateRaw.slice(1);
 
   if (loading) {
     return (
@@ -488,7 +529,7 @@ const HomeView = ({ userId, onNavigate, isHonorary = false }: HomeViewProps) => 
       {/* Greeting */}
       <header className="space-y-1">
         <h1 className="text-2xl font-brand leading-tight">{greeting}</h1>
-        <p className="text-xs text-muted-foreground capitalize flex items-center gap-1.5">
+        <p className="text-xs text-muted-foreground flex items-center gap-1.5">
           <CalendarDays className="w-3.5 h-3.5" />
           {dateLabel}
           {currentWeek > 0 && <span className="text-muted-foreground/70">· Vecka {currentWeek}</span>}
@@ -599,93 +640,125 @@ const HomeView = ({ userId, onNavigate, isHonorary = false }: HomeViewProps) => 
         )}
       </section>
 
-      {/* 1b. Suggestion when nothing is scheduled */}
-      {showSuggestion && suggestion && (
-        <section
-          className="rounded-2xl border border-primary/30 bg-primary/5 p-4 space-y-3"
-          aria-label="Vad ska jag göra idag?"
+      {/* 2. Veckans framsteg: pass, minuter, km och svit */}
+      <section className="card-soft p-4 space-y-3" aria-label="Veckans framsteg">
+        <div className="flex items-center gap-2">
+          <Target className="w-4 h-4 text-success" />
+          <p className="text-sm font-semibold">Veckans framsteg</p>
+          <span
+            className={`ml-auto inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold ${streak > 0 ? "bg-warning/15 text-warning" : "bg-muted text-muted-foreground"}`}
+            aria-label={`Svit: ${streak} ${streak === 1 ? "dag" : "dagar"} i rad`}
+          >
+            <Flame className="w-3.5 h-3.5" />
+            {streak > 0 ? `${streak} ${streak === 1 ? "dag" : "dagar"} i rad` : "Ingen svit än"}
+          </span>
+        </div>
+        <div className="space-y-1.5">
+          <div className="flex items-baseline justify-between">
+            <p className="text-2xl font-bold leading-none tabular-nums">
+              {weekCompleted}
+              <span className="text-sm font-medium text-muted-foreground"> av {goal} pass</span>
+            </p>
+            <span className="text-xs font-semibold text-success tabular-nums">{progressPct} %</span>
+          </div>
+          <div className="h-2 w-full bg-muted rounded-full overflow-hidden" role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={progressPct}>
+            <div className="h-full bg-success rounded-full transition-all duration-500" style={{ width: `${progressPct}%` }} />
+          </div>
+        </div>
+        <div className="grid grid-cols-2 gap-2">
+          <div className="tile-soft p-3">
+            <p className="text-[11px] text-muted-foreground flex items-center gap-1"><Timer className="w-3.5 h-3.5" />Träningstid</p>
+            <p className="text-lg font-bold tabular-nums">{weekProgress.minutes > 0 ? formatDurationMin(weekProgress.minutes) : "–"}</p>
+          </div>
+          <div className="tile-soft p-3">
+            <p className="text-[11px] text-muted-foreground flex items-center gap-1"><Route className="w-3.5 h-3.5" />Distans</p>
+            <p className="text-lg font-bold tabular-nums">{weekProgress.km > 0 ? `${weekProgress.km.toLocaleString("sv-SE")} km` : "–"}</p>
+          </div>
+        </div>
+      </section>
+
+      {/* 3. Dagens kost: kalorier och protein */}
+      {nutritionOn && nutritionToday && (
+        <button
+          type="button"
+          onClick={() => onNavigate("nutrition")}
+          className="w-full text-left card-soft p-4 space-y-3"
+          aria-label="Kost idag – öppna Kost"
         >
           <div className="flex items-center gap-2">
-            <div className="h-9 w-9 rounded-xl bg-primary/15 text-primary flex items-center justify-center shrink-0">
-              <Lightbulb className="w-5 h-5" />
-            </div>
-            <div className="min-w-0">
-              <p className="text-[11px] uppercase tracking-wider text-muted-foreground font-semibold">
-                Vad ska jag göra idag?
+            <Apple className="w-4 h-4 text-primary" />
+            <p className="text-sm font-semibold">Kost idag</p>
+            <ChevronRight className="w-4 h-4 text-muted-foreground ml-auto" />
+          </div>
+          {nutritionToday.logged ? (
+            <div className="grid grid-cols-2 gap-3">
+              {([
+                { label: "Kalorier", value: nutritionToday.kcal, goal: nutritionToday.kcalGoal, unit: "kcal" },
+                { label: "Protein", value: nutritionToday.protein, goal: nutritionToday.proteinGoal, unit: "g" },
+              ] as const).map((m) => {
+                const pct = Math.min(100, Math.round((m.value / Math.max(1, m.goal)) * 100));
+                return (
+                  <div key={m.label} className="space-y-1">
+                    <p className="text-[11px] text-muted-foreground">{m.label}</p>
+                    <p className="text-lg font-bold tabular-nums leading-none">
+                      {m.value.toLocaleString("sv-SE")}
+                      <span className="text-xs font-medium text-muted-foreground"> / {m.goal.toLocaleString("sv-SE")} {m.unit}</span>
+                    </p>
+                    <div className="h-1.5 w-full bg-muted rounded-full overflow-hidden">
+                      <div className={`h-full rounded-full ${m.label === "Protein" ? "bg-success" : "bg-primary"}`} style={{ width: `${pct}%` }} />
+                    </div>
+                  </div>
+                );
+              })}
+              <p className="col-span-2 text-xs text-muted-foreground">
+                {nutritionToday.protein >= nutritionToday.proteinGoal
+                  ? "Proteinmålet är nått idag."
+                  : <><span className="font-semibold text-foreground">{(nutritionToday.proteinGoal - nutritionToday.protein).toLocaleString("sv-SE")} g protein</span> kvar idag</>}
               </p>
-              <p className="text-sm font-semibold truncate">Förslag: {suggestion.title}</p>
             </div>
-          </div>
-
-          <p className="text-sm text-muted-foreground">
-            Du har inte tränat {suggestion.labels.join(", ")} de senaste 7 dagarna. Ett pass med fokus på{" "}
-            {suggestion.title.toLowerCase()} balanserar veckan.
-          </p>
-
-          <div className="flex flex-wrap gap-1.5">
-            {suggestion.exercises.map((ex) => (
-              <span key={ex} className="text-[11px] font-medium bg-card border border-border/60 rounded-full px-2.5 py-1">
-                {ex}
-              </span>
-            ))}
-          </div>
-
-          <div className="flex flex-wrap gap-2">
-            <Button className="flex-1 min-w-[160px]" onClick={() => openPickerForGroup(suggestion.primaryGroup)}>
-              <Plus className="w-4 h-4 mr-1" />
-              Lägg till {suggestion.primaryGroup ?? "pass"}
-            </Button>
-            {suggestion.groups.slice(1).map((group) => (
-              <Button key={group} variant="outline" className="min-w-[110px]" onClick={() => openPickerForGroup(group)}>
-                {group}
-              </Button>
-            ))}
-          </div>
-        </section>
+          ) : (
+            <p className="text-sm text-muted-foreground">Inget loggat än idag. Tryck för att logga din första måltid.</p>
+          )}
+        </button>
       )}
 
-
-
+      {/* 4. Aktivitet från hälsoappen (Health Connect / Apple Health) */}
       <HealthWorkoutPrompt userId={userId} preview={healthPreview} />
-
-      {/* 1c. Steg och aktiva kalorier från hälsoappen */}
       {healthToday && (
-        <div className="space-y-2">
+        <section className="card-soft p-4 space-y-3" aria-label="Aktivitet idag">
           {healthPreview && (
-            <div className="flex items-center gap-2 px-1 text-xs font-medium text-success">
+            <div className="flex items-center gap-2 text-xs font-medium text-success">
               <CheckCircle2 className="h-4 w-4" />
               Samsung Health synkades precis
             </div>
           )}
           <div className="grid grid-cols-2 gap-3">
-            <section className="card-soft p-4 space-y-1" aria-label="Steg idag">
-            <div className="flex items-center gap-1.5 text-muted-foreground">
-              <Footprints className="w-4 h-4" />
-              <span className="text-[11px] uppercase tracking-wider font-semibold">Steg idag</span>
-            </div>
-            <p className="text-2xl font-bold leading-none">{healthToday.steps.toLocaleString("sv-SE")}</p>
+            <div className="space-y-1" aria-label="Steg idag">
+              <div className="flex items-center gap-1.5 text-muted-foreground">
+                <Footprints className="w-4 h-4" />
+                <span className="text-[11px] uppercase tracking-wider font-semibold">Steg idag</span>
+              </div>
+              <p className="text-2xl font-bold leading-none">{healthToday.steps.toLocaleString("sv-SE")}</p>
               <p className="text-[11px] text-muted-foreground">{healthPreview ? "från Samsung Health" : "från din hälsoapp"}</p>
-            </section>
-            <section className="card-soft p-4 space-y-1" aria-label="Aktiva kalorier idag">
-            <div className="flex items-center gap-1.5 text-muted-foreground">
-              <FlameIcon className="w-4 h-4" />
-              <span className="text-[11px] uppercase tracking-wider font-semibold">Aktiva kcal</span>
             </div>
-            <p className="text-2xl font-bold leading-none">
-              {healthToday.activeCalories.toLocaleString("sv-SE")}
-            </p>
+            <div className="space-y-1" aria-label="Aktiva kalorier idag">
+              <div className="flex items-center gap-1.5 text-muted-foreground">
+                <FlameIcon className="w-4 h-4" />
+                <span className="text-[11px] uppercase tracking-wider font-semibold">Aktiva kcal</span>
+              </div>
+              <p className="text-2xl font-bold leading-none">{healthToday.activeCalories.toLocaleString("sv-SE")}</p>
               <p className="text-[11px] text-muted-foreground">totalt idag</p>
-            </section>
+            </div>
           </div>
           {restingHr && (
-            <div className="space-y-1 px-1" aria-label="Dagens form">
+            <div className="space-y-1" aria-label="Dagens form">
               <div className="flex flex-wrap items-center gap-2 text-[11px] text-muted-foreground">
                 <span className="font-semibold uppercase tracking-wider">Dagens form</span>
                 <span className="rounded-full border border-border bg-card px-2 py-0.5">
                   Vilopuls {restingHr.today}
                   {restingHr.delta !== null && (
                     <span className={restingHr.elevated ? " text-warning" : ""}>
-                      {" "}{restingHr.delta > 1 ? "↑" : restingHr.delta < -1 ? "↓" : "→"} {restingHr.delta > 0 ? "+" : ""}{restingHr.delta} vs 7 d
+                      {" "}{restingHr.delta > 1 ? "↑" : restingHr.delta < -1 ? "↓" : "→"} {restingHr.delta > 0 ? "+" : ""}{restingHr.delta} mot 7 d
                     </span>
                   )}
                 </span>
@@ -696,73 +769,37 @@ const HomeView = ({ userId, onNavigate, isHonorary = false }: HomeViewProps) => 
             </div>
           )}
           {healthToday.sleepMinutes > 0 && (
-            <p className="px-1 text-[11px] text-muted-foreground">
-              Sömn i natt: {formatSleep(healthToday.sleepMinutes)}
-            </p>
+            <p className="text-[11px] text-muted-foreground">Sömn i natt: {formatSleep(healthToday.sleepMinutes)}</p>
           )}
           <HomeHealthTrends days={healthHistory} />
-
-        </div>
+        </section>
       )}
 
-      {/* 1c. Veckan i siffror: pass, volym, rekord, kost och vikt mot förra veckan */}
+      {/* 5. Veckan i siffror (bara här – Statistik har veckorapporten) */}
       <WeeklySummaryCard userId={userId} onStartWorkout={() => onNavigate("workout")} />
 
-      {/* 1d. Träningsstatistik vecka/månad/år med grenval direkt i kortet */}
+      {/* 6. Träningsstatistik vecka/månad/år */}
       <HomeTrainingStats userId={userId} onStartWorkout={() => onNavigate("workout")} />
 
-      {/* 1e. Dagens recept utifrån målet */}
       <DailyRecipeCard userId={userId} isHonorary={isHonorary} />
 
-      {/* 2. Streak + weekly progress */}
-      <div className="grid grid-cols-2 gap-3">
-        <section className="card-soft p-4 space-y-1" aria-label="Streak">
-          <div className="flex items-center gap-1.5 text-muted-foreground">
-            <Flame className={`w-4 h-4 ${streak > 0 ? "text-warning" : ""}`} />
-            <span className="text-[11px] uppercase tracking-wider font-semibold">Streak</span>
-          </div>
-          <p className="text-2xl font-bold leading-none">{streak}</p>
-          <p className="text-[11px] text-muted-foreground">
-            {streak === 0 ? "Kom igång idag" : streak === 1 ? "dag i rad" : "dagar i rad"}
-          </p>
-        </section>
-
-        <section className="card-soft p-4 space-y-2" aria-label="Veckans framsteg">
-          <div className="flex items-center gap-1.5 text-muted-foreground">
-            <Target className="w-4 h-4" />
-            <span className="text-[11px] uppercase tracking-wider font-semibold">Veckan</span>
-          </div>
-          <p className="text-2xl font-bold leading-none">
-            {weekCompleted}
-            <span className="text-sm font-medium text-muted-foreground">/{goal}</span>
-          </p>
-          <div className="h-1.5 w-full bg-secondary rounded-full overflow-hidden">
-            <div
-              className="h-full bg-primary rounded-full transition-all duration-500"
-              style={{ width: `${progressPct}%` }}
-            />
-          </div>
-          <p className="text-[11px] text-muted-foreground">{progressPct}% av veckans mål</p>
-        </section>
-      </div>
-
-      {/* 3. Latest achievement */}
+      {/* Senaste utmärkelse */}
       <button
         onClick={() => onNavigate("stats")}
         className="w-full text-left card-soft p-4 flex items-center gap-3"
-        aria-label="Visa achievements"
+        aria-label="Visa utmärkelser"
       >
-        <div className="h-11 w-11 rounded-xl bg-primary/15 flex items-center justify-center text-xl shrink-0">
-          {achievementDef ? achievementDef.emoji : <Trophy className="w-5 h-5 text-primary" />}
+        <div className="h-11 w-11 rounded-tile bg-warning/15 flex items-center justify-center text-xl shrink-0">
+          {achievementDef ? achievementDef.emoji : <Trophy className="w-5 h-5 text-warning" />}
         </div>
         <div className="min-w-0 flex-1">
           <p className="text-[11px] uppercase tracking-wider text-muted-foreground font-semibold flex items-center gap-1">
             <Sparkles className="w-3 h-3" />
-            Senaste achievement
+            Senaste utmärkelse
           </p>
           {achievementDef ? (
             <>
-              <p className="text-sm font-semibold truncate">{achievementDef.title}</p>
+              <p className="text-sm font-semibold break-words">{achievementDef.title}</p>
               <p className="text-[11px] text-muted-foreground">
                 {achievementCount} av {ACHIEVEMENTS.length} upplåsta
                 {latestAchievement?.unlocked_at
@@ -779,6 +816,35 @@ const HomeView = ({ userId, onNavigate, isHonorary = false }: HomeViewProps) => 
         </div>
         <ChevronRight className="w-4 h-4 text-muted-foreground shrink-0" />
       </button>
+
+      {/* 7. Litet förslagskort sist, bara när inget är inplanerat */}
+      {showSuggestion && suggestion && (
+        <section className="rounded-tile border border-border/70 p-3 space-y-2" aria-label="Förslag för idag">
+          <div className="flex items-start gap-2">
+            <Lightbulb className="w-4 h-4 text-primary mt-0.5 shrink-0" />
+            <div className="min-w-0">
+              <p className="text-sm font-semibold">Förslag: {suggestion.title}</p>
+              <p className="text-xs text-muted-foreground">
+                {suggestion.labels.join(", ")} har vilat i 7 dagar. Ett pass med fokus på {suggestion.title.toLowerCase()} balanserar veckan.
+              </p>
+            </div>
+          </div>
+          <div className={`grid gap-2 ${suggestion.groups.length >= 3 ? "grid-cols-3" : suggestion.groups.length === 2 ? "grid-cols-2" : "grid-cols-1"}`}>
+            {suggestion.groups.map((group, i) => (
+              <Button
+                key={group}
+                size="sm"
+                variant={i === 0 ? "default" : "outline"}
+                className="w-full min-w-0 px-2"
+                onClick={() => openPickerForGroup(group)}
+              >
+                {i === 0 && <Plus className="w-4 h-4" />}
+                <span className="truncate">{group}</span>
+              </Button>
+            ))}
+          </div>
+        </section>
+      )}
     </div>
   );
 };

@@ -101,7 +101,7 @@ export default function HomeTrainingStats({ userId, onStartWorkout }: { userId: 
         </div>
       )}
       {isEmpty ? (
-        <div className="rounded-xl bg-muted/40 p-4 flex items-center gap-3">
+        <div className="tile-soft p-4 flex items-center gap-3">
           <div className="h-10 w-10 rounded-xl bg-primary/10 text-primary flex items-center justify-center shrink-0">
             <Dumbbell className="w-5 h-5" />
           </div>
@@ -115,7 +115,7 @@ export default function HomeTrainingStats({ userId, onStartWorkout }: { userId: 
         </div>
       ) : (
       <div className="grid grid-cols-2 gap-2">
-        <div className={`rounded-xl bg-muted/40 p-3 text-center ${tiles % 2 === 1 && active.length === 0 ? "col-span-2" : ""}`}>
+        <div className={`tile-soft p-3 text-center ${tiles % 2 === 1 && active.length === 0 ? "col-span-2" : ""}`}>
           <CheckCircle className="w-4 h-4 text-success mx-auto mb-1" />
           <p className="text-xl font-black tabular-nums">{loaded ? stats.sessions : "–"}</p>
           <p className="text-[10px] text-muted-foreground">Pass</p>
@@ -125,7 +125,7 @@ export default function HomeTrainingStats({ userId, onStartWorkout }: { userId: 
           const Icon = CARDIO_ICONS[c.key];
           const lone = tiles % 2 === 1 && i === active.length - 1;
           return (
-            <div key={c.key} className={`rounded-xl bg-muted/40 p-3 text-center ${lone ? "col-span-2" : ""}`}>
+            <div key={c.key} className={`tile-soft p-3 text-center ${lone ? "col-span-2" : ""}`}>
               <Icon className="w-4 h-4 text-primary mx-auto mb-1" aria-hidden="true" />
               <p className="text-xl font-black tabular-nums">{String(Math.round(v.km * 10) / 10).replace(".", ",")} <span className="text-xs font-normal text-muted-foreground">km</span></p>
               <p className="text-[10px] text-muted-foreground">{c.label} · {v.passes} pass</p>

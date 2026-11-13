@@ -64,19 +64,18 @@ const DisclaimerSection = () => {
     <div className="overflow-hidden">
       <button
         onClick={() => setExpanded((v) => !v)}
-        className="w-full flex items-center justify-between gap-2 py-2 px-4 text-sm font-bold bg-secondary text-secondary-foreground rounded-full shadow-soft active:scale-[0.97] hover:opacity-90 transition-opacity"
+        aria-expanded={expanded}
+        className="w-full pill-btn-outline justify-between py-2 px-4 text-sm"
       >
         <div className="flex items-center gap-2.5">
-          <Shield className="w-4 h-4 text-secondary-foreground/70" />
+          <Shield className="w-4 h-4 text-muted-foreground" />
           <span>Friskrivningar</span>
-          <span className="text-[10px] text-foreground bg-background rounded-full px-1.5 py-0.5 border border-border">
-            {disclaimers.length}
-          </span>
+          <span className="text-[11px] font-medium text-muted-foreground">{disclaimers.length}</span>
         </div>
         {expanded ? (
-          <ChevronUp className="w-4 h-4 text-secondary-foreground/70" />
+          <ChevronUp className="w-4 h-4 text-muted-foreground" />
         ) : (
-          <ChevronDown className="w-4 h-4 text-secondary-foreground/70" />
+          <ChevronDown className="w-4 h-4 text-muted-foreground" />
         )}
       </button>
 

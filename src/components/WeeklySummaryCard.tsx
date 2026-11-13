@@ -117,24 +117,24 @@ export default function WeeklySummaryCard({ userId, onStartWorkout }: { userId: 
       </div>
 
       <div className="grid grid-cols-2 gap-2">
-        <div className="rounded-xl bg-muted/40 p-3">
+        <div className="tile-soft p-3">
           <p className="text-[10px] text-muted-foreground flex items-center gap-1"><Dumbbell className="w-3 h-3" />Pass</p>
           <p className="text-xl font-black tabular-nums">{loaded ? cur.sessions : "–"}</p>
           <Delta value={loaded && prev.sessions > 0 ? cur.sessions - prev.sessions : null} unit=" st" />
         </div>
-        <div className="rounded-xl bg-muted/40 p-3">
+        <div className="tile-soft p-3">
           <p className="text-[10px] text-muted-foreground flex items-center gap-1"><Dumbbell className="w-3 h-3" />Volym</p>
           <p className="text-xl font-black tabular-nums">{loaded ? fmtTons(cur.volumeKg) : "–"}</p>
           <Delta value={loaded ? pctChange(cur.volumeKg, prev.volumeKg) : null} />
         </div>
-        <div className="rounded-xl bg-muted/40 p-3">
+        <div className="tile-soft p-3">
           <p className="text-[10px] text-muted-foreground flex items-center gap-1"><Flame className="w-3 h-3" />Kost, snitt/dag</p>
           <p className="text-xl font-black tabular-nums">{cur.avgKcal !== null ? <>{fmt(cur.avgKcal)} <span className="text-xs font-normal text-muted-foreground">kcal</span></> : "–"}</p>
           {cur.avgKcal !== null
             ? <Delta value={kcalDelta} unit=" kcal" />
             : <span className="text-[10px] text-muted-foreground">logga mat för att se trenden</span>}
         </div>
-        <div className="rounded-xl bg-muted/40 p-3">
+        <div className="tile-soft p-3">
           <p className="text-[10px] text-muted-foreground flex items-center gap-1"><Scale className="w-3 h-3" />Vikt, snitt</p>
           <p className="text-xl font-black tabular-nums">{cur.avgWeightKg !== null ? <>{fmt(cur.avgWeightKg, 1)} <span className="text-xs font-normal text-muted-foreground">kg</span></> : "–"}</p>
           {cur.avgWeightKg !== null
@@ -143,7 +143,7 @@ export default function WeeklySummaryCard({ userId, onStartWorkout }: { userId: 
         </div>
       </div>
 
-      <div className="rounded-xl bg-muted/40 p-3 space-y-1.5">
+      <div className="tile-soft p-3 space-y-1.5">
         <p className="text-[11px] font-semibold flex items-center gap-1">
           <Trophy className="w-3.5 h-3.5 text-primary" />
           {cur.prs.length > 0 ? `${cur.prs.length} nya rekord (e1RM)` : "Inga nya rekord än den här veckan"}
