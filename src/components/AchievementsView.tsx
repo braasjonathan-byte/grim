@@ -84,13 +84,13 @@ const AchievementsView = ({ unlockedIds, unlockedAt = {}, title = "Utmärkelser"
       </div>
 
       <div className="flex-1 overflow-y-auto p-3 space-y-3" style={{ paddingBottom: "calc(var(--grim-bottom-safe, 0px) + 1.5rem)" }}>
-        <div className="border border-border bg-secondary p-3 space-y-2">
+        <div className="card-soft p-3 space-y-2">
           <div className="flex items-baseline justify-between">
             <p className="text-xs font-black">{unlockedCount} av {total} upplåsta</p>
             <span className="text-xs font-mono text-muted-foreground">{pct}%</span>
           </div>
-          <div className="h-2 w-full bg-muted overflow-hidden" role="progressbar" aria-valuenow={pct} aria-valuemin={0} aria-valuemax={100}>
-            <div className="h-full bg-primary transition-all duration-500" style={{ width: `${pct}%` }} />
+          <div className="h-2 w-full bg-muted rounded-full overflow-hidden" role="progressbar" aria-valuenow={pct} aria-valuemin={0} aria-valuemax={100}>
+            <div className="h-full bg-success rounded-full transition-all duration-500" style={{ width: `${pct}%` }} />
           </div>
           <div className="grid grid-cols-4 gap-2 pt-1">
             {perDifficulty.map((d) => (
@@ -108,7 +108,7 @@ const AchievementsView = ({ unlockedIds, unlockedAt = {}, title = "Utmärkelser"
               key={f.key}
               type="button"
               onClick={() => setFilter(f.key)}
-              className={`shrink-0 px-3 py-1.5 text-xs font-black border transition-colors ${
+              className={`shrink-0 px-3 py-1.5 text-xs font-bold border rounded-full transition-colors ${
                 filter === f.key
                   ? "bg-primary text-primary-foreground border-primary"
                   : "bg-secondary text-muted-foreground border-border hover:bg-accent"
@@ -127,13 +127,13 @@ const AchievementsView = ({ unlockedIds, unlockedAt = {}, title = "Utmärkelser"
                 key={a.id}
                 type="button"
                 onClick={() => setSelected(a)}
-                className={`relative border p-2 text-left min-h-[96px] flex flex-col items-center justify-center gap-1 transition-colors ${
-                  unlocked ? "border-border bg-secondary hover:bg-accent" : "border-border/50 bg-muted/30"
+                className={`relative border rounded-tile p-2 text-left min-h-[96px] flex flex-col items-center justify-center gap-1 transition-colors ${
+                  unlocked ? "border-warning/40 bg-warning/10 hover:bg-warning/15" : "border-border/50 bg-muted/30"
                 }`}
               >
                 {unlocked && isNew(a.id) && (
-                  <span className="absolute top-1 right-1 px-1 py-0.5 text-[9px] font-black bg-warning text-warning-foreground animate-pulse">
-                    NY!
+                  <span className="absolute top-1 right-1 px-1.5 py-0.5 rounded-full text-[9px] font-bold bg-warning text-warning-foreground">
+                    Ny
                   </span>
                 )}
                 <span className={`text-2xl leading-none ${unlocked ? "" : "grayscale opacity-30"}`}>{a.emoji}</span>
@@ -149,7 +149,7 @@ const AchievementsView = ({ unlockedIds, unlockedAt = {}, title = "Utmärkelser"
         </div>
 
         {list.length === 0 && (
-          <p className="text-xs text-muted-foreground text-center py-6">Inga achievements matchar filtret</p>
+          <p className="text-xs text-muted-foreground text-center py-6">Inga utmärkelser matchar filtret</p>
         )}
       </div>
 

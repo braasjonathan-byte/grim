@@ -54,6 +54,8 @@
     --sidebar-border: 0 0% 88%;
     --sidebar-ring: 0 0% 30%;
 
+    /* Statusfärger: grönt = genomfört/framsteg, bärnsten = aktivitet/svit/utmärkelser,
+       rött (--destructive) = varningar. Textvarianterna mörkas i ljust tema längst ner. */
     --success: 142 70% 45%;
     --success-foreground: 220 20% 7%;
     --warning: 38 92% 50%;

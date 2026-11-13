@@ -3,11 +3,13 @@ import { supabase } from "@/integrations/supabase/client";
 import { Medal, Crown, ChevronLeft, ChevronRight, Trophy } from "lucide-react";
 import HonoraryBadge from "./HonoraryBadge";
 import EmptyState from "./EmptyState";
+import { MEDALS } from "@/lib/medals";
 import { loadPrivacySettings } from "@/lib/socialPrivacy";
 
 interface LeaderboardProps {
   userId: string;
 }
+
 
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "Maj", "Jun", "Jul", "Aug", "Sep", "Okt", "Nov", "Dec"];
 
@@ -76,12 +78,6 @@ const Leaderboard = ({ userId }: LeaderboardProps) => {
     setMonth(month === null ? now.getMonth() + 1 : null);
   };
 
-  const getMedalColor = (index: number) => {
-    if (index === 0) return "text-warning";
-    if (index === 1) return "text-muted-foreground";
-    if (index === 2) return "text-orange-400";
-    return "text-muted-foreground/40";
-  };
 
   return (
     <div className="space-y-3">
@@ -149,7 +145,7 @@ const Leaderboard = ({ userId }: LeaderboardProps) => {
               {/* Rank */}
               <div className="w-7 flex-shrink-0 flex items-center justify-center">
                 {i < 3 ? (
-                  <Medal className={`w-5 h-5 ${getMedalColor(i)}`} strokeWidth={2} />
+                  <Medal className={`w-5 h-5 ${MEDALS[i].className}`} strokeWidth={2} aria-label={MEDALS[i].label} role="img" />
                 ) : (
                   <span className="text-xs font-bold text-muted-foreground">{i + 1}</span>
                 )}

@@ -319,8 +319,8 @@ const TrainingCalendar = ({ userId }: TrainingCalendarProps) => {
                     : isSkipped
                     ? "bg-destructive/15 text-destructive font-bold"
                     : isPending
-                    ? "bg-primary/10 text-primary font-semibold"
-                    : "text-muted-foreground/70"
+                    ? "ring-2 ring-inset ring-primary/70 text-foreground font-semibold"
+                    : "text-muted-foreground/50"
                 } ${hasStats ? "group-hover:bg-success/35" : ""}`}
               >
                 {hasStats ? (
@@ -380,16 +380,17 @@ const TrainingCalendar = ({ userId }: TrainingCalendarProps) => {
         )}
 
         <div className="flex items-center justify-center flex-wrap gap-x-4 gap-y-1.5 mt-4 pt-3 border-t border-border/40">
+          {/* Samma stil som cellerna: planerat = ring, vilodag = bara en dämpad siffra. */}
           {[
             ["bg-success/25", "Tränat"],
             ["bg-primary", "Idag"],
-            ["bg-primary/15", "Planerat"],
+            ["ring-2 ring-inset ring-primary/70", "Planerat"],
             ["bg-destructive/20", "Missat"],
-            ["bg-muted", "Vilodag"],
+            ["border border-dashed border-muted-foreground/40", "Vilodag"],
           ].map(([cls, label]) => (
             <div key={label} className="flex items-center gap-1.5">
-              <div className={`w-2.5 h-2.5 rounded-full ${cls}`} />
-              <span className="text-[10px] text-muted-foreground">{label}</span>
+              <div className={`w-3 h-3 rounded-full ${cls}`} />
+              <span className="text-[11px] text-muted-foreground">{label}</span>
             </div>
           ))}
         </div>

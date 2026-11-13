@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { MEDALS } from "@/lib/medals";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -247,7 +248,7 @@ export default function FriendChallenges({ userId }: Props) {
                   <div key={s.userId} className="space-y-1">
                     <div className="flex items-center justify-between text-xs">
                       <span className="flex items-center gap-1.5 truncate">
-                        {i < 3 && <Medal className={`w-3.5 h-3.5 ${i === 0 ? "text-warning" : i === 1 ? "text-muted-foreground" : "text-primary"}`} />}
+                        {i < 3 && <Medal className={`w-3.5 h-3.5 ${MEDALS[i].className}`} aria-label={MEDALS[i].label} role="img" />}
                         <span className={s.userId === userId ? "font-bold" : ""}>{i + 1}. {s.nickname}</span>
                       </span>
                       <span className="font-semibold tabular-nums">{fmt(s.value, c.metric === "pass" ? 0 : 1)} {unitFor(c.metric)}</span>
