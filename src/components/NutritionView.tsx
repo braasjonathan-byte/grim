@@ -128,9 +128,9 @@ function SortableMeal({ meal, isCustom, logs, mealKcal, onAdd, onRename, onDelet
           </p>
         </div>
         <div className="flex items-center gap-1.5">
-          <button onClick={onAdd} className="w-8 h-8 icon-round pill-btn-soft flex items-center justify-center" aria-label={`Lägg till i ${meal}`}>
+          <Button variant="secondary" size="icon" onClick={onAdd} className="w-11 h-11 icon-round shrink-0" aria-label={`Lägg till i ${meal}`} title={`Lägg till i ${meal}`}>
             <Plus className="w-4 h-4" />
-          </button>
+          </Button>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <button className="w-8 h-8 icon-round text-muted-foreground hover:bg-muted/60 transition-colors" aria-label="Fler val">
@@ -212,8 +212,6 @@ export default function NutritionView({ userId, isHonorary: isHonoraryProp = fal
   const [microTargets, setMicroTargets] = useState<Micros>({});
   const [slots, setSlots] = useState<string[]>(DEFAULT_SLOTS);
   const [picker, setPicker] = useState<string | null>(null);
-  // Tom dag: ett enda tomläge (snabbvalsrutan) – måltidskorten visas först när något loggats eller på begäran.
-  const [showEmptyMeals, setShowEmptyMeals] = useState(false);
   const [recipeOpen, setRecipeOpen] = useState(false);
   const [editingRecipeId, setEditingRecipeId] = useState<string | null>(null);
   const [templateRecipe, setTemplateRecipe] = useState<import("@/data/curatedRecipes").CuratedRecipe | null>(null);
@@ -663,11 +661,7 @@ export default function NutritionView({ userId, isHonorary: isHonoraryProp = fal
 
         <FastingWidget userId={userId} />
 
-        {loaded && logs.length === 0 && !showEmptyMeals ? (
-          <button onClick={() => setShowEmptyMeals(true)} className="link-quiet w-full justify-center text-xs text-muted-foreground">
-            Visa och ordna måltider
-          </button>
-        ) : (
+        {loaded && (
         <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={onDragEnd}>
           <SortableContext items={slots} strategy={verticalListSortingStrategy}>
             <div className="space-y-3">
