@@ -35,14 +35,20 @@ export default function WaterTracker({ userId, dateKey, goalMl }: Props) {
   const filled = Math.floor(ml / STEP_ML);
   const glasses = Math.max(Math.ceil(goal / STEP_ML), filled + 1);
 
+  const pct = Math.min(100, Math.round((ml / goal) * 100));
+
   return (
-    <div className="rounded-2xl bg-card shadow-soft border border-border/40 p-3 space-y-3">
+    <div className="card-soft p-3 space-y-3">
       <div className="flex items-center justify-between gap-2">
         <div>
           <p className="text-sm font-bold flex items-center gap-1.5"><Droplet className="w-4 h-4 text-primary" /> Vatten</p>
           <p className="text-[11px] text-muted-foreground">Mål: {(goal / 1000).toLocaleString("sv-SE", { maximumFractionDigits: 2 })} l</p>
         </div>
-        <p className="text-sm font-bold tabular-nums">{(ml / 1000).toLocaleString("sv-SE", { maximumFractionDigits: 2 })} l</p>
+        <p className="text-sm font-bold tabular-nums">{(ml / 1000).toLocaleString("sv-SE", { maximumFractionDigits: 2 })} l <span className="text-xs font-medium text-muted-foreground">· {pct} %</span></p>
+      </div>
+      {/* Fyllnadsindikator mot dagens mål. */}
+      <div className="h-2.5 rounded-full bg-muted overflow-hidden" role="progressbar" aria-label="Vatten mot mål" aria-valuenow={pct} aria-valuemin={0} aria-valuemax={100}>
+        <div className="h-full rounded-full bg-primary transition-all" style={{ width: `${pct}%` }} />
       </div>
       <div className="grid grid-cols-8 gap-1.5">
         {Array.from({ length: glasses }).map((_, i) => {
@@ -53,11 +59,13 @@ export default function WaterTracker({ userId, dateKey, goalMl }: Props) {
               key={i}
               onClick={() => { hapticLight(); setAmount(isFilled && i === filled - 1 ? (filled - 1) * STEP_ML : (i + 1) * STEP_ML); }}
               aria-label={isFilled ? `Glas ${i + 1} (tryck för att ta bort)` : `Fyll glas ${i + 1}`}
-              className={`h-11 rounded-b-xl rounded-t-md flex items-center justify-center transition-all active:scale-90 ${
-                isFilled ? "bg-primary/70" : isNext ? "bg-primary/10 border border-dashed border-primary/40" : "bg-muted/50"
+              className={`relative h-11 overflow-hidden rounded-b-xl rounded-t-md border flex items-center justify-center transition-all active:scale-90 ${
+                isFilled ? "border-primary/60 bg-muted/40" : isNext ? "border-dashed border-primary/50 bg-transparent" : "border-border bg-transparent"
               }`}
             >
-              {!isFilled && <Plus className={`w-3.5 h-3.5 ${isNext ? "text-primary" : "text-muted-foreground/50"}`} />}
+              {isFilled && <span className="absolute inset-x-0 bottom-0 h-[78%] bg-primary/70" aria-hidden="true" />}
+              {isNext && <Plus className="relative w-3.5 h-3.5 text-primary" />}
+              {isFilled && <Droplet className="relative w-3 h-3 text-primary-foreground" aria-hidden="true" />}
             </button>
           );
         })}

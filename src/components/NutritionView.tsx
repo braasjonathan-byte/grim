@@ -211,6 +211,8 @@ export default function NutritionView({ userId, isHonorary: isHonoraryProp = fal
   const [microTargets, setMicroTargets] = useState<Micros>({});
   const [slots, setSlots] = useState<string[]>(DEFAULT_SLOTS);
   const [picker, setPicker] = useState<string | null>(null);
+  // Tom dag: ett enda tomläge (snabbvalsrutan) – måltidskorten visas först när något loggats eller på begäran.
+  const [showEmptyMeals, setShowEmptyMeals] = useState(false);
   const [recipeOpen, setRecipeOpen] = useState(false);
   const [editingRecipeId, setEditingRecipeId] = useState<string | null>(null);
   const [templateRecipe, setTemplateRecipe] = useState<import("@/data/curatedRecipes").CuratedRecipe | null>(null);
@@ -652,7 +654,21 @@ export default function NutritionView({ userId, isHonorary: isHonoraryProp = fal
           const want = slotForNow();
           const quickSlot = allSlots.find((m) => m.toLowerCase() === want) || allSlots[0] || want;
           return (
-            <div className="rounded-2xl bg-muted/30 border border-border/40 p-3 space-y-2" data-tour="nutrition-quick-repeat">
+            <div className="tile-soft p-3 space-y-2" data-tour="nutrition-quick-repeat">
+              {/* Ett enda tomläge: texten bor i snabbvalsrutan i stället för ett separat kort. */}
+              {logs.length === 0 && (
+                <div className="space-y-0.5">
+                  <p className="text-sm font-semibold">Inget loggat {isToday ? "idag" : "denna dag"} än</p>
+                  <p className="text-xs text-muted-foreground">Lägg till din första måltid så räknar vi kalorier och makros åt dig.</p>
+                  <div className="flex flex-wrap gap-1.5 pt-1.5">
+                    {allSlots.map((m) => (
+                      <button key={m} onClick={() => { hapticLight(); setPicker(m); }} className="pill-btn-outline px-3 py-1.5 text-xs first-letter:uppercase">
+                        <Plus className="w-3 h-3" /> {m}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
               <MealSuggestions
                 key={`${dateKey}:${quickSlot}:${logs.length}`}
                 userId={userId}
@@ -667,30 +683,17 @@ export default function NutritionView({ userId, isHonorary: isHonoraryProp = fal
               <div className="flex gap-1.5">
                 <button onClick={() => setTemplatesOpen(true)} className="flex-1 pill-btn-ghost py-1.5 text-[11px]"><Bookmark className="w-3 h-3" /> Mallar</button>
                 <button onClick={() => { hapticLight(); setPastOpen(true); }} className="flex-1 pill-btn-ghost py-1.5 text-[11px]"><CopyPlus className="w-3 h-3" /> Från senaste veckan</button>
-                <button onClick={() => { hapticLight(); setPicker(quickSlot); }} className="flex-1 pill-btn bg-primary text-primary-foreground py-1.5 text-[11px] font-semibold"><Plus className="w-3 h-3" /> Sök</button>
+                <button onClick={() => { hapticLight(); setPicker(quickSlot); }} className="flex-1 pill-btn bg-primary text-primary-foreground py-1.5 text-[11px] font-semibold"><Plus className="w-3 h-3" /> {logs.length === 0 ? `Logga ${quickSlot}` : "Sök"}</button>
               </div>
             </div>
           );
         })()}
 
-        {loaded && logs.length === 0 && (
-          <div className="rounded-2xl bg-primary/5 border border-primary/25 p-3 text-center space-y-2">
-            <p className="text-sm font-semibold">Inget loggat {isToday ? "idag" : "denna dag"} än</p>
-            <p className="text-xs text-muted-foreground">
-              Lägg till din första måltid så räknar vi kalorier och makros åt dig.
-            </p>
-            <button
-              onClick={() => setPicker(allSlots[0] || slots[0] || "frukost")}
-              className="pill-btn bg-primary text-primary-foreground px-4 py-2 text-xs font-semibold"
-            >
-              <Plus className="w-3.5 h-3.5" /> Logga {allSlots[0] || slots[0] || "frukost"}
-            </button>
-          </div>
-        )}
-
-
-
-
+        {loaded && logs.length === 0 && !showEmptyMeals ? (
+          <button onClick={() => setShowEmptyMeals(true)} className="link-quiet w-full justify-center text-xs text-muted-foreground">
+            Visa och ordna måltider
+          </button>
+        ) : (
         <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={onDragEnd}>
           <SortableContext items={slots} strategy={verticalListSortingStrategy}>
             <div className="space-y-3">
@@ -722,6 +725,7 @@ export default function NutritionView({ userId, isHonorary: isHonoraryProp = fal
             </div>
           </SortableContext>
         </DndContext>
+        )}
 
 
       </div>

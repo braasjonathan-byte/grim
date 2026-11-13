@@ -70,22 +70,23 @@ export default function MealSuggestions({ userId, meal, onPick, onPickMany }: Pr
   return (
     <div className="space-y-1.5">
       <p className="text-[11px] font-bold uppercase tracking-wide text-muted-foreground flex items-center gap-1"><Clock className="w-3 h-3" /> Förslag till {slot}</p>
-      <div className="flex gap-1.5 overflow-x-auto pb-1 -mx-1 px-1 no-scrollbar">
-        {lastMeal && (
-          <button onClick={() => onPickMany(lastMeal.items)}
-            className="shrink-0 flex items-center gap-1 rounded-full bg-primary/10 text-primary px-3 py-1.5 text-xs font-semibold">
-            <RotateCcw className="w-3 h-3" /> Samma {label.toLowerCase()} som {new Date(lastMeal.date).toLocaleDateString("sv-SE", { weekday: "short" })} · {Math.round(lastMeal.items.reduce((s, i) => s + i.kcal, 0))} kcal
-          </button>
-        )}
+      {/* Egen rad för «Samma … som …» och radbrytande chips – inget klipps vid kanten. */}
+      {lastMeal && (
+        <button onClick={() => onPickMany(lastMeal.items)}
+          className="w-full flex items-center gap-1.5 rounded-control bg-primary/10 text-foreground px-3 py-2 text-xs font-semibold text-left min-h-[40px]">
+          <RotateCcw className="w-3.5 h-3.5 shrink-0 text-primary" /> <span className="min-w-0">Samma {label.toLowerCase()} som {new Date(lastMeal.date).toLocaleDateString("sv-SE", { weekday: "short" })} · {Math.round(lastMeal.items.reduce((s, i) => s + i.kcal, 0))} kcal</span>
+        </button>
+      )}
+      <div className="flex flex-wrap gap-1.5">
         {items.map(({ p }) => {
           const k = p.name.toLowerCase();
           const done = added.has(k);
           return (
             <button key={k} disabled={done}
               onClick={() => { setAdded((s) => new Set(s).add(k)); onPick(p); }}
-              className={`shrink-0 flex items-center gap-1 rounded-full px-3 py-1.5 text-xs font-medium ${done ? "bg-primary text-primary-foreground" : "bg-secondary"}`}>
+              className={`max-w-full flex items-center gap-1 rounded-full px-3 py-1.5 text-xs font-medium ${done ? "bg-primary text-primary-foreground" : "bg-secondary text-secondary-foreground"}`}>
               {!done && <Plus className="w-3 h-3" />}{done && "✓ "}
-              <span className="max-w-[9rem] truncate">{p.name}</span>
+              <span className="min-w-0 break-words text-left">{p.name}</span>
               <span className="text-[10px] opacity-70 tabular-nums">{Math.round(p.amount)}{p.unit === "g" ? "g" : ` ${p.unit}`}</span>
             </button>
           );

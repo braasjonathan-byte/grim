@@ -148,12 +148,13 @@ export default function NutritionInsights({ userId, dateKey, targets, refreshKey
   }, [logs, dateKey]);
 
   return (
-    <div className="rounded-2xl bg-card shadow-soft border border-border/40 p-4 space-y-3">
+    <div className="card-soft p-4 space-y-3">
       <div className="grid grid-cols-4 gap-1 rounded-full bg-muted/60 p-0.5">
         {TABS.map((t) => (
           <button key={t.key} onClick={() => setTab(t.key)}
-            className={`flex items-center justify-center gap-1 py-1.5 text-[11px] font-semibold rounded-full ${tab === t.key ? "bg-primary text-primary-foreground" : "text-muted-foreground"}`}>
-            <t.icon className="w-3 h-3" /> {t.label}
+            className={`min-w-0 flex items-center justify-center gap-1 px-1 py-1.5 text-[11px] font-semibold rounded-full whitespace-nowrap ${tab === t.key ? "bg-primary text-primary-foreground" : "text-muted-foreground"}`}>
+            {/* Ikonen bara när det finns plats – annars klipptes «Livsmedel» vid kanten. */}
+            <t.icon className="w-3 h-3 shrink-0 hidden min-[420px]:block" aria-hidden="true" /> <span>{t.label}</span>
           </button>
         ))}
       </div>
@@ -164,6 +165,13 @@ export default function NutritionInsights({ userId, dateKey, targets, refreshKey
             Vecka från {monday.toLocaleDateString("sv-SE", { day: "numeric", month: "short" })} · Snitt{" "}
             <span className="font-bold text-foreground tabular-nums">{fmt(forecastAvg(week))} kcal</span> · Mål {fmt(targets.kcal)}
           </p>
+          {!week.some((x) => x.logged) ? (
+            <div className="h-40 tile-soft flex flex-col items-center justify-center text-center px-4" data-testid="week-empty">
+              <BarChart3 className="w-6 h-6 text-muted-foreground mb-1" aria-hidden="true" />
+              <p className="text-sm font-semibold">Inget loggat den här veckan</p>
+              <p className="text-xs text-muted-foreground">Grafen fylls i när du loggar dina måltider.</p>
+            </div>
+          ) : (
           <div className="h-40">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={week} margin={{ top: 5, right: 5, left: -20, bottom: 0 }}>
@@ -176,11 +184,12 @@ export default function NutritionInsights({ userId, dateKey, targets, refreshKey
               </BarChart>
             </ResponsiveContainer>
           </div>
+          )}
           <div className="grid grid-cols-3 gap-2 text-center">
             {([["Protein", "protein", targets.protein_g], ["Fett", "fat", targets.fat_g], ["Kolhydr.", "carbs", targets.carbs_g]] as const).map(([label, k, goal]) => {
               const d = week.filter((x) => x.logged); const avg = d.length ? d.reduce((s, x) => s + x[k], 0) / d.length : 0;
               return (
-                <div key={k} className="rounded-xl bg-muted/50 py-2">
+                <div key={k} className="tile-soft py-2">
                   <p className="text-[10px] text-muted-foreground">{label} snitt</p>
                   <p className="text-sm font-bold tabular-nums">{fmt(avg)} g</p>
                   <p className="text-[10px] text-muted-foreground">mål {fmt(goal)} g</p>

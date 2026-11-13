@@ -16,18 +16,19 @@ interface Props {
   targets: { kcal: number; protein_g: number; fat_g: number; carbs_g: number; fiber_g?: number | null };
 }
 
-function Ring({ size, stroke, pct, color, children }: { size: number; stroke: number; pct: number; color: string; children: React.ReactNode }) {
-  const r = (size - stroke) / 2;
-  const c = 2 * Math.PI * r;
-  const dash = (Math.min(100, Math.max(0, pct)) / 100) * c;
+function MacroBar({ label, v, t, color, note }: { label: string; v: number; t: number; color: string; note?: string }) {
+  const pct = t > 0 ? Math.min(100, (v / t) * 100) : 0;
   return (
-    <div className="relative" style={{ width: size, height: size }}>
-      <svg width={size} height={size} className="-rotate-90">
-        <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="hsl(var(--muted) / 0.6)" strokeWidth={stroke} />
-        <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke={color} strokeWidth={stroke}
-          strokeDasharray={`${dash} ${c}`} strokeLinecap="round" style={{ transition: "stroke-dasharray 0.5s ease" }} />
-      </svg>
-      <div className="absolute inset-0 flex flex-col items-center justify-center leading-tight">{children}</div>
+    <div>
+      <div className="flex items-baseline justify-between text-xs">
+        <span className="font-medium">{label}</span>
+        <span className="tabular-nums text-muted-foreground">
+          <span className="font-semibold text-foreground">{Math.round(v)}</span> / {note ?? ""}{Math.round(t)} g
+        </span>
+      </div>
+      <div className="h-2 rounded-full bg-muted mt-1 overflow-hidden" role="progressbar" aria-label={label} aria-valuenow={Math.round(v)} aria-valuemax={Math.round(t)}>
+        <div className="h-full rounded-full transition-all" style={{ width: `${pct}%`, background: color }} />
+      </div>
     </div>
   );
 }
@@ -42,57 +43,54 @@ export default function NutritionHero({ kcal, burned, protein, fat, carbs, fiber
   const left = Math.round(budget) - Math.round(kcal);
   const over = left < 0;
   const fiberTarget = targets.fiber_g && targets.fiber_g > 0 ? targets.fiber_g : 30;
+  const proteinLeft = Math.max(0, Math.round(targets.protein_g - protein));
+  const kcalPct = budget > 0 ? Math.min(100, (kcal / budget) * 100) : 0;
   const macros = [
-    { label: "Fett", v: fat, t: targets.fat_g, color: "hsl(45 93% 47%)" },
     { label: "Protein", v: protein, t: targets.protein_g, color: "hsl(var(--destructive))" },
     { label: "Kolhydrater", v: carbs, t: carbTarget, color: "hsl(199 89% 48%)" },
-    { label: "Fiber", v: fiber, t: fiberTarget, color: "hsl(25 60% 50%)" },
+    { label: "Fett", v: fat, t: targets.fat_g, color: "hsl(45 93% 47%)" },
   ];
   return (
     <div className="space-y-4">
-      {quality != null && (
-        <div className="flex justify-end -mb-2">
-          <Popover>
-            <PopoverTrigger asChild>
-              <button type="button" className={`rounded-full px-2.5 py-0.5 text-[11px] font-bold tabular-nums ${qualityTone(quality)}`}>Matkvalitet {quality}/100 ⓘ</button>
-            </PopoverTrigger>
-            <PopoverContent className="w-64 text-xs">0–100 för dagens mat. Högre poäng när du äter mer hela, lite processade livsmedel med fiber och mindre socker.</PopoverContent>
-          </Popover>
+      {/* Kompakt kcal-mätare: en rad + en stapel i stället för stor ring. */}
+      <div className="rounded-tile bg-primary/10 p-3.5 space-y-2">
+        <div className="flex items-end justify-between gap-3">
+          <div>
+            <p className="text-2xl font-bold tabular-nums leading-none">
+              <span className={over ? "text-destructive" : ""}>{Math.abs(left)}</span>
+              <span className="text-sm font-semibold"> kcal {over ? "över" : "kvar"}</span>
+            </p>
+            <p className="text-xs text-muted-foreground mt-1 tabular-nums">
+              {Math.round(kcal)} av {Math.round(budget)} kcal ätit
+            </p>
+          </div>
+          <div className="text-right shrink-0">
+            <p className="text-sm font-semibold tabular-nums">{Math.round(burned)} kcal</p>
+            <Popover>
+              <PopoverTrigger asChild>
+                <button type="button" className="text-xs text-muted-foreground font-medium">Förbränt ⓘ</button>
+              </PopoverTrigger>
+              <PopoverContent className="w-64 text-xs">Uppskattade kalorier från dagens genomförda träningspass (samma uppskattning som i Träning; 75 kg används om du inte angett din vikt). Förbränningen räknas INTE in i "kvar" – ditt dagsmål bygger redan på den aktivitetsnivå du valt under Mål, så träningen räknas inte dubbelt.</PopoverContent>
+            </Popover>
+          </div>
         </div>
-      )}
-      <div className="rounded-2xl bg-primary/10 p-4 flex items-center justify-between">
-        <div className="text-center w-16">
-          <p className="text-xl font-bold tabular-nums">{Math.round(kcal)}</p>
-          <p className="text-[10px] text-muted-foreground font-medium">Ätit</p>
-        </div>
-        <Ring size={128} stroke={10} pct={budget > 0 ? (kcal / budget) * 100 : 0} color={over ? "hsl(var(--destructive))" : "hsl(var(--primary))"}>
-          <span className={`text-2xl font-bold tabular-nums ${over ? "text-destructive" : ""}`}>{Math.abs(left)}</span>
-          <span className="text-xs font-semibold">kcal</span>
-          <span className="text-[10px] text-muted-foreground">{over ? "över" : "kvar"}</span>
-        </Ring>
-        <div className="text-center w-16">
-          <p className="text-xl font-bold tabular-nums">{Math.round(burned)}</p>
-          <Popover>
-            <PopoverTrigger asChild>
-              <button type="button" className="text-[10px] text-muted-foreground font-medium">Förbränt ⓘ</button>
-            </PopoverTrigger>
-            <PopoverContent className="w-64 text-xs">Uppskattade kalorier från dagens genomförda träningspass (samma uppskattning som i Träning; 75 kg används om du inte angett din vikt). Förbränningen räknas INTE in i "kvar" – ditt dagsmål bygger redan på den aktivitetsnivå du valt under Mål, så träningen räknas inte dubbelt.</PopoverContent>
-          </Popover>
+        <div className="h-2.5 rounded-full bg-muted overflow-hidden" role="progressbar" aria-label="Kalorier" aria-valuenow={Math.round(kcal)} aria-valuemax={Math.round(budget)}>
+          <div className={`h-full rounded-full transition-all ${over ? "bg-destructive" : "bg-primary"}`} style={{ width: `${kcalPct}%` }} />
         </div>
       </div>
-      <div className="grid grid-cols-4 gap-2">
-        {macros.map((m) => (
-          <div key={m.label} className="flex flex-col items-center gap-1">
-            <Ring size={62} stroke={6} pct={m.t > 0 ? (m.v / m.t) * 100 : 0} color={m.color}>
-              <span className="text-sm font-bold tabular-nums">{Math.round(m.v)}</span>
-              <span className="text-[9px] text-muted-foreground tabular-nums">/{m.label === "Fiber" && !(targets.fiber_g && targets.fiber_g > 0) ? "rek. " : ""}{Math.round(m.t)}g</span>
-            </Ring>
-            <span className="text-[11px] font-medium">{m.label}</span>
-          </div>
-        ))}
+      {targets.protein_g > 0 && (
+        <p className="text-base font-semibold" data-testid="protein-left">
+          {proteinLeft > 0 ? <><span className="tabular-nums">{proteinLeft} g</span> protein kvar idag</> : "Proteinmålet är nått idag"}
+        </p>
+      )}
+      <div className="space-y-2.5">
+        {macros.map((m) => <MacroBar key={m.label} {...m} />)}
+        <p className="text-xs text-muted-foreground tabular-nums">
+          Fiber {Math.round(fiber)} / {targets.fiber_g && targets.fiber_g > 0 ? "" : "rek. "}{Math.round(fiberTarget)} g
+        </p>
       </div>
       {microRows.length > 0 && (
-        <div className="rounded-2xl bg-muted/40">
+        <div className="tile-soft">
           <button onClick={() => setMicroOpen((v) => !v)} aria-expanded={microOpen}
             className="w-full flex items-center justify-between px-3 py-2 text-xs font-semibold">
             Mikronäringsämnen
