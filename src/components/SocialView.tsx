@@ -744,7 +744,6 @@ const SocialView = ({ userId, isAdmin, isHonorary = false, friendActivities, unr
       style={isChatTab ? { height: "calc(100dvh - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px) - 10.5rem)" } : undefined}
     >
       <h2 className="sr-only">Social – vänner, meddelanden, eventgrupper och flöde</h2>
-      {!isChatTab && <div className="flex justify-end"><Button variant="ghost" onClick={() => { sessionStorage.setItem("grim_tools_open", "settings:privacy"); window.dispatchEvent(new CustomEvent("grim:set-tab", { detail: "calc" })); window.dispatchEvent(new CustomEvent("grim:open-privacy")); }}><Eye /> Integritet & delning</Button></div>}
       {/* Sub-tab navigation */}
       {(() => {
         const tabs = [
@@ -797,6 +796,7 @@ const SocialView = ({ userId, isAdmin, isHonorary = false, friendActivities, unr
           <div className="flex items-center justify-between gap-2">
             <div className="flex gap-1" role="group" aria-label="Flödesfilter">
               {(["friends", "all"] as const).map(value => <Button key={value} variant={feedFilter === value ? "secondary" : "ghost"} aria-pressed={feedFilter === value} onClick={() => { setFeedLimit(50); setFeedFilter(value); }}><span>{value === "friends" ? "Vänner" : "Alla"}</span></Button>)}
+              <Button variant="ghost" onClick={() => { sessionStorage.setItem("grim_tools_open", "settings:privacy"); window.dispatchEvent(new CustomEvent("grim:set-tab", { detail: "calc" })); window.dispatchEvent(new CustomEvent("grim:open-privacy")); }}><Eye /> Integritet & delning</Button>
             </div>
             {feedLoading && posts.length > 0 && (
               <span className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
