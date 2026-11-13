@@ -366,7 +366,7 @@ const ChatConversation = ({ userId, friend, onBack }: ChatConversationProps) => 
         {groupedMessages.map(group => (
           <div key={group.date}>
             <div className="text-center my-3">
-              <span className="text-[10px] font-medium text-muted-foreground bg-muted/60 px-2.5 py-1 rounded-full">
+              <span className="text-[10px] font-medium text-muted-foreground/80 bg-muted/60 px-2.5 py-1 rounded-full">
                 {group.date}
               </span>
             </div>
@@ -532,7 +532,7 @@ const ChatConversation = ({ userId, friend, onBack }: ChatConversationProps) => 
                               <p key={i} className="text-[11px] text-muted-foreground truncate">{ex}</p>
                             ))}
                             {exercises.length > 2 && (
-                              <p className="text-[11px] text-muted-foreground">+{exercises.length - 2} fler</p>
+                              <p className="text-[11px] text-muted-foreground/60">+{exercises.length - 2} fler</p>
                             )}
                           </div>
                         )}

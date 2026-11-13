@@ -438,8 +438,8 @@ const WorkoutStats = ({ userId }: WorkoutStatsProps) => {
         const m = calendarDate.getMonth();
         const yr = calendarDate.getFullYear();
         key = `${yr}-${String(m + 1).padStart(2, "0")}`;
-        const monthNames = ["jan", "feb", "mar", "apr", "maj", "jun", "jul", "aug", "sep", "okt", "nov", "dec"];
-        label = `${monthNames[m].replace(/^./, (c) => c.toUpperCase())} ${yr}`;
+        const monthNames = ["Jan", "Feb", "Mar", "Apr", "Maj", "Jun", "Jul", "Aug", "Sep", "Okt", "Nov", "Dec"];
+        label = `${monthNames[m]} ${yr}`;
         sortKey = key;
       } else {
         const yr = calendarDate.getFullYear();
@@ -662,7 +662,7 @@ const WorkoutStats = ({ userId }: WorkoutStatsProps) => {
 
 
       {showSectionPicker && (
-        <div className="card-soft p-3 space-y-2">
+        <div className="rounded-2xl bg-card shadow-soft p-3 space-y-2">
           <p className="text-sm font-semibold">Visa i Statistik</p>
           <div className="flex flex-wrap gap-1.5">
             {STATS_SECTIONS.map((sec) => {
@@ -708,7 +708,7 @@ const WorkoutStats = ({ userId }: WorkoutStatsProps) => {
           className="w-8 h-8 rounded-full flex items-center justify-center bg-secondary text-secondary-foreground hover:bg-muted transition-colors">
           <ChevronLeft className="w-4 h-4" />
         </button>
-        <p className="text-sm font-bold first-letter:uppercase">{periodLabel}</p>
+        <p className="text-sm font-bold capitalize">{periodLabel}</p>
         <button
           onClick={() => setPeriodOffset((o) => Math.min(0, o + 1))}
           disabled={periodOffset >= 0}
@@ -719,14 +719,14 @@ const WorkoutStats = ({ userId }: WorkoutStatsProps) => {
       </div>
       }
 
-      {/* Sammanfattning: ett kort med rutor i stället för ett kort per siffra. */}
-      <div className="card-soft p-3 grid grid-cols-2 gap-2">
-        <div className="tile-soft p-3 text-center">
+      {/* Summary cards */}
+      <div className="grid grid-cols-2 gap-2">
+        <div className="rounded-2xl p-3 text-center bg-card shadow-soft">
           <CheckCircle className="w-5 h-5 text-success mx-auto mb-1" />
           <p className="text-2xl font-black">{totalDone}</p>
           <p className="text-[10px] text-muted-foreground">Genomförda</p>
         </div>
-        <div className="tile-soft p-3 text-center">
+        <div className="rounded-2xl p-3 text-center bg-card shadow-soft">
           <Weight className="w-5 h-5 text-primary mx-auto mb-1" />
           <p className="text-2xl font-black">{formatTons(totalLiftedTons)} <span className="text-xs font-normal text-muted-foreground">ton</span></p>
           <p className="text-[10px] text-muted-foreground">Lyft totalt</p>
@@ -736,14 +736,14 @@ const WorkoutStats = ({ userId }: WorkoutStatsProps) => {
         </div>
         <button
           onClick={() => setShowChallengeList(true)}
-          className="tile-soft p-3 text-center transition-colors cursor-pointer hover:bg-muted/60"
+          className="rounded-2xl p-3 text-center transition-colors cursor-pointer bg-card shadow-soft"
         >
           <Swords className="w-5 h-5 text-warning mx-auto mb-1" />
           <p className="text-2xl font-black">{periodChallengeCount}</p>
           <p className="text-[10px] text-muted-foreground">Utmaningar klarade</p>
         </button>
         {perCategoryStats.map(({ meta, km, passes }) => (
-          <div key={meta.key} className="tile-soft p-3 text-center">
+          <div key={meta.key} className="rounded-2xl p-3 text-center bg-card shadow-soft">
             <div className="text-2xl leading-none mb-1">{meta.icon}</div>
             <p className="text-2xl font-black">
               {Math.round(km * 10) / 10} <span className="text-xs font-normal text-muted-foreground">km</span>
@@ -792,13 +792,13 @@ const WorkoutStats = ({ userId }: WorkoutStatsProps) => {
       {stats.length === 0 ?
       <EmptyState icon={BarChart3} title="Ingen statistik ännu" description="Genomför ditt första pass så dyker din data upp här!" emoji="📊" /> :
 
-      <div className="card-soft divide-y divide-border/50">
+      <div className="space-y-2">
           {stats.map((b) => {
           const scheduled = b.totalWithExercise;
           const pctDone = scheduled > 0 ? Math.round(b.doneWithExercise / scheduled * 100) : 0;
           const pctSkipped = scheduled > 0 ? Math.round(b.skipped / scheduled * 100) : 0;
           return (
-            <div key={b.label} className="p-3">
+            <div key={b.label} className="rounded-2xl p-3 bg-card shadow-soft">
                 <div className="flex items-center justify-between mb-2">
                   <span className="text-sm font-semibold">{b.label}</span>
                   <div className="flex items-center gap-2">

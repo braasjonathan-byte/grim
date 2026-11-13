@@ -4,7 +4,7 @@ import { ArrowLeft, ChevronLeft, ChevronRight, Flame, Share2, Sparkles, Trophy, 
 import { computePeriodStats, toTons, type PeriodCompletionRow } from "@/lib/periodStats";
 import { toast } from "sonner";
 
-const MONTHS = ["januari", "februari", "mars", "april", "maj", "juni", "juli", "augusti", "september", "oktober", "november", "december"];
+const MONTHS = ["Januari", "Februari", "Mars", "April", "Maj", "Juni", "Juli", "Augusti", "September", "Oktober", "November", "December"];
 const WEEKDAYS = ["söndagar", "måndagar", "tisdagar", "onsdagar", "torsdagar", "fredagar", "lördagar"];
 
 const CATEGORY_LABELS: Record<string, string> = {
@@ -76,7 +76,7 @@ export default function PeriodRecapView({ userId, onClose }: Props) {
       to: new Date(year, month + 1, 0),
       prevFrom: prev,
       prevTo: new Date(prev.getFullYear(), prev.getMonth() + 1, 0),
-      label: `${MONTHS[month].replace(/^./, (c) => c.toUpperCase())} ${year}`,
+      label: `${MONTHS[month]} ${year}`,
     };
   }, [scope, year, month]);
 

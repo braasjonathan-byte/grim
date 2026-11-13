@@ -12,7 +12,7 @@ interface TrainingCalendarProps {
   userId: string;
 }
 
-const MONTH_NAMES = ["januari", "februari", "mars", "april", "maj", "juni", "juli", "augusti", "september", "oktober", "november", "december"];
+const MONTH_NAMES = ["Januari", "Februari", "Mars", "April", "Maj", "Juni", "Juli", "Augusti", "September", "Oktober", "November", "December"];
 const DAY_HEADERS = ["Mån", "Tis", "Ons", "Tor", "Fre", "Lör", "Sön"];
 const DAY_NAME_TO_OFFSET: Record<string, number> = {
   "Mån": 0, "Tis": 1, "Ons": 2, "Tor": 3, "Tors": 3,
@@ -281,7 +281,7 @@ const TrainingCalendar = ({ userId }: TrainingCalendarProps) => {
             <ChevronLeft className="w-4 h-4" />
           </button>
           <span className="text-sm font-bold">
-            {MONTH_NAMES[month].replace(/^./, (c) => c.toUpperCase())} {year}
+            {MONTH_NAMES[month]} {year}
           </span>
           <button onClick={nextMonth} className="w-8 h-8 icon-round bg-muted/50 text-muted-foreground hover:text-foreground hover:bg-muted">
             <ChevronRight className="w-4 h-4" />
@@ -320,7 +320,7 @@ const TrainingCalendar = ({ userId }: TrainingCalendarProps) => {
                     ? "bg-destructive/15 text-destructive font-bold"
                     : isPending
                     ? "ring-2 ring-inset ring-primary/70 text-foreground font-semibold"
-                    : "text-muted-foreground"
+                    : "text-muted-foreground/50"
                 } ${hasStats ? "group-hover:bg-success/35" : ""}`}
               >
                 {hasStats ? (

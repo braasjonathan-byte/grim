@@ -133,7 +133,7 @@ const TriathlonCalendar = ({ userId, planId }: Props) => {
                 className={`flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-medium ${
                   isToday
                     ? "bg-warning/10 text-warning/80 border border-warning/30"
-                    : "bg-secondary/40 text-muted-foreground"
+                    : "bg-secondary/40 text-muted-foreground/70"
                 } cursor-not-allowed`}
                 title="Vilodag"
               >

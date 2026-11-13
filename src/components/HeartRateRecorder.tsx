@@ -84,7 +84,7 @@ const HeartRateRecorder = ({ onResult }: Props) => {
 
       {!snap.connected && (
         <p className="text-[10px] text-muted-foreground">
-          Anslut din pulsmätare under Verktyg → Träningsverktyg för att spela in puls.
+          Anslut din pulsmätare under Verktyg → Hjälpmedel för att spela in puls.
         </p>
       )}
       {rec.recording && (

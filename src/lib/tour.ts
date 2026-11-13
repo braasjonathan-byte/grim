@@ -71,7 +71,7 @@ const SHORT: TourStep[] = [
       popover: {
         title: "Social",
         description:
-          "Vänner, topplista, chatt och flöde med dina vänners pass.",
+          "Vänner, leaderboard, chatt och flöde med dina vänners pass.",
         side: "top",
       },
     },
@@ -81,9 +81,9 @@ const SHORT: TourStep[] = [
     step: {
       element: '[data-tour="tab-calc"]',
       popover: {
-        title: "Verktyg & inställningar",
-        description: "Tryck på ditt namn uppe till höger för profil, inställningar, kalkylatorer, hjälp och mycket mer.",
-        side: "bottom",
+        title: "Verktyg",
+        description: "Profil, inställningar, kalkylatorer, hjälp och mycket mer.",
+        side: "top",
       },
     },
   },
@@ -214,7 +214,7 @@ const LONG: TourStep[] = [
       popover: {
         title: "Missade pass & ersättningspass",
         description:
-          "Markerar du ett pass som missat (via kugghjulet ⚙️) kan du i samma dialog skapa ett anpassat ersättningspass. All historik bevaras och du tappar inte sviten.",
+          "Markerar du ett pass som missat (via kugghjulet ⚙️) kan du i samma dialog skapa ett anpassat ersättningspass. All historik bevaras och du tappar inte streaken.",
       },
     },
   },
@@ -340,7 +340,7 @@ const LONG: TourStep[] = [
       popover: {
         title: "Avsnitt 5 av 8 – Socialt",
         description:
-          "GRIM är roligare ihop. Lägg till vänner, peppa varandra, chatta och tävla på topplistan.",
+          "GRIM är roligare ihop. Lägg till vänner, peppa varandra, chatta och tävla på leaderboarden.",
       },
     },
   },
@@ -351,7 +351,7 @@ const LONG: TourStep[] = [
       popover: {
         title: "Social-fliken",
         description:
-          "Här hittar du flödet med vänners pass, topplistan, vänlistan och alla chattar – både 1-mot-1 och gruppchatter.",
+          "Här hittar du flödet med vänners pass, leaderboarden, vänlistan och alla chattar – både 1-mot-1 och gruppchatter.",
         side: "top",
       },
     },
@@ -398,7 +398,7 @@ const LONG: TourStep[] = [
       popover: {
         title: "Avsnitt 6 av 8 – Verktyg",
         description:
-          "Verktyg samlar profil, inställningar, kalkylatorer, butik, kalender och hjälp. Du når dem via ditt namn i sidhuvudet.",
+          "Verktygsfliken samlar profil, inställningar, kalkylatorer, butik, kalender och hjälp.",
       },
     },
   },
@@ -407,10 +407,10 @@ const LONG: TourStep[] = [
     step: {
       element: '[data-tour="tab-calc"]',
       popover: {
-        title: "Verktyg i sidhuvudet",
+        title: "Verktyg-fliken",
         description:
-          "Tryck på ditt namn uppe till höger för att öppna allt som inte är ren träning eller statistik – inklusive 1RM-, puls- och kaloriberäknare samt din profil.",
-        side: "bottom",
+          "Tryck här för att öppna allt som inte är ren träning eller statistik – inklusive 1RM-, puls- och kaloriberäknare samt din profil.",
+        side: "top",
       },
     },
   },

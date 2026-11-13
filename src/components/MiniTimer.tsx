@@ -402,7 +402,7 @@ const MiniTimer = () => {
             </>
           )}
           {!running && (
-            <span className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground truncate">
+            <span className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground/70 truncate">
               {mode === "countdown" ? label : "Stoppur"}
             </span>
           )}
@@ -436,7 +436,7 @@ const MiniTimer = () => {
         </button>
 
         <div className="min-w-0 flex-1">
-          <p className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground truncate">
+          <p className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground/70 truncate">
             {mode === "countdown" ? label : "Stoppur"}
           </p>
           <span className={`font-sans text-2xl font-semibold tabular-nums tracking-tight ${running ? "text-primary" : "text-foreground"}`}>

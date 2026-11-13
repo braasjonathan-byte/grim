@@ -47,7 +47,7 @@ export default function CalorieIntakeChart({ userId }: { userId: string }) {
       ) : (
         <>
           <p className="text-[11px] text-muted-foreground">Snitt <span className="font-bold text-foreground tabular-nums">{fmt(avg)} kcal</span> på {logged.length} loggade dagar{target ? ` · Mål ${fmt(target)}` : ""}</p>
-          <div className="h-52">
+          <div className="h-40">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={data} margin={{ top: 5, right: 5, left: -20, bottom: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />

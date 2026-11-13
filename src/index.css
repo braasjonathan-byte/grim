@@ -498,9 +498,8 @@ button:not([data-no-press]),
   }
 
   /* Pill buttons */
-  /* Gemensam knappbas: samma minsta höjd, radie och avstånd ikon–text överallt. */
   .pill-btn {
-    @apply inline-flex items-center justify-center gap-1.5 rounded-control font-semibold min-h-[36px]
+    @apply inline-flex items-center justify-center gap-1.5 rounded-control font-semibold
            transition-all active:scale-[0.97];
   }
   .pill-btn-primary {

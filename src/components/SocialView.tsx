@@ -150,7 +150,6 @@ const SocialView = ({ userId, isAdmin, isHonorary = false, friendActivities, unr
   const [comments, setComments] = useState<Record<string, { id: string; user_id: string; comment: string; created_at: string }[]>>({});
   const [commentCounts, setCommentCounts] = useState<Record<string, number>>({});
   const [openComments, setOpenComments] = useState<Set<string>>(new Set());
-  const [expandedLogs, setExpandedLogs] = useState<Set<string>>(new Set());
   const [commentDrafts, setCommentDrafts] = useState<Record<string, string>>({});
   const fileRef = useRef<HTMLInputElement>(null);
   const cameraRef = useRef<HTMLInputElement>(null);
@@ -539,7 +538,7 @@ const SocialView = ({ userId, isAdmin, isHonorary = false, friendActivities, unr
       setLikes(prev => ({ ...prev, [postId]: (prev[postId] || 0) + 1 }));
       setLikeUsers(prev => ({ ...prev, [postId]: [...(prev[postId] || []).filter(u => u !== userId), userId] }));
       const fresh = await checkInteractionAchievements(userId);
-      if (fresh.length > 0) toast.success(`Utmärkelse upplåst: ${fresh[0].title}`);
+      if (fresh.length > 0) toast.success(`Achievement upplåst: ${fresh[0].title}`);
     }
     emitPostInteraction(postId);
   };
@@ -599,7 +598,7 @@ const SocialView = ({ userId, isAdmin, isHonorary = false, friendActivities, unr
     setCommentDrafts(prev => ({ ...prev, [postId]: "" }));
     emitPostInteraction(postId);
     const fresh = await checkInteractionAchievements(userId);
-    if (fresh.length > 0) toast.success(`Utmärkelse upplåst: ${fresh[0].title}`);
+    if (fresh.length > 0) toast.success(`Achievement upplåst: ${fresh[0].title}`);
     // Push-notify post owner
     if (post && post.user_id !== userId) {
       supabase.functions.invoke("notify-comment", {
@@ -1102,23 +1101,9 @@ const SocialView = ({ userId, isAdmin, isHonorary = false, friendActivities, unr
                       <h3 className="font-sans text-[15px] font-bold leading-snug tracking-normal">{parsed.title}</h3>
                     </div>
                   )}
-                  {/* Strava-lik statistikrad: de viktigaste värdena stort, resten som små chips. */}
-                  {isWorkoutPost && parsed.chips.length > 0 && (
-                    <div className="grid grid-flow-col auto-cols-fr divide-x divide-border/60 rounded-tile bg-muted/40 py-2" data-testid="post-stats">
-                      {parsed.chips.slice(0, 3).map((chip, i) => {
-                        const ChipIcon = chip.icon;
-                        return (
-                          <div key={i} className="min-w-0 px-2 text-center">
-                            <ChipIcon className="mx-auto h-3.5 w-3.5 text-muted-foreground" aria-hidden="true" />
-                            <p className="mt-0.5 text-sm font-bold tabular-nums leading-tight break-words">{chip.label}</p>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  )}
-                  {(isWorkoutPost ? parsed.chips.slice(3) : parsed.chips).length > 0 && (
+                  {parsed.chips.length > 0 && (
                     <div className="flex flex-wrap gap-1.5">
-                      {(isWorkoutPost ? parsed.chips.slice(3) : parsed.chips).map((chip, i) => {
+                      {parsed.chips.map((chip, i) => {
                         const ChipIcon = chip.icon;
                         return (
                           <span
@@ -1138,10 +1123,10 @@ const SocialView = ({ userId, isAdmin, isHonorary = false, friendActivities, unr
               {/* Träningslogg */}
               {parsed.exercises.length > 0 && (
                 <div className="px-4 pb-2">
-                  <div className="tile-soft p-3">
+                  <div className="rounded-xl border border-border/50 bg-muted/30 p-3">
                     <p className="mb-2 text-[10px] font-bold uppercase tracking-wide text-muted-foreground">Träningslogg</p>
                     <ul className="space-y-2">
-                      {(expandedLogs.has(post.id) ? parsed.exercises : parsed.exercises.slice(0, 3)).map((ex, i) => (
+                      {parsed.exercises.map((ex, i) => (
                         <li key={i} className="flex items-start gap-2 text-[13px] leading-snug">
                           <Dumbbell className="mt-0.5 h-3.5 w-3.5 shrink-0 text-primary/70" />
                           <span className="min-w-0 flex-1">
@@ -1151,16 +1136,6 @@ const SocialView = ({ userId, isAdmin, isHonorary = false, friendActivities, unr
                         </li>
                       ))}
                     </ul>
-                    {parsed.exercises.length > 3 && (
-                      <button
-                        type="button"
-                        onClick={() => setExpandedLogs((s) => { const n = new Set(s); if (n.has(post.id)) n.delete(post.id); else n.add(post.id); return n; })}
-                        className="mt-2 text-xs font-semibold text-primary"
-                        aria-expanded={expandedLogs.has(post.id)}
-                      >
-                        {expandedLogs.has(post.id) ? "Visa färre" : `Visa alla ${parsed.exercises.length} övningar`}
-                      </button>
-                    )}
                   </div>
                 </div>
               )}

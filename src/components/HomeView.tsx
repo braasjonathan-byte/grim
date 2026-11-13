@@ -532,7 +532,7 @@ const HomeView = ({ userId, onNavigate, isHonorary = false }: HomeViewProps) => 
         <p className="text-xs text-muted-foreground flex items-center gap-1.5">
           <CalendarDays className="w-3.5 h-3.5" />
           {dateLabel}
-          {currentWeek > 0 && <span className="text-muted-foreground">· Vecka {currentWeek}</span>}
+          {currentWeek > 0 && <span className="text-muted-foreground/70">· Vecka {currentWeek}</span>}
         </p>
       </header>
 
@@ -646,7 +646,7 @@ const HomeView = ({ userId, onNavigate, isHonorary = false }: HomeViewProps) => 
           <Target className="w-4 h-4 text-success" />
           <p className="text-sm font-semibold">Veckans framsteg</p>
           <span
-            className={`ml-auto inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold ${streak > 0 ? "bg-warning/15 text-amber-800 dark:text-amber-300" : "bg-muted text-muted-foreground"}`}
+            className={`ml-auto inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold ${streak > 0 ? "bg-warning/15 text-warning" : "bg-muted text-muted-foreground"}`}
             aria-label={`Svit: ${streak} ${streak === 1 ? "dag" : "dagar"} i rad`}
           >
             <Flame className="w-3.5 h-3.5" />
