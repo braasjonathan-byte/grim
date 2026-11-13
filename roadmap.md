@@ -1,5 +1,11 @@
 # Roadmap
 
+## Tydligare vardag och första start 13 november 2026
+- [x] 1. Välj Träning, Kost eller Båda vid första starten utan att ta bort andra funktioner; användarspecifikt val prioriterar Hem-genvägen.
+- [x] 5. Statistik besvarar regelbundenhet, jämförbara resultat och vikt med period och underlag; faktisk historik verifierad på mobil och dator, 28/90-dagarsgränser testade.
+- [x] 6. Social öppnar med vänner och frivilliga utmaningar; tydliga inbjudningar och lämna-val, inga automatiska inlägg. Vänvy och skapardialog verifierade; tvåkontoflödet för inbjudan/acceptans fortfarande inte manuellt verifierat.
+- [x] 7. Första registreringen utan krav på kroppsdata, med tydlig första uppgift; välkomstfrågan visad med simulerad förstagångsstatus på befintligt inloggat konto, valet sparat och samma matsökning öppnad. Inte verifierat med ett nyskapat konto.
+
 ## Nästa förbättringar 13 november 2026
 - [x] Ge fler hårt kritiska förbättringsförslag, utan att utöka implementationen.
 - [x] Ge konkreta lösningsförslag för de kritiserade punkterna.

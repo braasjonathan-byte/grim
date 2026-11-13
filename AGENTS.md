@@ -1,6 +1,8 @@
 # Architecture rules
 
 - Settings search uses a shared catalogue and opens existing category controls; never create a second settings editor.
+- First-start focus is user-scoped and prioritizes existing registration paths without disabling modules or requiring body data; welcome completion must be confirmed before closing.
+- Statistics answer three questions using UTC-bounded history: four seven-day activity periods and 90-day matched results/weigh-ins; missing evidence is never inferred progress.
 - Training insights read unified workout history and compare identical counted exercise rosters and rep layouts; label volume as volume rather than inferred maximal strength.
 - New friend challenges are created atomically via an authenticated RPC; only accepted friends receive pending invitations, and new standings expose aggregates only to accepted participants.
 - Unsaved nutrition quick posts use user-scoped session drafts; a failed read must not be presented as an empty day or a successful save.

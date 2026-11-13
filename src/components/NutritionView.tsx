@@ -664,7 +664,7 @@ export default function NutritionView({ userId, isHonorary: isHonoraryProp = fal
               <span className="text-sm font-bold">{activeKcal.toLocaleString("sv-SE")} <span className="text-[11px] font-normal text-muted-foreground">från hälsoappen</span></span>
             </div>
           )}
-          {loaded && !hasGoals && <p className="text-[11px] text-muted-foreground text-center mt-2">Standardmål 2000 kcal – öppna <b>Mer → Mål</b> och fyll i ålder, vikt och längd så räknar vi ut ditt eget behov.</p>}
+          {loaded && !hasGoals && <p className="text-[11px] text-muted-foreground text-center mt-2">Standardmål 2000 kcal, inte ett personligt beräknat behov. Du kan registrera måltider direkt utan kroppsdata. Personliga mål är valfria under <b>Mer → Mål</b>.</p>}
         </div>
 
         {loaded && <AdaptiveTdeeCard userId={userId} currentKcal={targets.kcal} hasGoals={hasGoals} onApplied={load} enabled={adaptiveOn} />}

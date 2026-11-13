@@ -56,6 +56,7 @@ export default function FriendChallenges({ userId }: Props) {
 
   const [pendingIds, setPendingIds] = useState<Set<string>>(new Set());
   const [inviterNames, setInviterNames] = useState<Record<string, string>>({});
+  const [responding, setResponding] = useState<string | null>(null);
 
   const loadChallenges = useCallback(async () => {
     setLoadError(false);
@@ -93,12 +94,16 @@ export default function FriendChallenges({ userId }: Props) {
   }, [userId, loadChallenges]);
 
   const respondInvite = async (c: Challenge, accept: boolean) => {
+    if (responding) return;
+    if (!accept && !pendingIds.has(c.id) && !window.confirm(`Lämna "${c.title}"?`)) return;
+    setResponding(c.id);
     const q = supabase.from("friend_challenge_participants");
     const { error } = accept
       ? await q.update({ status: "accepted" }).eq("challenge_id", c.id).eq("user_id", userId)
       : await q.delete().eq("challenge_id", c.id).eq("user_id", userId);
+    setResponding(null);
     if (error) { toast.error("Något gick fel"); return; }
-    toast.success(accept ? "Du är med i utmaningen!" : "Inbjudan avböjd");
+    toast.success(accept ? "Du är med i utmaningen!" : pendingIds.has(c.id) ? "Inbjudan avböjd" : "Du har lämnat utmaningen");
     loadChallenges();
   };
 
@@ -224,7 +229,7 @@ export default function FriendChallenges({ userId }: Props) {
                 );
               })
             )}
-            {!done && c.created_by !== userId && <Button variant="ghost" size="sm" onClick={() => respondInvite(c, false)}>Lämna utmaningen</Button>}
+            {c.created_by !== userId && <Button variant="ghost" size="sm" disabled={responding !== null} onClick={() => respondInvite(c, false)}>Lämna utmaningen</Button>}
             {c.created_by === userId && (
               <button onClick={() => removeChallenge(c)} className="flex items-center gap-1 text-[11px] text-destructive pt-1">
                 <Trash2 className="w-3 h-3" /> Ta bort utmaningen
@@ -254,6 +259,7 @@ export default function FriendChallenges({ userId }: Props) {
         </div>
       ) : (
         <div className="space-y-2">
+          {invites.length > 0 && <h4 className="text-sm font-semibold text-primary" role="status">Väntande inbjudningar ({invites.length})</h4>}
           {invites.map((c) => (
             <div key={c.id} className="bg-card border border-primary/40 rounded-2xl p-3 space-y-2">
               <div className="flex items-center gap-2">
@@ -267,8 +273,8 @@ export default function FriendChallenges({ userId }: Props) {
                 </div>
               </div>
               <div className="flex gap-2">
-                <Button size="sm" className="flex-1" onClick={() => respondInvite(c, true)}>Gå med</Button>
-                <Button size="sm" variant="outline" className="flex-1" onClick={() => respondInvite(c, false)}>Avböj</Button>
+                <Button size="sm" className="flex-1" disabled={responding !== null} onClick={() => respondInvite(c, true)}>Gå med</Button>
+                <Button size="sm" variant="outline" className="flex-1" disabled={responding !== null} onClick={() => respondInvite(c, false)}>Avböj</Button>
               </div>
             </div>
           ))}

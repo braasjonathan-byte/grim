@@ -108,7 +108,7 @@ const SocialView = ({ userId, isAdmin, isHonorary = false, friendActivities, unr
   const [subTab, setSubTabState] = useState<SubTab>(() => {
     if (initialFriendId) return "friends";
     const saved = localStorage.getItem("grim_social_subtab");
-    return (saved === "feed" || saved === "friends" || saved === "chat" || saved === "groups") ? saved : "feed";
+    return (saved === "feed" || saved === "friends" || saved === "chat" || saved === "groups") ? saved : "friends";
   });
   const setSubTab = (t: SubTab) => {
     setSubTabState(t);
@@ -721,10 +721,10 @@ const SocialView = ({ userId, isAdmin, isHonorary = false, friendActivities, unr
       {/* Sub-tab navigation */}
       {(() => {
         const tabs = [
-          { key: "feed" as SubTab, label: "Flöde", icon: Globe },
           { key: "friends" as SubTab, label: "Vänner", icon: Users },
           { key: "chat" as SubTab, label: "Chatt", icon: MessageCircle, badge: unreadChats },
           { key: "groups" as SubTab, label: "Grupper", icon: UsersRound },
+          { key: "feed" as SubTab, label: "Flöde", icon: Globe },
         ];
         const activeIndex = Math.max(0, tabs.findIndex(t => t.key === subTab));
         return (

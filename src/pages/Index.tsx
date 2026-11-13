@@ -1096,7 +1096,7 @@ const Index = () => {
       </main>
       </Suspense>
 
-      <TourPrompt userId={user.id} />
+      <TourPrompt userId={user.id} onNavigate={setTab} />
 
       {/* Notification toast at bottom */}
       {notification &&

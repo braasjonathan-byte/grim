@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
+import { getFirstFocus } from "@/lib/firstStart";
 import {
   Dumbbell,
   Flame,
@@ -155,6 +156,7 @@ const archivedCache = new Map<string, string[]>();
 const untrainedCache = new Map<string, string[]>();
 
 const HomeView = ({ userId, onNavigate, isHonorary = false }: HomeViewProps) => {
+  const focus = getFirstFocus(userId);
   const cached = homeCache.get(userId);
   // Visar en ofarlig Samsung Health-demonstration i Lovables förhandsvisning.
   const healthPreview = import.meta.env.DEV;
@@ -538,9 +540,9 @@ const HomeView = ({ userId, onNavigate, isHonorary = false }: HomeViewProps) => 
       </header>
 
       <nav className="grid grid-cols-3 gap-2" aria-label="Snabbval">
-        <Button className="h-auto min-h-14 flex-col gap-1 px-1 py-2 text-xs" onClick={() => onNavigate("workout")}><Dumbbell />Starta pass</Button>
-        {nutritionOn && <Button variant="outline" className="h-auto min-h-14 flex-col gap-1 px-1 py-2 text-xs" onClick={() => { sessionStorage.setItem("grim_nutrition_action", "food"); onNavigate("nutrition"); }}><Apple />Logga mat</Button>}
-        <Button variant="outline" className="h-auto min-h-14 flex-col gap-1 px-1 py-2 text-xs" onClick={() => { sessionStorage.setItem("grim_nutrition_action", "weight"); sessionStorage.setItem("grim_nutrition_insights_tab", "weight"); onNavigate("nutrition"); }}><Scale />Logga vikt</Button>
+        <Button variant={focus === "nutrition" ? "outline" : "default"} className={`h-auto min-h-14 flex-col gap-1 px-1 py-2 text-xs ${focus === "nutrition" ? "order-2" : "order-1"}`} onClick={() => onNavigate("workout")}><Dumbbell />Starta pass</Button>
+        {nutritionOn && <Button variant={focus === "nutrition" ? "default" : "outline"} className={`h-auto min-h-14 flex-col gap-1 px-1 py-2 text-xs ${focus === "nutrition" ? "order-1" : "order-2"}`} onClick={() => { sessionStorage.setItem("grim_nutrition_action", "food"); onNavigate("nutrition"); }}><Apple />Logga mat</Button>}
+        <Button variant="outline" className="order-3 h-auto min-h-14 flex-col gap-1 px-1 py-2 text-xs" onClick={() => { sessionStorage.setItem("grim_nutrition_action", "weight"); sessionStorage.setItem("grim_nutrition_insights_tab", "weight"); onNavigate("nutrition"); }}><Scale />Logga vikt</Button>
       </nav>
 
       {/* 1. Today's workout — most important */}
