@@ -539,7 +539,7 @@ const SocialView = ({ userId, isAdmin, isHonorary = false, friendActivities, unr
       setLikes(prev => ({ ...prev, [postId]: (prev[postId] || 0) + 1 }));
       setLikeUsers(prev => ({ ...prev, [postId]: [...(prev[postId] || []).filter(u => u !== userId), userId] }));
       const fresh = await checkInteractionAchievements(userId);
-      if (fresh.length > 0) toast.success(`Achievement upplåst: ${fresh[0].title}`);
+      if (fresh.length > 0) toast.success(`Utmärkelse upplåst: ${fresh[0].title}`);
     }
     emitPostInteraction(postId);
   };
@@ -599,7 +599,7 @@ const SocialView = ({ userId, isAdmin, isHonorary = false, friendActivities, unr
     setCommentDrafts(prev => ({ ...prev, [postId]: "" }));
     emitPostInteraction(postId);
     const fresh = await checkInteractionAchievements(userId);
-    if (fresh.length > 0) toast.success(`Achievement upplåst: ${fresh[0].title}`);
+    if (fresh.length > 0) toast.success(`Utmärkelse upplåst: ${fresh[0].title}`);
     // Push-notify post owner
     if (post && post.user_id !== userId) {
       supabase.functions.invoke("notify-comment", {

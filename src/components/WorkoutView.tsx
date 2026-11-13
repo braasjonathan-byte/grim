@@ -1409,7 +1409,7 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
     const newAchievements = await unlockEarnedAchievements(userId, metrics);
     if (newAchievements.length > 0) {
       setAchievementToast({ achievements: newAchievements });
-      toast.success(`Achievement upplåst: ${newAchievements[0].title}`);
+      toast.success(`Utmärkelse upplåst: ${newAchievements[0].title}`);
     }
   };
 
@@ -4307,7 +4307,7 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
                             ? "px-3 py-1 bg-muted text-foreground border border-primary/30"
                             : distance === 1
                             ? "px-3 py-1 text-muted-foreground hover:bg-muted"
-                            : "px-2.5 py-1 text-muted-foreground/50 text-[10px]"
+                            : "px-2.5 py-1 text-muted-foreground text-[10px]"
                         }`}
                       >
                         V{wk}
@@ -5850,7 +5850,7 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
                     className={`w-full min-w-0 flex flex-col items-center gap-1 px-0.5 py-1.5 rounded-full transition-all ${
                       isToday
                         ? "bg-warning/10 text-warning/80 ring-2 ring-warning/50 hover:bg-warning/20"
-                        : "bg-secondary/40 text-muted-foreground/70 hover:bg-secondary hover:text-foreground"
+                        : "bg-secondary/40 text-muted-foreground hover:bg-secondary hover:text-foreground"
                     }`}
                     title="Vilodag — tryck för att lägga till pass"
                   >
@@ -9587,7 +9587,7 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
       <div className="fixed inset-0 z-[90] flex items-center justify-center bg-background/80 p-4" onClick={() => setAchievementToast(null)}>
         <div className="w-full max-w-sm border border-border bg-card p-5 text-center animate-fade-in" onClick={(e) => e.stopPropagation()}>
           <div className="text-5xl mb-3">{achievementToast.achievements[0].emoji}</div>
-          <p className="text-xs font-black text-warning uppercase">Achievement upplåst</p>
+          <p className="text-xs font-black text-warning uppercase">Utmärkelse upplåst</p>
           <h3 className="text-xl font-black mt-1">{achievementToast.achievements[0].title}</h3>
           <p className="text-sm text-muted-foreground mt-2">{achievementToast.achievements[0].description}</p>
           {achievementToast.achievements.length > 1 && (

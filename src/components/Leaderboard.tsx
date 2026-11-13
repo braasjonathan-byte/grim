@@ -11,7 +11,7 @@ interface LeaderboardProps {
 }
 
 
-const MONTHS = ["Jan", "Feb", "Mar", "Apr", "Maj", "Jun", "Jul", "Aug", "Sep", "Okt", "Nov", "Dec"];
+const MONTHS = ["jan", "feb", "mar", "apr", "maj", "jun", "jul", "aug", "sep", "okt", "nov", "dec"];
 
 interface LeaderboardEntry {
   user_id: string;
@@ -105,7 +105,7 @@ const Leaderboard = ({ userId }: LeaderboardProps) => {
             onClick={toggleAllYear}
             className="text-sm font-bold hover:text-primary transition-colors"
           >
-            {month === null ? `Hela ${year}` : `${MONTHS[month - 1]} ${year}`}
+            {month === null ? `Hela ${year}` : `${MONTHS[month - 1].replace(/^./, (c) => c.toUpperCase())} ${year}`}
           </button>
           <p className="text-[10px] text-muted-foreground">
             {month === null ? "Tryck för att visa per månad" : "Tryck för att visa hela året"}

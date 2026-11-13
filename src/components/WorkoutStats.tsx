@@ -438,8 +438,8 @@ const WorkoutStats = ({ userId }: WorkoutStatsProps) => {
         const m = calendarDate.getMonth();
         const yr = calendarDate.getFullYear();
         key = `${yr}-${String(m + 1).padStart(2, "0")}`;
-        const monthNames = ["Jan", "Feb", "Mar", "Apr", "Maj", "Jun", "Jul", "Aug", "Sep", "Okt", "Nov", "Dec"];
-        label = `${monthNames[m]} ${yr}`;
+        const monthNames = ["jan", "feb", "mar", "apr", "maj", "jun", "jul", "aug", "sep", "okt", "nov", "dec"];
+        label = `${monthNames[m].replace(/^./, (c) => c.toUpperCase())} ${yr}`;
         sortKey = key;
       } else {
         const yr = calendarDate.getFullYear();
@@ -708,7 +708,7 @@ const WorkoutStats = ({ userId }: WorkoutStatsProps) => {
           className="w-8 h-8 rounded-full flex items-center justify-center bg-secondary text-secondary-foreground hover:bg-muted transition-colors">
           <ChevronLeft className="w-4 h-4" />
         </button>
-        <p className="text-sm font-bold capitalize">{periodLabel}</p>
+        <p className="text-sm font-bold first-letter:uppercase">{periodLabel}</p>
         <button
           onClick={() => setPeriodOffset((o) => Math.min(0, o + 1))}
           disabled={periodOffset >= 0}

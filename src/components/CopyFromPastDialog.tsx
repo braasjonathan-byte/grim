@@ -92,9 +92,9 @@ const CopyFromPastDialog = ({ open, onOpenChange, userId, dateKey, onCopied }: P
                 const kcal = Math.round(items.reduce((a, i) => a + Number(i.kcal || 0), 0));
                 return (
                   <div key={meal} className="rounded-xl border border-border/60 bg-muted/30 p-3 space-y-1.5">
-                    <label className="flex items-center gap-2 text-sm font-semibold capitalize cursor-pointer">
+                    <label className="flex items-center gap-2 text-sm font-semibold cursor-pointer">
                       <Checkbox checked={all} onCheckedChange={(v) => toggle(ids, !!v)} />
-                      <span className="flex-1">{meal}</span>
+                      <span className="flex-1 first-letter:uppercase">{meal}</span>
                       <span className="text-xs text-muted-foreground font-normal">{kcal} kcal</span>
                     </label>
                     {items.map((i) => (

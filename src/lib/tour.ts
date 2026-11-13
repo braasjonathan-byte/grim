@@ -71,7 +71,7 @@ const SHORT: TourStep[] = [
       popover: {
         title: "Social",
         description:
-          "Vänner, leaderboard, chatt och flöde med dina vänners pass.",
+          "Vänner, topplista, chatt och flöde med dina vänners pass.",
         side: "top",
       },
     },
@@ -214,7 +214,7 @@ const LONG: TourStep[] = [
       popover: {
         title: "Missade pass & ersättningspass",
         description:
-          "Markerar du ett pass som missat (via kugghjulet ⚙️) kan du i samma dialog skapa ett anpassat ersättningspass. All historik bevaras och du tappar inte streaken.",
+          "Markerar du ett pass som missat (via kugghjulet ⚙️) kan du i samma dialog skapa ett anpassat ersättningspass. All historik bevaras och du tappar inte sviten.",
       },
     },
   },
@@ -340,7 +340,7 @@ const LONG: TourStep[] = [
       popover: {
         title: "Avsnitt 5 av 8 – Socialt",
         description:
-          "GRIM är roligare ihop. Lägg till vänner, peppa varandra, chatta och tävla på leaderboarden.",
+          "GRIM är roligare ihop. Lägg till vänner, peppa varandra, chatta och tävla på topplistan.",
       },
     },
   },
@@ -351,7 +351,7 @@ const LONG: TourStep[] = [
       popover: {
         title: "Social-fliken",
         description:
-          "Här hittar du flödet med vänners pass, leaderboarden, vänlistan och alla chattar – både 1-mot-1 och gruppchatter.",
+          "Här hittar du flödet med vänners pass, topplistan, vänlistan och alla chattar – både 1-mot-1 och gruppchatter.",
         side: "top",
       },
     },

@@ -600,7 +600,7 @@ const ChatView = ({ userId, isAdmin = false, isPremium = false, initialFriendId 
                           </span>
                         )}
                         {lastMsg && (
-                          <span className="ml-auto shrink-0 text-[10px] text-muted-foreground/70">
+                          <span className="ml-auto shrink-0 text-[10px] text-muted-foreground">
                             {formatTime(lastMsg.created_at)}
                           </span>
                         )}
@@ -612,7 +612,7 @@ const ChatView = ({ userId, isAdmin = false, isPremium = false, initialFriendId 
                           {lastMsg.message || '🏋️ Delade ett pass'}
                         </p>
                       ) : (
-                        <p className="text-xs text-muted-foreground/80 italic truncate">Starta en konversation</p>
+                        <p className="text-xs text-muted-foreground italic truncate">Starta en konversation</p>
                       )}
                     </div>
                     {unread > 0 && (

@@ -1102,7 +1102,7 @@ const Index = () => {
                   className="w-full mb-4 flex items-center justify-between gap-3 card-soft px-4 py-3 text-left active:scale-[0.99] transition-transform"
                 >
                   <span className="flex items-center gap-2">
-                    <span className="text-lg">📊</span>
+                    <BarChart3 className="w-5 h-5 text-primary" aria-hidden="true" />
                     <span>
                       <span className="block text-sm font-bold text-foreground">Veckorapport</span>
                       <span className="block text-xs text-muted-foreground">Se veckans pass i detalj</span>

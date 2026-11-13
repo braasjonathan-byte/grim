@@ -71,13 +71,13 @@ const streakDayDifficulty = (day: number): AchievementDifficulty => {
   return "legend";
 };
 
-// Ett nytt achievement för varje dag streaken fortsätter (1-365 dagar).
+// En ny utmärkelse för varje dag sviten fortsätter (1-365 dagar).
 const makeStreakDayAchievements = (): AchievementDefinition[] =>
   Array.from({ length: 365 }, (_, i) => {
     const day = i + 1;
     return {
       id: `langsta-streak-${day}`,
-      title: `Längsta streak ${day} ${day === 1 ? "dag" : "dagar"} i rad`,
+      title: `Längsta svit ${day} ${day === 1 ? "dag" : "dagar"} i rad`,
       description: `Träna ${day} ${day === 1 ? "dag" : "dagar"} i rad.`,
       metric: "longestStreak" as keyof AchievementMetrics,
       threshold: day,
@@ -95,7 +95,7 @@ export const ACHIEVEMENTS: AchievementDefinition[] = [
   ...makeAchievements("eld", "Eldsjäl", "firesGiven", [1, 5, 10, 25, 50, 100, 200, 350, 500, 750, 1000, 1500, 2000, 3000, 5000, 7500, 10000, 15000, 20000, 30000], " eldningar", "🔥"),
   ...makeAchievements("kommentar", "Hejarklacken", "commentsGiven", [1, 5, 10, 25, 50, 100, 200, 350, 500, 750, 1000, 1500, 2000, 3000, 5000, 7500, 10000, 15000, 20000, 30000], " kommentarer", "💬"),
   ...makeAchievements("tonpass", "Tonklubben", "bestSessionTons", [5, 10, 15, 20, 30, 50], "-tons pass", "💥"),
-  ...makeAchievements("streak", "Streak", "currentStreak", [3, 7, 14, 30, 60, 100, 200, 365], " dagar i rad", "⚡"),
+  ...makeAchievements("streak", "Svit", "currentStreak", [3, 7, 14, 30, 60, 100, 200, 365], " dagar i rad", "⚡"),
   ...makeStreakDayAchievements(),
 ];
 

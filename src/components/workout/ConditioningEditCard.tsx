@@ -477,7 +477,7 @@ export const ConditioningEditCard = ({ name, lineIndex, planId, planCondTime, pl
                 <span className="text-muted-foreground font-bold">:</span>
               </>
             ) : (
-              <button type="button" onClick={() => setShowHourField(true)} className="text-[10px] text-muted-foreground/70 px-1 shrink-0" title="Lägg till timmar">+h</button>
+              <button type="button" onClick={() => setShowHourField(true)} className="text-[10px] text-muted-foreground px-1 shrink-0" title="Lägg till timmar">+h</button>
             )}
             <input aria-label="Minuter" type="text" inputMode="numeric" value={minutes} onChange={(e) => onM(e.target.value)} placeholder={showHours ? "00" : "min"} className={hmsCls} />
             <span className="text-muted-foreground font-bold">:</span>

@@ -114,7 +114,7 @@ export function ChangeWorkoutDayDialog({ changeDayDialog, setChangeDayDialog, pl
                   title={isOccupied ? `Byt plats med ${plans.find(p => p.week === changeDayDialog.week && sameWorkoutDay(p.day, d))?.session_name}` : undefined}
                 >
                   {d}
-                  {isOccupied && <span className="block text-[8px] text-muted-foreground/70 mt-0.5">upptagen</span>}
+                  {isOccupied && <span className="block text-[8px] text-muted-foreground mt-0.5">upptagen</span>}
                 </button>
               );
             })}

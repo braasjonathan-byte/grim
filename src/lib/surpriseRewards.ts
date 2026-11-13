@@ -97,7 +97,7 @@ function buildCandidates(ctx: RewardContext): SurpriseReward[] {
   if (ctx.metrics.currentStreak >= 3) {
     out.push({
       emoji: "⚡",
-      title: "Streak igång",
+      title: "Svit igång",
       text: `${ctx.metrics.currentStreak} träningsdagar i rad – konsekvensen är det som bygger resultat.`,
       confetti: ctx.metrics.currentStreak >= 7,
     });

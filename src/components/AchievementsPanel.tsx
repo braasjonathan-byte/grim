@@ -59,7 +59,7 @@ const AchievementsPanel = ({ unlockedIds, unlockedAt = {}, compact = false, onOp
 
       {onOpen && (
         <div className="flex items-center justify-between text-[10px] text-muted-foreground">
-          <span>{unlockedCount === 0 ? "Inga achievements upplåsta ännu" : "Tryck för att se alla badges"}</span>
+          <span>{unlockedCount === 0 ? "Inga utmärkelser upplåsta ännu" : "Tryck för att se alla utmärkelser"}</span>
           <ChevronRight className="w-3.5 h-3.5" />
         </div>
       )}

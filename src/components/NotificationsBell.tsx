@@ -331,7 +331,7 @@ export default function NotificationsBell({ userId, onViewAll, onNavigate }: Not
           {notifs.slice(0, 10).map(n => {
             const Icon = iconFor(n.type);
             const isUnread = new Date(n.createdAt).getTime() > lastSeen;
-            const grad = avatarGradient(n.initial || (n.type === "achievement" ? "Achievement" : n.type === "weekly_report" ? "Veckorapport" : "?"));
+            const grad = avatarGradient(n.initial || (n.type === "achievement" ? "Utmärkelse" : n.type === "weekly_report" ? "Veckorapport" : "?"));
             const badgeTone =
               n.type === "like" ? "bg-destructive text-destructive-foreground"
               : n.type === "achievement" ? "bg-warning text-warning-foreground"

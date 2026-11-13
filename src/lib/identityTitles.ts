@@ -162,8 +162,8 @@ export function buildTitles(stats: IdentityStats): IdentityTitle[] {
   add("igang", "Igång", "🌱", "Slutför ditt första pass", stats.workouts / 1);
   add("vanebyggare", "Vanebyggare", "🧱", "Slutför 20 pass", stats.workouts / 20);
   add("veteran", "Veteran", "🎖️", "Slutför 100 pass", stats.workouts / 100);
-  add("streak-mastare", "Streak-mästare", "⚡", "Träna 7 dagar i rad", stats.streak / 7);
-  add("manadens-streak", "Månadens streak-mästare", "🔥", "Träna 30 dagar i rad", stats.streak / 30);
+  add("streak-mastare", "Svitmästare", "⚡", "Träna 7 dagar i rad", stats.streak / 7);
+  add("manadens-streak", "Månadens svitmästare", "🔥", "Träna 30 dagar i rad", stats.streak / 30);
   add("styrkefokuserad", "Styrkefokuserad", "🏋️", "Logga 150 styrkeset", stats.strengthSets / 150);
   add("jarnflyttare", "Järnflyttare", "💥", "Lyft 50 ton totalt", stats.totalTons / 50);
   add("uthallig", "Uthållig", "🛣️", "Logga 100 km distans", stats.distanceKm / 100);

@@ -331,7 +331,7 @@ export default function WeeklyReportView({ userId, reportId, onClose }: WeeklyRe
                       {metrics.length > 0 ? metrics.join(" · ") : "Genomfört"}
                     </p>
                     {s.exercises && s.exercises.length > 0 && (
-                      <p className="text-[11px] text-muted-foreground/80 mt-1 truncate">
+                      <p className="text-[11px] text-muted-foreground mt-1 truncate">
                         {s.exercises.join(", ")}
                       </p>
                     )}

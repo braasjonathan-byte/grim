@@ -459,7 +459,7 @@ const FriendProfileView = ({ friendUserId, nickname, onClose }: FriendProfileVie
           {showAchievements && (
             <AchievementsView
               unlockedIds={achievementIds}
-              title="Achievements"
+              title="Utmärkelser"
               onClose={() => setShowAchievements(false)}
             />
           )}
