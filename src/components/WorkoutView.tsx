@@ -1,6 +1,7 @@
 import { SingleWorkoutForm } from "@/components/workout/SingleWorkoutForm";
 import EmptyState from "@/components/EmptyState";
 import { openMiniTimer } from "@/components/MiniTimer";
+import { cardioIconFor } from "@/lib/cardioIcons";
 import { maybeAutoExportToStrava, STRAVA_ERROR_TEXT } from "@/lib/stravaExport";
 import { getHeartRateSamplesBetween } from "@/lib/heartRate";
 import { readSessionHr, summarizeSessionHr, SESSION_HR_KEY } from "@/lib/sessionHeartRate";
@@ -4554,6 +4555,7 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
                             planCondDist={planCondDist}
                             planCondTempo={planCondTempo}
                             planCondPulse={planCondPulse}
+                            explicitPlan={exerciseLines.length > 1 ? parsePlanCardioForExercise(name, weight || "") : undefined}
                             savedData={condSavedInline}
                             hasSavedData={hasSavedCondData || !!planCondPulse}
                             exerciseLinesCount={exerciseLines.length}
@@ -5736,8 +5738,8 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
                     isCurrent
                       ? "px-5 py-2 text-sm bg-primary text-primary-foreground scale-100"
                       : isActive
-                      ? "px-3.5 py-1.5 text-xs bg-muted text-foreground border border-primary/30 scale-95 opacity-80"
-                      : "px-3.5 py-1.5 text-xs text-muted-foreground bg-secondary/50 scale-90 opacity-60"
+                      ? "px-3.5 py-1.5 text-xs bg-muted text-foreground border border-primary/40"
+                      : "px-3.5 py-1.5 text-xs text-foreground/80 bg-muted border border-border"
                   }`}
                 >
                   V{w}
@@ -6488,6 +6490,7 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
                                         planCondTime={pTime}
                                         planCondDist={pDist}
                                         planCondTempo={pTempo}
+                                        explicitPlan={detailParts.length > 1 ? parsePlanCardioForExercise(condLineName, condLineWeight || "") : undefined}
                                         savedData={cSaved}
                                         hasSavedData={cHasSaved}
                                         exerciseLinesCount={detailParts.length}
@@ -7208,8 +7211,8 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
                                     </button>
                                   )}
                                   <span className="font-semibold text-sm text-foreground flex items-center gap-1.5 min-w-0">
-                                    <Footprints className="w-3.5 h-3.5 text-primary shrink-0" />
-                                    <span className="truncate">{toTitleCase(condName || part)}</span>
+                                    {(() => { const SportIcon = cardioIconFor(condName || part); return <SportIcon className="w-3.5 h-3.5 text-primary shrink-0" aria-hidden="true" />; })()}
+                                    <span className="break-words line-clamp-2">{toTitleCase(condName || part)}</span>
                                   </span>
                                 </div>
                                 <div className="flex items-center gap-0.5 shrink-0">

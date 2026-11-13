@@ -618,6 +618,15 @@ html.theme-bg-image body { background-color: hsl(var(--background)); }
 
 /* Text på knapp-/fältfärgen följer alltid temats kontrastfärg. */
 @layer utilities {
+  /* Horisontella karuseller (veckochips, filter) – ingen grå scrollbar-linje. */
+  .scrollbar-none {
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+  .scrollbar-none::-webkit-scrollbar {
+    display: none;
+  }
+
   .bg-secondary:not([class*="text-"]) { color: hsl(var(--secondary-foreground)); }
   input.bg-secondary, textarea.bg-secondary, select.bg-secondary { color: hsl(var(--secondary-foreground)); }
   .bg-secondary::placeholder { color: hsl(var(--secondary-foreground) / 0.6); }

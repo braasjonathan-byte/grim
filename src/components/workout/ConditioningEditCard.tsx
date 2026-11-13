@@ -4,11 +4,12 @@ import { useState, useEffect, useRef } from "react";
 import { parseNum, validateCardioEntry, validateNumber } from "@/lib/inputValidation";
 import { toast } from "sonner";
 import { format } from "date-fns";
-import { Check, ChevronDown, ChevronUp, Footprints, Info, MapPin, Pencil, Play, X } from "lucide-react";
+import { Check, ChevronDown, ChevronUp, Gauge, Heart, Info, MapPin, Mountain, Pencil, Play, Route, Timer, X } from "lucide-react";
 import RouteMap from "@/components/RouteMap";
 import IntervalRunner from "@/components/IntervalRunner";
 import GpsTrackerControl from "@/components/workout/GpsTrackerControl";
 import { toTitleCase, sanitizePaceInput } from "@/lib/workoutIntervalUtils";
+import { cardioIconFor } from "@/lib/cardioIcons";
 import { type CardioMode, getCardioModes, getCardioDistUnit, modeLabel, modeFieldLabel, modeDisplaySuffix, modePlaceholder, isPaceMode, isLinkedMode, formatPaceDisplay, computeTempoValue, resolveTempoDisplay, kmPerTempoUnit, showCardioElevation } from "@/lib/cardioUnits";
 
 // Enhetlig fältstil för alla konditionsvyer (samma känsla som styrkeövningarna)
@@ -16,10 +17,12 @@ export const condInputCls = "w-full min-w-0 bg-background text-foreground text-s
 export const condUnitCls = "text-[9px] text-muted-foreground uppercase tracking-wider mt-1 block text-center";
 
 
-export const ConditioningEditCard = ({ name, lineIndex, planId, planCondTime, planCondDist, planCondTempo, planCondPulse, savedData, hasSavedData, exerciseLinesCount, isCompleted = false, onToggleCompleted, onMoveUp, onMoveDown, onShowInfo, onDelete, onSave, dragHandle }: {
+export const ConditioningEditCard = ({ name, lineIndex, planId, planCondTime, planCondDist, planCondTempo, planCondPulse, explicitPlan, savedData, hasSavedData, exerciseLinesCount, isCompleted = false, onToggleCompleted, onMoveUp, onMoveDown, onShowInfo, onDelete, onSave, dragHandle }: {
   name: string; lineIndex: number; planId: string;
   planCondTime: string; planCondDist: string; planCondTempo: string;
   planCondPulse?: string;
+  /** Värden som står i just den här raden (utan passets gemensamma tempo). Visas i den kompakta raden. */
+  explicitPlan?: { time: string; dist: string; tempo: string; pulse?: string };
   savedData: Record<string, any> | null; hasSavedData: boolean;
   exerciseLinesCount: number;
   isCompleted?: boolean; onToggleCompleted?: () => void;
@@ -29,6 +32,7 @@ export const ConditioningEditCard = ({ name, lineIndex, planId, planCondTime, pl
   dragHandle?: React.ReactNode;
 }) => {
   const isSwim = /simning|simma|sim\b/i.test(name);
+  const SportIcon = cardioIconFor(name);
 
   // Per-sport tempo modes (presentation only). First entry is the default.
   type TempoMode = CardioMode;
@@ -289,8 +293,8 @@ export const ConditioningEditCard = ({ name, lineIndex, planId, planCondTime, pl
               </button>
             )}
             <span className="font-semibold text-sm text-foreground flex items-center gap-1.5 min-w-0">
-              <Footprints className="w-3.5 h-3.5 text-primary shrink-0" />
-              <span className="truncate">{toTitleCase(name)}</span>
+              <SportIcon className="w-3.5 h-3.5 text-primary shrink-0" aria-hidden="true" />
+              <span className="break-words line-clamp-2">{toTitleCase(name)}</span>
             </span>
           </div>
           <div className="flex items-center gap-1">
@@ -299,12 +303,12 @@ export const ConditioningEditCard = ({ name, lineIndex, planId, planCondTime, pl
           </div>
         </div>
         <div className="flex flex-wrap gap-x-3 gap-y-0.5">
-          {displayTime && <p className="text-xs">⏱ <span className="font-mono font-semibold">{displayTime} min</span></p>}
-          {displayTempo && <p className="text-xs">{isSwim ? "🏊" : "🏃"} <span className="font-mono font-semibold">{formatPaceDisplay(displayTempo, bikeMode)}{tempoDisplayUnit}</span></p>}
-          {displayDist && showDistance && <p className="text-xs">📏 <span className="font-mono font-semibold">{displayDist} {distUnit}</span></p>}
+          {displayTime && <p className="text-xs inline-flex items-center gap-1"><Timer className="w-3 h-3 text-muted-foreground" aria-label="Tid" /><span className="font-mono font-semibold">{displayTime} min</span></p>}
+          {displayTempo && <p className="text-xs inline-flex items-center gap-1"><Gauge className="w-3 h-3 text-muted-foreground" aria-label="Tempo" /><span className="font-mono font-semibold">{formatPaceDisplay(displayTempo, bikeMode)}{tempoDisplayUnit}</span></p>}
+          {displayDist && showDistance && <p className="text-xs inline-flex items-center gap-1"><Route className="w-3 h-3 text-muted-foreground" aria-label="Distans" /><span className="font-mono font-semibold">{displayDist} {distUnit}</span></p>}
 
-          {savedData?.elev && <p className="text-xs">⛰ <span className="font-mono font-semibold">{savedData.elev} m</span></p>}
-          {displayPulse && <p className="text-xs">❤️ <span className="font-mono font-semibold">{displayPulse} bpm</span></p>}
+          {savedData?.elev && <p className="text-xs inline-flex items-center gap-1"><Mountain className="w-3 h-3 text-muted-foreground" aria-label="Höjdmeter" /><span className="font-mono font-semibold">{savedData.elev} m</span></p>}
+          {displayPulse && <p className="text-xs inline-flex items-center gap-1"><Heart className="w-3 h-3 text-destructive" aria-label="Puls" /><span className="font-mono font-semibold">{displayPulse} bpm</span></p>}
         </div>
         {(Array.isArray(savedData?.hr) && savedData!.hr.length > 1) || savedData?.pulseMax ? (
           <HeartRateCurve hr={savedData?.hr} avg={displayPulse} max={savedData?.pulseMax} min={savedData?.pulseMin} minutes={Number(savedData?.time) || null} />
@@ -317,11 +321,14 @@ export const ConditioningEditCard = ({ name, lineIndex, planId, planCondTime, pl
     );
   }
 
+  // Bara värden som faktiskt står i raden – passets gemensamma tempo gav annars
+  // identiska «10 min · 4 km · 2:30» på varje uppvärmnings-/teknikrad.
+  const chipSrc = explicitPlan ?? { time: planCondTime, dist: planCondDist, tempo: planCondTempo, pulse: planCondPulse };
   const planChips: string[] = [];
-  if (planCondTime) planChips.push(`${planCondTime} min`);
-  if (planCondDist && showDistance) planChips.push(`${planCondDist} ${distUnit}`);
-  if (planCondTempo) planChips.push(`${planCondTempo}`);
-  if (planCondPulse) planChips.push(`${planCondPulse} bpm`);
+  if (chipSrc.time) planChips.push(`${chipSrc.time} min`);
+  if (chipSrc.dist && showDistance) planChips.push(`${chipSrc.dist} ${distUnit}`);
+  if (chipSrc.tempo) planChips.push(`${chipSrc.tempo}${tempoDisplayUnit}`);
+  if (chipSrc.pulse) planChips.push(`${chipSrc.pulse} bpm`);
 
   const completeBtn = onToggleCompleted && isIntervalRun ? (
     <button onClick={(e) => { e.stopPropagation(); onToggleCompleted(); }} className={`w-7 h-7 shrink-0 rounded-full border-2 flex items-center justify-center transition-all ${isCompleted ? "bg-success border-success text-success-foreground" : "border-primary/30 text-muted-foreground hover:border-primary"}`} title="Klarmarkera">
@@ -339,9 +346,9 @@ export const ConditioningEditCard = ({ name, lineIndex, planId, planCondTime, pl
         onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setExpanded(true); } }}
         className="bg-card border border-border rounded-2xl px-3 py-2.5 flex items-center gap-2 cursor-pointer hover:border-primary/40 transition-colors"
       >
-        {completeBtn ?? <span className="w-7 h-7 shrink-0 rounded-full bg-primary/10 flex items-center justify-center"><Footprints className="w-3.5 h-3.5 text-primary" /></span>}
+        {completeBtn ?? <span className="w-7 h-7 shrink-0 rounded-full bg-primary/10 flex items-center justify-center"><SportIcon className="w-3.5 h-3.5 text-primary" aria-hidden="true" /></span>}
         <div className="min-w-0 flex-1">
-          <p className="text-sm font-semibold text-foreground truncate">{toTitleCase(name)}</p>
+          <p className="text-sm font-semibold text-foreground break-words line-clamp-2">{toTitleCase(name)}</p>
           {planChips.length > 0 ? (
             <div className="flex flex-wrap gap-1 mt-0.5">
               {planChips.map((c) => <span key={c} className="text-[10px] font-medium text-muted-foreground bg-muted/60 rounded-full px-2 py-0.5 tabular-nums">{c}</span>)}
@@ -373,7 +380,7 @@ export const ConditioningEditCard = ({ name, lineIndex, planId, planCondTime, pl
             onClick={() => { if (exerciseLinesCount > 1) setExpanded(false); }}
             className="text-sm font-semibold text-foreground flex items-center gap-1 min-w-0 text-left"
           >
-            <span className="truncate">{toTitleCase(name)}</span>
+            <span className="break-words line-clamp-2">{toTitleCase(name)}</span>
             {exerciseLinesCount > 1 && <ChevronUp className="w-4 h-4 text-muted-foreground shrink-0" />}
           </button>
         </div>
