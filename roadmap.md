@@ -1,11 +1,12 @@
 # Roadmap
 
 ## Nästa förbättringar 13 november 2026
-- [ ] Ge fler hårt kritiska förbättringsförslag, utan att utöka implementationen.
-- [ ] 1. Sök inställningar och öppna rätt val direkt.
-- [ ] 2. Förklarande statistik baserad på jämförbara registrerade resultat.
-- [ ] 8. Frivilliga vänutmaningar för pass och regelbundenhet, utan viktnedgång.
-- [ ] 10. Tydliga tomma/felläge och bevarad inmatning vid anslutningsproblem.
+- [x] Ge fler hårt kritiska förbättringsförslag, utan att utöka implementationen.
+- [x] Ge konkreta lösningsförslag för de kritiserade punkterna.
+- [x] 1. Sök inställningar och öppna rätt val direkt; Maxpuls öppnar och fokuserar rätt fält på mobil och dator.
+- [x] 2. Förklarande statistik med jämförbar styrkevolym, kondition på samma distans och faktisk viktförändring; verifierat mot registrerad historik.
+- [x] 8. Frivilliga vänutmaningar för pass och träningsdagar; privat testutmaning skapad, ställning läst och testet borttaget. Inbjudan/acceptans mellan två konton inte manuellt verifierad.
+- [x] 10. Kost, statistik och utmaningar skiljer fel från tom data; snabbpost bevaras i sessionen och vid misslyckad sparning, verifierat utan internet. Inte generell offlinelagring för alla formulär.
 
 ## Vardagsförbättringar 13 november 2026
 - [x] 1. Lugnare Hem med tre snabbval och samlad vecköversikt.

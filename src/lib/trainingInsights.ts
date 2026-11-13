@@ -1,5 +1,6 @@
 import type { HistorySession } from "@/lib/workoutHistory";
 import { allCheckedSets, setVolumeKg } from "@/lib/checkedSets";
+import { summarizeCompletion } from "@/lib/workoutSummary";
 
 export interface TrainingInsight { title: string; detail: string }
 const fmt = (n: number) => n.toLocaleString("sv-SE", { maximumFractionDigits: 1 });
@@ -23,6 +24,28 @@ export function trainingInsights(sessions: HistorySession[]): TrainingInsight[] 
     break;
   }
   const days = [...new Set(ordered.map(s => s.date))];
+  for (const latest of ordered) {
+    const cardio = summarizeCompletion(latest.completion.logged_weights).cardio;
+    if (!cardio || cardio.count !== 1 || cardio.distanceKm <= 0 || cardio.minutes <= 0) continue;
+    const previous = ordered.find(s => {
+      const before = summarizeCompletion(s.completion.logged_weights).cardio;
+      return (s.date || "") < (latest.date || "") && before?.count === 1 && before.primaryName === cardio.primaryName && Math.abs(before.distanceKm - cardio.distanceKm) < 0.001 && before.minutes > 0;
+    });
+    if (!previous) continue;
+    const before = summarizeCompletion(previous.completion.logged_weights).cardio;
+    if (!before) continue;
+    const difference = cardio.minutes - before.minutes;
+    results.push({ title: difference === 0 ? `${cardio.primaryName}: samma tid` : `${cardio.primaryName}: ${fmt(Math.abs(difference))} min ${difference < 0 ? "snabbare" : "långsammare"}`, detail: `${fmt(cardio.distanceKm)} km på ${fmt(cardio.minutes)} mot ${fmt(before.minutes)} min (${latest.date} mot ${previous.date}). Samma övning och distans; väder, terräng och ansträngning kan skilja.` });
+    break;
+  }
   if (days.length) results.push({ title: `${days.length} träningsdagar registrerade`, detail: `${ordered.length} genomförda pass mellan ${days[days.length - 1]} och ${days[0]}. Flera pass samma dag räknas som en träningsdag.` });
   return results;
+}
+
+export function weightInsight(rows: { log_date: string; weight_kg: number }[]): TrainingInsight | null {
+  const ordered = rows.filter(row => Number.isFinite(row.weight_kg) && row.weight_kg >= 30 && row.weight_kg <= 300).sort((a, b) => a.log_date.localeCompare(b.log_date));
+  const first = ordered[0], last = ordered[ordered.length - 1];
+  if (!first || !last || first.log_date === last.log_date) return null;
+  const difference = last.weight_kg - first.weight_kg;
+  return { title: `Vikt: ${difference > 0 ? "+" : ""}${fmt(difference)} kg`, detail: `${fmt(first.weight_kg)} till ${fmt(last.weight_kg)} kg mellan ${first.log_date} och ${last.log_date}, baserat på ${ordered.length} vägningar. Skillnaden mellan två vägningar är inte samma sak som förändrad fettmassa.` };
 }
