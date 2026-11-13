@@ -8256,32 +8256,6 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
                               </div>
                               {/* Copied-from-previous progression reminder */}
                               
-                              {/* Last logged weight note */}
-                              {(() => {
-                                const lastKg = findHeaviestSetFromLastSession(partName, plan.week);
-                                if (!lastKg) return null;
-                                // Don't show if user already has saved data for this session
-                                const hasCurrentData = getSetData(key, partName).some(s => s.kg && parseNum(s.kg) !== 0);
-                                if (hasCurrentData) return null;
-                                const isNegative = lastKg.kg < 0;
-                                
-                                const effectiveKg = isNegative && profileWeight ? profileWeight + lastKg.kg : null;
-                                return (
-                                  <div className="pl-1">
-                                    <p className="text-[10px] text-muted-foreground flex items-center gap-1">
-                                      <Weight className="w-3 h-3" />
-                                      Senast: <span className="font-mono font-semibold text-foreground">{formatDecimal(lastKg.kg)} kg{lastKg.reps ? ` (${lastKg.reps} reps)` : ''}</span>
-                                    </p>
-                                    {isNegative && effectiveKg !== null && (
-                                      <p className="text-[10px] text-muted-foreground pl-4">= {Math.round(effectiveKg * 10) / 10} kg effektiv vikt (kroppsvikt {profileWeight} kg)</p>
-                                    )}
-                                    {isNegative && !profileWeight && (
-                                      <button onClick={() => setShowWeightPrompt(true)} className="text-[10px] text-primary pl-4 underline text-left">⚠ Ange din kroppsvikt</button>
-                                    )}
-                                    
-                                  </div>
-                                );
-                              })()}
                               <div className="space-y-1 pl-1">
                                   {(() => {
                                     const planSetData = getSetData(key, partName);

@@ -88,3 +88,21 @@ describe("enforceSurfaceContrast", () => {
     expect(root.style.getPropertyValue("--secondary").trim()).toBe("0 0% 96%");
   });
 });
+
+describe("helper text contrast", () => {
+  for (const { id, mode, t } of resolvedThemes()) {
+    it(`${id} (${mode}) keeps helper text at least 4.5:1 on neutral surfaces`, async () => {
+      const { enforceSurfaceContrast, enforceMutedContrast } = await import("@/lib/themes");
+      const root = document.createElement("div");
+      document.body.appendChild(root);
+      Object.entries(t).forEach(([key, value]) => root.style.setProperty(key, value));
+      enforceSurfaceContrast(root);
+      enforceMutedContrast(root);
+      const fg = root.style.getPropertyValue("--muted-foreground");
+      for (const name of ["background", "card", "muted", "secondary"]) {
+        expect(ratio(fg, root.style.getPropertyValue(`--${name}`))).toBeGreaterThanOrEqual(4.5);
+      }
+      root.remove();
+    });
+  }
+});

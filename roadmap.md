@@ -1,12 +1,12 @@
 # Roadmap
 
 ## Vardagsförbättringar 13 november 2026
-- [ ] 1. Lugnare Hem med tre snabbval och samlad vecköversikt.
-- [ ] 2. Kontrast i alla teman och tydligare primära/sekundära knappar.
-- [ ] 3. Större träningsfält och separat föregående resultat.
-- [ ] 4. Färre skuggor och rutor, behåll Grims rundade identitet.
-- [ ] 5. Matregistrering direkt under datumet, behåll kostringarna.
-- [ ] 8. Integritetsöversikt med nuvarande synlighet och äldre inlägg.
+- [x] 1. Lugnare Hem med tre snabbval och samlad vecköversikt.
+- [x] 2. Kontrast i alla teman och tydligare primära/sekundära knappar; 66 kontrasttester godkända.
+- [x] 3. Större träningsfält och separat föregående resultat; kg-fält 80×44 och ingen mobil överbredd verifierat i Tema 1–3.
+- [x] 4. Färre skuggor och rutor, behåll Grims rundade identitet.
+- [x] 5. Matregistrering direkt under datumet, behåll kostringarna; mat- och viktsnabbval verifierade inloggad.
+- [x] 8. Integritetsöversikt med nuvarande synlighet och äldre inlägg; verifierad inloggad utan att ändra delningsval.
 
 ## Inställningar 9 november 2026
 - [x] Flytta statistikvisningens inställningar till en egen Statistik-kategori.

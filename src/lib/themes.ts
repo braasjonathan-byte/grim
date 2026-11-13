@@ -915,6 +915,7 @@ export function applyTheme(themeId: string) {
 
   enforceSurfaceContrast(root);
   enforceButtonContrast(root);
+  enforceMutedContrast(root);
 
   // Dämpad bakgrundsbild (bara teman med backgroundImage).
   if (theme.backgroundImage) {
@@ -977,4 +978,25 @@ export function enforceButtonContrast(root: HTMLElement) {
     const dark = contrast(bg, 0) >= contrast(bg, 1);
     root.style.setProperty(fgKey, dark ? "0 0% 4%" : "0 0% 98%");
   }
+}
+
+/** Helper text and placeholders must remain readable on every neutral surface. */
+export function enforceMutedContrast(root: HTMLElement) {
+  const cs = getComputedStyle(root);
+  const backgrounds = ["background", "card", "muted", "secondary"]
+    .map((name) => tokenLuminance(cs.getPropertyValue(`--${name}`)))
+    .filter((value): value is number => value !== null);
+  if (!backgrounds.length) return;
+  const current = tokenLuminance(cs.getPropertyValue("--muted-foreground"));
+  if (current !== null && backgrounds.every((bg) => contrast(bg, current) >= 4.5)) return;
+  let best = "0 0% 0%", bestMinimum = 0;
+  for (let lightness = 0; lightness <= 100; lightness++) {
+    const token = `0 0% ${lightness}%`;
+    const luminance = tokenLuminance(token);
+    if (luminance === null) continue;
+    const minimum = Math.min(...backgrounds.map((bg) => contrast(bg, luminance)));
+    if (minimum >= 4.5) { best = token; break; }
+    if (minimum > bestMinimum) { bestMinimum = minimum; best = token; }
+  }
+  root.style.setProperty("--muted-foreground", best);
 }
