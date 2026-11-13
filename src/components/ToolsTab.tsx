@@ -37,6 +37,7 @@ import { useToolLayout, applyOrder, move } from "@/hooks/useToolLayout";
 import type { LucideIcon } from "lucide-react";
 
 import { updateApp } from "@/lib/appUpdate";
+import { openMiniTimer } from "@/components/MiniTimer";
 import { APP_VERSION } from "@/lib/version";
 import HonoraryBadge from "@/components/HonoraryBadge";
 import { type HelpCategory } from "@/data/helpTopics";
@@ -589,6 +590,14 @@ const ToolsTab = ({ userId, isAdmin, isHonorary, userRole, onViewUserPlan, onLog
               >
                 <span className="font-semibold">Vilotimer efter set</span>
                 <span className="block text-xs text-primary">Ändra i Inställningar → Träning</span>
+              </button>
+              <button
+                type="button"
+                onClick={openMiniTimer}
+                className="w-full card-soft px-4 py-3 text-left text-sm min-h-[44px]"
+              >
+                <span className="font-semibold">Stoppur och nedräkning</span>
+                <span className="block text-xs text-muted-foreground">Öppnar den lilla timern ovanför menyn</span>
               </button>
               <EventCountdown userId={userId} />
               <CalorieCalculator />

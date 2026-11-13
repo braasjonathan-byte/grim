@@ -15,6 +15,7 @@ import {
   Lightbulb,
   Plus,
   Footprints,
+  Moon,
   Flame as FlameIcon,
 } from "lucide-react";
 import {
@@ -88,6 +89,19 @@ const greetingFor = (hour: number) => {
   if (hour < 22) return "God kväll";
   return "God natt";
 };
+
+const REST_NAME = /(?<!\p{L})(vila|vilodag|återhämtning|rest)(?!\p{L})/iu;
+
+/**
+ * Dagens läge på Hem: vilodag (inget planerat eller bara «Vila»), ett planerat pass
+ * utan övningar, eller ett pass med innehåll. Styr vilken knapp som visas.
+ */
+export function classifyToday(todays: Pick<PlanRow, "details" | "session_name">[]): "rest" | "empty" | "workout" {
+  if (todays.length === 0) return "rest";
+  const withContent = todays.filter((p) => !!p.details && p.details.trim().length > 0);
+  if (withContent.length > 0) return "workout";
+  return todays.every((p) => !p.session_name?.trim() || REST_NAME.test(p.session_name)) ? "rest" : "empty";
+}
 
 /** Strips set/rep instruction noise so the card stays readable. */
 const summarizeDetails = (details: string | null): string[] => {
@@ -355,6 +369,8 @@ const HomeView = ({ userId, onNavigate, isHonorary = false }: HomeViewProps) => 
   );
 
   const noActivePlan = plans.length === 0;
+  // «Vila» utan övningar är en vilodag – inte ett pass som saknar övningar.
+  const todayKind = classifyToday(todaysPlans);
 
   const DAY_NAMES_FULL: Record<string, string> = {
     mån: "Måndag", tis: "Tisdag", ons: "Onsdag", tors: "Torsdag", fre: "Fredag", lör: "Lördag", sön: "Söndag",
@@ -486,15 +502,15 @@ const HomeView = ({ userId, onNavigate, isHonorary = false }: HomeViewProps) => 
       >
         <div className="flex items-center justify-between gap-2">
           <div className="flex items-center gap-2 min-w-0 flex-1">
-            <div className={`h-9 w-9 rounded-xl flex items-center justify-center ${todayDone ? "bg-success/15 text-success" : "bg-primary/15 text-primary"}`}>
-              {todayDone ? <CheckCircle2 className="w-5 h-5" /> : <Dumbbell className="w-5 h-5" />}
+            <div className={`h-9 w-9 rounded-xl flex items-center justify-center ${todayDone ? "bg-success/15 text-success" : todayKind === "rest" && !noActivePlan ? "bg-muted text-muted-foreground" : "bg-primary/15 text-primary"}`}>
+              {todayDone ? <CheckCircle2 className="w-5 h-5" /> : todayKind === "rest" && !noActivePlan ? <Moon className="w-5 h-5" /> : <Dumbbell className="w-5 h-5" />}
             </div>
             <div className="min-w-0">
               <p className="text-[11px] uppercase tracking-wider text-muted-foreground font-semibold">Dagens pass</p>
               <p className="text-sm font-semibold truncate">
                 {noActivePlan
                   ? "Ingen plan än"
-                  : todaysPlans.length === 0
+                  : todayKind === "rest"
                   ? "Vilodag"
                   : todaysPlans
                       .map((p) => p.session_name?.trim())
@@ -504,12 +520,7 @@ const HomeView = ({ userId, onNavigate, isHonorary = false }: HomeViewProps) => 
             </div>
           </div>
           <div className="flex items-center gap-1.5 shrink-0">
-            {todaysPlans.length > 0 && (
-              <span className="whitespace-nowrap text-[10px] font-bold uppercase px-2 py-1 rounded-full bg-secondary text-secondary-foreground">
-                Idag
-              </span>
-            )}
-            {todaysPlans.length > 0 && (
+            {todayKind === "workout" && (
               <span className={`whitespace-nowrap text-[10px] font-bold uppercase px-2 py-1 rounded-full ${todayDone ? "bg-success/15 text-success" : "bg-primary/15 text-primary"}`}>
                 {todayDone ? "Klart" : "Ej klart"}
               </span>
@@ -535,34 +546,55 @@ const HomeView = ({ userId, onNavigate, isHonorary = false }: HomeViewProps) => 
           </div>
         ) : (
           <>
-            {todaysPlans.length === 0 ? (
-              <p className="text-sm text-muted-foreground">
-                Inget pass inplanerat idag. Passa på att återhämta dig – eller lägg till ett pass.
-              </p>
+            {todayKind === "rest" && !todayDone ? (
+              <div className="space-y-2">
+                <p className="text-sm text-muted-foreground">
+                  Vilodag idag. Återhämtning är en del av träningen – musklerna bygger upp sig nu.
+                </p>
+                <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
+                  {nextSession && (
+                    <p className="text-xs text-muted-foreground">
+                      Nästa pass: <span className="font-semibold text-foreground">{nextSession.dayLabel} – {nextSession.name}</span>
+                    </p>
+                  )}
+                  <button type="button" onClick={() => onNavigate("workout")} className="text-xs font-semibold text-primary underline-offset-2 hover:underline">
+                    Träna ändå
+                  </button>
+                </div>
+              </div>
+            ) : todayKind === "empty" && !todayDone ? (
+              <div className="space-y-3">
+                <p className="text-sm text-muted-foreground">Passet är planerat men har inga övningar än.</p>
+                <Button className="w-full" onClick={() => openPickerForGroup(null)}>
+                  <Plus className="w-4 h-4 mr-1" />
+                  Lägg till övningar
+                </Button>
+              </div>
             ) : (
-              <ul className="space-y-1.5">
-                {todaysPlans.flatMap((p) => summarizeDetails(p.details).map(fixCardioUnitSuffix)).slice(0, 5).map((line, i) => (
-                  <li key={i} className="text-sm text-foreground/90 flex items-start gap-2">
-                    <span className="mt-1.5 h-1 w-1 rounded-full bg-primary shrink-0" />
-                    <span className="line-clamp-1">{line}</span>
-                  </li>
-                ))}
-                {todaysPlans.every((p) => !p.details?.trim()) && (
-                  <li className="text-sm text-muted-foreground">Passet saknar övningar – lägg till dem i Träning.</li>
+              <>
+                {todayKind === "workout" && (
+                  <ul className="space-y-1.5">
+                    {todaysPlans.flatMap((p) => summarizeDetails(p.details).map(fixCardioUnitSuffix)).slice(0, 5).map((line, i) => (
+                      <li key={i} className="text-sm text-foreground/90 flex items-start gap-2">
+                        <span className="mt-1.5 h-1 w-1 rounded-full bg-primary shrink-0" />
+                        <span className="line-clamp-1">{line}</span>
+                      </li>
+                    ))}
+                  </ul>
                 )}
-              </ul>
-            )}
 
-            {todayDone && nextSession && (
-              <p className="text-xs text-muted-foreground">
-                Nästa pass: <span className="font-semibold text-foreground">{nextSession.dayLabel} – {nextSession.name}</span>
-              </p>
-            )}
+                {todayDone && nextSession && (
+                  <p className="text-xs text-muted-foreground">
+                    Nästa pass: <span className="font-semibold text-foreground">{nextSession.dayLabel} – {nextSession.name}</span>
+                  </p>
+                )}
 
-            <Button className="w-full" onClick={() => onNavigate("workout")}>
-              {todaysPlans.length === 0 ? "Öppna träning" : todayDone ? "Visa passet" : "Starta passet"}
-              <ChevronRight className="w-4 h-4 ml-1" />
-            </Button>
+                <Button className="w-full" variant={todayDone ? "outline" : "default"} onClick={() => onNavigate("workout")}>
+                  {todayDone ? "Visa passet" : "Starta passet"}
+                  <ChevronRight className="w-4 h-4 ml-1" />
+                </Button>
+              </>
+            )}
           </>
         )}
       </section>

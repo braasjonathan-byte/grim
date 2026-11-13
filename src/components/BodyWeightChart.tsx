@@ -8,6 +8,30 @@ import { WEIGHT_CHANGED_EVENT } from "@/lib/bodyWeight";
 const parseKey = (k: string) => { const [y, m, d] = k.split("-").map(Number); return new Date(y, m - 1, d); };
 const addDays = (d: Date, n: number) => { const x = new Date(d); x.setDate(x.getDate() + n); return x; };
 
+/** Linjefärgerna i grafen – legenden ritas från samma värden så att de alltid stämmer. */
+export const WEIGHT_LINES = {
+  weight: { label: "Dina vägningar", color: "hsl(var(--primary))", dash: undefined as string | undefined },
+  projected: { label: "Prognos mot målvikten", color: "hsl(var(--muted-foreground))", dash: "5 4" },
+  goal: { label: "Målvikt", color: "hsl(var(--success))", dash: "4 4" },
+} as const;
+
+function WeightLegend({ showGoal, showProjection }: { showGoal: boolean; showProjection: boolean }) {
+  const items = [WEIGHT_LINES.weight, ...(showProjection ? [WEIGHT_LINES.projected] : []), ...(showGoal ? [WEIGHT_LINES.goal] : [])];
+  return (
+    <div className="space-y-1">
+      <ul className="flex flex-wrap gap-x-3 gap-y-1 text-[11px] text-muted-foreground" aria-label="Förklaring">
+        {items.map((l) => (
+          <li key={l.label} className="inline-flex items-center gap-1.5">
+            <svg width="18" height="6" aria-hidden="true"><line x1="0" y1="3" x2="18" y2="3" stroke={l.color} strokeWidth="2" strokeDasharray={l.dash} /></svg>
+            {l.label}
+          </li>
+        ))}
+      </ul>
+      <p className="text-[11px] text-muted-foreground">Lägg in ny vikt under Vikt i Kost.</p>
+    </div>
+  );
+}
+
 export default function BodyWeightChart({ userId }: { userId: string }) {
   const [weights, setWeights] = useState<{ log_date: string; weight_kg: number }[]>([]);
   const [goalWeight, setGoalWeight] = useState<number | null>(null);
@@ -115,14 +139,14 @@ export default function BodyWeightChart({ userId }: { userId: string }) {
                 <Tooltip contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: 12, fontSize: 12 }}
                   formatter={(v: number, n: string) => [`${String(v).replace(".", ",")} kg`, n === "weight" ? "Vikt" : "Prognos"]} />
                 {goalWeight != null &&
-                  <ReferenceLine y={goalWeight} stroke="hsl(var(--success))" strokeDasharray="4 4"
+                  <ReferenceLine y={goalWeight} stroke={WEIGHT_LINES.goal.color} strokeDasharray={WEIGHT_LINES.goal.dash}
                     label={{ value: "Mål", fontSize: 10, fill: "hsl(var(--success))", position: "insideTopRight" }} />}
-                <Line dataKey="weight" stroke="hsl(var(--destructive))" strokeWidth={2} dot={{ r: 2 }} connectNulls />
-                <Line dataKey="projected" stroke="hsl(var(--primary))" strokeWidth={2} strokeDasharray="5 4" dot={false} connectNulls />
+                <Line dataKey="weight" stroke={WEIGHT_LINES.weight.color} strokeWidth={2} dot={{ r: 2 }} connectNulls />
+                <Line dataKey="projected" stroke={WEIGHT_LINES.projected.color} strokeWidth={2} strokeDasharray={WEIGHT_LINES.projected.dash} dot={false} connectNulls />
               </ComposedChart>
             </ResponsiveContainer>
           </div>
-          <p className="text-[10px] text-muted-foreground">Röd linje: dina vägningar · Blå streckad: vägen till målvikten · Lägg in ny vikt under Vikt-fliken i kost.</p>
+          <WeightLegend showGoal={goalWeight != null} showProjection={chart.pts.some((p) => p.weight == null && p.projected != null)} />
         </>
       ) : (
         <div className="rounded-xl border border-border/40 overflow-hidden">

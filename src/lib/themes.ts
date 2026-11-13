@@ -388,7 +388,7 @@ export const THEMES: ThemeDefinition[] = [
       "--secondary": "150 35% 92%",
       "--secondary-foreground": "155 30% 20%",
       "--muted": "150 25% 93%",
-      "--muted-foreground": "155 15% 40%",
+      "--muted-foreground": "155 15% 36%",
       "--accent": "160 45% 88%",
       "--accent-foreground": "160 70% 22%",
       "--primary": "160 70% 35%",
@@ -644,7 +644,7 @@ export const THEMES: ThemeDefinition[] = [
       "--secondary": "40 40% 90%",
       "--secondary-foreground": "30 25% 14%",
       "--muted": "40 40% 90%",
-      "--muted-foreground": "30 12% 42%",
+      "--muted-foreground": "30 12% 37%",
       "--accent": "40 40% 90%",
       "--accent-foreground": "37 60% 30%",
       "--primary": "37 59% 41%",
@@ -753,8 +753,9 @@ THEMES.push(
       "--card-foreground": "205 35% 97%",
       "--popover": "210 65% 17%",
       "--popover-foreground": "205 35% 97%",
-      "--secondary": "205.102 45.794% 58.039%",
-      "--secondary-foreground": "210 90.625% 12.549%",
+      // Ytfärg (chips, räknare, sekundära knappar) – brandfärgen ligger i --accent.
+      "--secondary": "210 50% 22%",
+      "--secondary-foreground": "205 35% 97%",
       "--muted": "210 50% 22%",
       "--muted-foreground": "205 35% 76%",
       "--accent": "205.102 45.794% 58.039%",
@@ -782,8 +783,9 @@ THEMES.push(
       "--card-foreground": "52 26.786% 21.961%",
       "--popover": "28 40% 96%",
       "--popover-foreground": "52 26.786% 21.961%",
-      "--secondary": "52 26.786% 21.961%",
-      "--secondary-foreground": "28.571 41.176% 90%",
+      // Ljus ytfärg – mörk oliv på --secondary gav mörk text på mörk botten.
+      "--secondary": "28 30% 85%",
+      "--secondary-foreground": "52 26.786% 21.961%",
       "--muted": "28 30% 85%",
       "--muted-foreground": "52 20% 32%",
       "--accent": "332 95.745% 72.353%",
@@ -811,8 +813,9 @@ THEMES.push(
       "--card-foreground": "326 40% 22%",
       "--popover": "329 65% 96%",
       "--popover-foreground": "326 40% 22%",
-      "--secondary": "325.895 40.426% 46.078%",
-      "--secondary-foreground": "0 0% 100%",
+      // Ljus ytfärg – brandrosa ligger kvar i --accent.
+      "--secondary": "329 50% 83%",
+      "--secondary-foreground": "326 40% 22%",
       "--muted": "329 50% 83%",
       "--muted-foreground": "326 35% 30%",
       "--accent": "325.895 40.426% 46.078%",
@@ -910,6 +913,7 @@ export function applyTheme(themeId: string) {
     root.style.setProperty(key, value);
   });
 
+  enforceSurfaceContrast(root);
   enforceButtonContrast(root);
 
   // Dämpad bakgrundsbild (bara teman med backgroundImage).
@@ -940,6 +944,26 @@ function tokenLuminance(token: string): number | null {
 }
 
 const contrast = (a: number, b: number) => (Math.max(a, b) + 0.05) / (Math.min(a, b) + 0.05);
+
+/**
+ * --secondary används som neutral yta (chips, räknare, sekundära knappar) där
+ * komponenter ofta lägger text-foreground/text-muted-foreground ovanpå. Ett tema
+ * som sätter --secondary till en mättad brandfärg ger då mörk text på mörk botten.
+ * Faller tillbaka till --muted som yta när kontrasten mot temats text är för låg.
+ */
+export function enforceSurfaceContrast(root: HTMLElement) {
+  const cs = getComputedStyle(root);
+  const sec = tokenLuminance(cs.getPropertyValue("--secondary"));
+  const fg = tokenLuminance(cs.getPropertyValue("--foreground"));
+  const mutedFg = tokenLuminance(cs.getPropertyValue("--muted-foreground"));
+  if (sec === null || fg === null) return;
+  const ok = contrast(sec, fg) >= 4.5 && (mutedFg === null || contrast(sec, mutedFg) >= 3);
+  if (ok) return;
+  const muted = cs.getPropertyValue("--muted").trim();
+  if (!muted) return;
+  root.style.setProperty("--secondary", muted);
+  root.style.setProperty("--secondary-foreground", cs.getPropertyValue("--foreground").trim());
+}
 
 /** Säkerställer stark kontrast (≥ 7:1) för text på knappfärgerna i alla teman. */
 export function enforceButtonContrast(root: HTMLElement) {

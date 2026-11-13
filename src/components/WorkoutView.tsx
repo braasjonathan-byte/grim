@@ -1,5 +1,6 @@
 import { SingleWorkoutForm } from "@/components/workout/SingleWorkoutForm";
 import EmptyState from "@/components/EmptyState";
+import { openMiniTimer } from "@/components/MiniTimer";
 import { maybeAutoExportToStrava, STRAVA_ERROR_TEXT } from "@/lib/stravaExport";
 import { getHeartRateSamplesBetween } from "@/lib/heartRate";
 import { readSessionHr, summarizeSessionHr, SESSION_HR_KEY } from "@/lib/sessionHeartRate";
@@ -5760,7 +5761,17 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
             <ChevronRight className="w-5 h-5" />
           </button>
         </div>
-        <p className="text-[10px] text-muted-foreground text-center">{progress}% avklarat · Vecka {currentWeek} av {weeks.length}</p>
+        <div className="flex items-center justify-center gap-2">
+          <p className="text-[11px] text-muted-foreground text-center">{progress}% avklarat · Vecka {currentWeek} av {weeks.length}</p>
+          <button
+            type="button"
+            onClick={openMiniTimer}
+            className="inline-flex items-center gap-1 rounded-full border border-border px-2.5 py-1 text-[11px] font-semibold text-foreground hover:bg-muted"
+            aria-label="Öppna timer"
+          >
+            <Timer className="w-3 h-3" /> Timer
+          </button>
+        </div>
       </div>
 
 

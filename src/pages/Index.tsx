@@ -136,7 +136,8 @@ const Index = () => {
     return () => window.removeEventListener(MODULES_EVENT, on);
   }, []);
   const bottomSafeInset = "max(env(safe-area-inset-bottom), 16px)";
-  const bottomNavOffset = `calc(5.5rem + ${bottomSafeInset})`;
+  // --grim-timer-clearance sätts av MiniTimer när en timer syns, så att den aldrig täcker innehåll.
+  const bottomNavOffset = `calc(5.5rem + ${bottomSafeInset} + var(--grim-timer-clearance, 0px))`;
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [notificationFriendId, setNotificationFriendId] = useState<string | null>(null);

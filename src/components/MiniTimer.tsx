@@ -58,6 +58,10 @@ const triggerLocalNotification = async (label: string) => {
   } catch { /* ignore */ }
 };
 
+/** Öppnar minitimern (stoppur/nedräkning) från valfri vy. */
+export const OPEN_MINI_TIMER_EVENT = "grim:open-mini-timer";
+export const openMiniTimer = () => window.dispatchEvent(new CustomEvent(OPEN_MINI_TIMER_EVENT));
+
 const MiniTimer = () => {
   const [seconds, setSeconds] = useState(0);
   const [running, setRunning] = useState(false);
@@ -251,72 +255,25 @@ const MiniTimer = () => {
     : (seconds % 60) / 60;
 
   const isIdle = !running && (mode === "countdown" ? seconds === countdownDefault : seconds === 0);
+  // Ingen flytande knapp när timern är oanvänd – den skymde innehåll på varje skärm.
+  // Öppnas via «Timer» i Träning/Hjälpmedel (event grim:open-mini-timer) eller startas av vilotimern.
+  const hidden = !fullscreen && !expanded && isIdle;
+  useEffect(() => {
+    const root = document.documentElement;
+    root.style.setProperty("--grim-timer-clearance", hidden || fullscreen ? "0px" : expanded ? "5rem" : "3.25rem");
+    return () => { root.style.removeProperty("--grim-timer-clearance"); };
+  }, [hidden, fullscreen, expanded]);
+  useEffect(() => {
+    const open = () => setExpanded(true);
+    window.addEventListener(OPEN_MINI_TIMER_EVENT, open);
+    return () => window.removeEventListener(OPEN_MINI_TIMER_EVENT, open);
+  }, []);
   const dockStyle = {
-    bottom: `calc(80px + env(safe-area-inset-bottom, 0px))`,
+    bottom: `calc(80px + var(--grim-bottom-safe, env(safe-area-inset-bottom, 0px)))`,
     transform: "translate3d(0,0,0)",
     WebkitTransform: "translate3d(0,0,0)",
     willChange: "transform",
   } as React.CSSProperties;
-
-  // --- Draggable bubble (snaps to left/right edge) ---
-  const BUBBLE_SIZE = 44;
-  const BUBBLE_KEY = "grim_mini_timer_bubble_pos";
-  const [bubblePos, setBubblePos] = useState<{ side: "left" | "right"; top: number } | null>(() => {
-    try {
-      const raw = localStorage.getItem(BUBBLE_KEY);
-      if (!raw) return null;
-      const p = JSON.parse(raw);
-      if ((p.side === "left" || p.side === "right") && typeof p.top === "number") return p;
-    } catch { /* ignore */ }
-    return null;
-  });
-  const [dragging, setDragging] = useState(false);
-  const dragRef = useRef<{ moved: boolean; offsetX: number; offsetY: number } | null>(null);
-  const [dragXY, setDragXY] = useState<{ x: number; y: number } | null>(null);
-
-  const clampTop = (y: number) =>
-    Math.max(8, Math.min(window.innerHeight - BUBBLE_SIZE - 8, y));
-
-  const onBubblePointerDown = (e: React.PointerEvent<HTMLButtonElement>) => {
-    const rect = e.currentTarget.getBoundingClientRect();
-    dragRef.current = { moved: false, offsetX: e.clientX - rect.left, offsetY: e.clientY - rect.top };
-    setDragXY({ x: rect.left, y: rect.top });
-    (e.currentTarget as HTMLElement).setPointerCapture?.(e.pointerId);
-  };
-
-  const onBubblePointerMove = (e: React.PointerEvent<HTMLButtonElement>) => {
-    const d = dragRef.current;
-    if (!d) return;
-    const x = e.clientX - d.offsetX;
-    const y = e.clientY - d.offsetY;
-    if (!d.moved) {
-      d.moved = true;
-      setDragging(true);
-    }
-    setDragXY({ x, y });
-  };
-
-  const onBubblePointerUp = (e: React.PointerEvent<HTMLButtonElement>) => {
-    const d = dragRef.current;
-    dragRef.current = null;
-    (e.currentTarget as HTMLElement).releasePointerCapture?.(e.pointerId);
-    if (!d) return;
-    if (!d.moved) {
-      setDragging(false);
-      setDragXY(null);
-      setExpanded(true);
-      return;
-    }
-    const x = e.clientX - d.offsetX;
-    const y = clampTop(e.clientY - d.offsetY);
-    const side: "left" | "right" = x + BUBBLE_SIZE / 2 < window.innerWidth / 2 ? "left" : "right";
-    const next = { side, top: y };
-    setBubblePos(next);
-    try { localStorage.setItem(BUBBLE_KEY, JSON.stringify(next)); } catch { /* ignore */ }
-    setDragging(false);
-    setDragXY(null);
-  };
-
 
   if (fullscreen) {
     const R = 120;
@@ -391,31 +348,8 @@ const MiniTimer = () => {
     );
   }
 
-  // Collapsed & idle: tiny floating round button (draggable along the screen edges)
-  if (!expanded && isIdle) {
-    const containerStyle: React.CSSProperties = dragXY
-      ? { top: dragXY.y, left: dragXY.x }
-      : bubblePos
-      ? { top: bubblePos.top, [bubblePos.side]: 16 }
-      : { right: 16, ...dockStyle };
-    return (
-      <div className="fixed z-50 pointer-events-none" style={containerStyle}>
-        <button
-          onPointerDown={onBubblePointerDown}
-          onPointerMove={onBubblePointerMove}
-          onPointerUp={onBubblePointerUp}
-          onPointerCancel={onBubblePointerUp}
-          aria-label="Öppna stoppur (dra för att flytta)"
-          className={`pointer-events-auto touch-none flex h-11 w-11 items-center justify-center rounded-full bg-card shadow-soft text-primary animate-fade-in ${
-            dragging ? "scale-110 cursor-grabbing" : "transition-transform active:scale-95 cursor-grab"
-          }`}
-        >
-          <TimerReset className="h-5 w-5" />
-        </button>
-      </div>
-
-    );
-  }
+  // Oanvänd timer: ingenting flytande över innehållet.
+  if (hidden) return null;
 
   // Collapsed: slim floating pill
   if (!expanded) {
@@ -425,12 +359,12 @@ const MiniTimer = () => {
         style={dockStyle}
       >
         <div
-          className="pointer-events-auto flex items-center gap-2.5 rounded-full bg-card/95 backdrop-blur px-2.5 py-1.5 shadow-soft cursor-pointer animate-fade-in"
+          className="pointer-events-auto flex items-center gap-2 rounded-full bg-card/95 backdrop-blur px-2 py-1 shadow-soft border border-border/60 cursor-pointer animate-fade-in"
           onClick={() => setExpanded(true)}
         >
           <button
             onClick={(e) => { e.stopPropagation(); setRunning(!running); }}
-            className={`w-8 h-8 shrink-0 rounded-full bg-primary/15 text-primary flex items-center justify-center transition-colors ${running ? "timer-play-pulse" : ""}`}
+            className={`w-7 h-7 shrink-0 rounded-full bg-primary/15 text-primary flex items-center justify-center transition-colors ${running ? "timer-play-pulse" : ""}`}
             aria-label={running ? "Pausa timer" : "Starta timer"}
           >
             {running ? <Pause className="w-3.5 h-3.5" /> : <Play className="w-3.5 h-3.5 ml-px" />}
