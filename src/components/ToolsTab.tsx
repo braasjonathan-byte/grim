@@ -1,4 +1,7 @@
 import ModuleSettings from "@/components/ModuleSettings";
+import { searchSettings, type SettingEntry } from "@/lib/settingsSearch";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
 import { lazyRetry } from "@/lib/lazyRetry";
 import { useState, useEffect, useMemo, Suspense } from "react";
 import {
@@ -162,6 +165,24 @@ const ToolsTab = ({ userId, isAdmin, isHonorary, userRole, onViewUserPlan, onLog
     sessionStorage.getItem("grim_tools_open") === "settings:supporter" ? "account" : null
   );
   const [query, setQuery] = useState("");
+  const [settingsQuery, setSettingsQuery] = useState("");
+  const [settingTarget, setSettingTarget] = useState<SettingEntry | null>(null);
+  useEffect(() => {
+    if (!settingTarget || settingsCategory !== settingTarget.category) return;
+    const timer = window.setInterval(() => {
+      const root = document.getElementById("settings-content");
+      if (!root) return;
+      const target = settingTarget.anchor ? [...root.querySelectorAll<HTMLElement>("label, span, p, h3, button")].find(el => el.textContent?.trim().startsWith(settingTarget.anchor)) : root;
+      if (!target) return;
+      target.scrollIntoView({ block: "center", behavior: "smooth" });
+      const forId = target.getAttribute("for");
+      const field = target.tagName === "LABEL" ? (forId ? document.getElementById(forId) : target.parentElement?.querySelector<HTMLElement>("input, select")) : null;
+      field?.focus({ preventScroll: true });
+      window.clearInterval(timer);
+    }, 150);
+    const stop = window.setTimeout(() => window.clearInterval(timer), 5000);
+    return () => { window.clearInterval(timer); window.clearTimeout(stop); };
+  }, [settingTarget, settingsCategory]);
   const [openItem, setOpenItem] = useState<string | null>(() => {
     const f = sessionStorage.getItem("grim_tools_open");
     sessionStorage.removeItem("grim_tools_open");
@@ -562,7 +583,8 @@ const ToolsTab = ({ userId, isAdmin, isHonorary, userRole, onViewUserPlan, onLog
         <Suspense fallback={<div className="flex justify-center py-8"><Loader2 className="w-5 h-5 animate-spin text-primary" /></div>}>
           {subView === "settings" ? !settingsCategory ? (
             <div className="space-y-2">
-              {SETTINGS_CATEGORIES.map((category) => renderCard({
+              <div className="relative"><Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" /><Input className="pl-9" placeholder="Sök inställning" aria-label="Sök inställning" value={settingsQuery} onChange={e => setSettingsQuery(e.target.value)} /></div>
+              {settingsQuery.trim() ? <div className="space-y-1">{searchSettings(settingsQuery).map(entry => <Button key={entry.label} variant="ghost" className="w-full h-auto py-3 justify-between text-left" onClick={() => { setSettingTarget(entry); setSettingsCategory(entry.category); }}><span className="min-w-0"><span className="block">{entry.label}</span><span className="block text-xs text-muted-foreground">{SETTINGS_CATEGORIES.find(c => c.id === entry.category)?.title}</span></span><ChevronRight className="h-4 w-4 shrink-0" /></Button>)}{searchSettings(settingsQuery).length === 0 && <p className="text-sm text-muted-foreground py-4">Ingen inställning hittades. Prova ett annat ord.</p>}</div> : SETTINGS_CATEGORIES.map((category) => renderCard({
                 id: `settings-${category.id}`,
                 title: category.title,
                 subtitle: category.subtitle,
@@ -572,7 +594,7 @@ const ToolsTab = ({ userId, isAdmin, isHonorary, userRole, onViewUserPlan, onLog
               }))}
             </div>
           ) : (
-            <div className="space-y-3">
+            <div id="settings-content" className="space-y-3">
               {settingsCategory === "profile" && <ProfileTab userId={userId} isAdmin={isAdmin} showDangerZone={false} />}
               {settingsCategory === "account" && <div data-supporter-section><SupporterButton userId={userId} /></div>}
               <SettingsPanel category={settingsCategory} userId={userId} isAdmin={isAdmin} isHonorary={isHonorary} onStartPlan={onStartPlan} onViewUserPlan={onViewUserPlan} />

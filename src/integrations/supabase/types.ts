@@ -3131,6 +3131,16 @@ export type Database = {
       can_view_post: { Args: { _post_id: string }; Returns: boolean }
       complete_forced_password_change: { Args: never; Returns: undefined }
       count_implausible_sets: { Args: { lw: Json }; Returns: number }
+      create_voluntary_challenge: {
+        Args: {
+          _end: string
+          _friends: string[]
+          _metric: string
+          _start: string
+          _title: string
+        }
+        Returns: string
+      }
       get_event_group_member_counts: {
         Args: never
         Returns: {
@@ -3271,6 +3281,14 @@ export type Database = {
       shares_plan_with_friends: { Args: { _user_id: string }; Returns: boolean }
       show_limit: { Args: never; Returns: number }
       show_trgm: { Args: { "": string }; Returns: string[] }
+      voluntary_challenge_standings: {
+        Args: { _challenge: string }
+        Returns: {
+          nickname: string
+          user_id: string
+          value: number
+        }[]
+      }
     }
     Enums: {
       app_role: "admin" | "member"

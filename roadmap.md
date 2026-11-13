@@ -1,5 +1,12 @@
 # Roadmap
 
+## Nästa förbättringar 13 november 2026
+- [ ] Ge fler hårt kritiska förbättringsförslag, utan att utöka implementationen.
+- [ ] 1. Sök inställningar och öppna rätt val direkt.
+- [ ] 2. Förklarande statistik baserad på jämförbara registrerade resultat.
+- [ ] 8. Frivilliga vänutmaningar för pass och regelbundenhet, utan viktnedgång.
+- [ ] 10. Tydliga tomma/felläge och bevarad inmatning vid anslutningsproblem.
+
 ## Vardagsförbättringar 13 november 2026
 - [x] 1. Lugnare Hem med tre snabbval och samlad vecköversikt.
 - [x] 2. Kontrast i alla teman och tydligare primära/sekundära knappar; 66 kontrasttester godkända.

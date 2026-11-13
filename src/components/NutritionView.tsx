@@ -1,4 +1,5 @@
 import { useAppSettings } from "@/lib/appSettings";
+import { useSessionDraft } from "@/hooks/useSessionDraft";
 import { validateNumber, parseDecimal, formatDecimal, isPlausibleMealLog, IMPLAUSIBLE_LABEL, UNUSUAL_FOOD_GRAMS, UNUSUAL_QUICK_KCAL, macroKcalMismatch, type NumberRule } from "@/lib/inputValidation";
 import ConfirmValueDialog, { FieldError } from "@/components/ConfirmValueDialog";
 const QUICK_MACRO: NumberRule = { min: 0, max: 1000, unit: "g", optional: true };
@@ -231,11 +232,13 @@ export default function NutritionView({ userId, isHonorary: isHonoraryProp = fal
   // Samma källa som Hem: health_daily.activeCalories från hälsoappen.
   const [activeKcal, setActiveKcal] = useState<number | null>(null);
   const [loaded, setLoaded] = useState(false);
+  const [loadError, setLoadError] = useState(false);
+  const [quickSaving, setQuickSaving] = useState(false);
   const [hasGoals, setHasGoals] = useState(true);
   const [feelings, setFeelings] = useState<Record<string, string>>({});
   const [yesterdayLogs, setYesterdayLogs] = useState<any[]>([]);
   const [quickMeal, setQuickMeal] = useState<string | null>(null);
-  const [quick, setQuick] = useState({ name: "", kcal: "", protein: "", fat: "", carbs: "" });
+  const [quick, setQuick] = useSessionDraft(`grim:quick-food:${userId}`, { name: "", kcal: "", protein: "", fat: "", carbs: "" });
 
   const quickErrs = {
     kcal: validateNumber(quick.kcal, "quickKcal").error,
@@ -254,8 +257,9 @@ export default function NutritionView({ userId, isHonorary: isHonoraryProp = fal
   }
 
   async function saveQuickLog() {
-    if (!quickMeal) return;
+    if (!quickMeal || quickSaving) return;
     if (quickHasErrors) return;
+    setQuickSaving(true);
     const num = (v: string) => validateNumber(v, QUICK_MACRO).value ?? 0;
     const kcal = parseDecimal(quick.kcal);
     const { error } = await supabase.from("meal_logs").insert({
@@ -263,7 +267,8 @@ export default function NutritionView({ userId, isHonorary: isHonoraryProp = fal
       item_name: quick.name.trim() || "Snabbpost", amount: 1, unit: "portion",
       kcal, protein_g: num(quick.protein), fat_g: num(quick.fat), carbs_g: num(quick.carbs), fiber_g: 0,
     });
-    if (error) { toast({ title: "Fel", description: error.message, variant: "destructive" }); return; }
+    setQuickSaving(false);
+    if (error) { toast({ title: "Kunde inte spara", description: "Din snabbpost finns kvar. Försök igen när anslutningen fungerar.", variant: "destructive" }); return; }
     setQuickMeal(null);
     setQuick({ name: "", kcal: "", protein: "", fat: "", carbs: "" });
     load();
@@ -360,12 +365,15 @@ export default function NutritionView({ userId, isHonorary: isHonoraryProp = fal
   const dateKey = toLocalDateKey(date);
 
   async function load() {
+    setLoadError(false);
     const y = new Date(date); y.setDate(y.getDate() - 1);
+    try {
     const [logsR, goalsR, yR] = await Promise.all([
       supabase.from("meal_logs").select("*").eq("user_id", userId).eq("log_date", dateKey).order("created_at"),
       supabase.from("nutrition_goals").select("*").eq("user_id", userId).maybeSingle(),
       supabase.from("meal_logs").select("*").eq("user_id", userId).eq("log_date", toLocalDateKey(y)).order("created_at"),
     ]);
+    if (logsR.error || goalsR.error || yR.error) { setLoadError(true); return; }
     setLogs((logsR.data as MealLog[]) || []);
     setYesterdayLogs(yR.data || []);
     if (goalsR.data) {
@@ -380,9 +388,10 @@ export default function NutritionView({ userId, isHonorary: isHonoraryProp = fal
     }
     setHasGoals(!!goalsR.data);
     setLoaded(true);
+    } catch { setLoadError(true); }
   }
 
-  useEffect(() => { load(); /* eslint-disable-next-line */ }, [userId, dateKey]);
+  useEffect(() => { setLoaded(false); setLogs([]); load(); /* eslint-disable-next-line */ }, [userId, dateKey]);
   // Inställningar → Kost ändrar samma växel/mål – håll Kost i synk.
   useEffect(() => {
     const onAdaptive = () => setAdaptiveOn(readAdaptiveEnabled());
@@ -608,6 +617,7 @@ export default function NutritionView({ userId, isHonorary: isHonoraryProp = fal
 
   return (
     <div className="space-y-4">
+      {loadError && <div role="alert" className="space-y-2"><p className="text-sm text-muted-foreground">Dagens kost kunde inte hämtas. Det betyder inte att dina måltider är tomma.</p><Button variant="outline" size="sm" onClick={() => void load()}>Försök igen</Button></div>}
       <div className="flex items-center justify-between">
         <button onClick={() => shiftDay(-1)} className="w-9 h-9 icon-round hover:bg-muted/60 transition-colors"><ChevronLeft className="w-5 h-5" /></button>
         <div className="text-center">
@@ -647,7 +657,7 @@ export default function NutritionView({ userId, isHonorary: isHonoraryProp = fal
 
       <div className="card-soft p-4 space-y-4">
         <div data-tour="nutrition-rings">
-          {!loaded ? <div className="h-64 rounded-2xl bg-muted/40 animate-pulse" aria-label="Laddar kostdata" /> : <NutritionHero kcal={totals.kcal} burned={burned} protein={totals.protein} fat={totals.fat} carbs={totals.carbs} fiber={totals.fiber} targets={targets} micros={microTotals} quality={foodQualityScore(logs)} microTargets={microTargets} />}
+          {!loaded ? <div className={`h-64 rounded-2xl bg-muted/40 ${loadError ? "" : "animate-pulse"}`} aria-label={loadError ? "Kostdata kunde inte hämtas" : "Laddar kostdata"} /> : <NutritionHero kcal={totals.kcal} burned={burned} protein={totals.protein} fat={totals.fat} carbs={totals.carbs} fiber={totals.fiber} targets={targets} micros={microTotals} quality={foodQualityScore(logs)} microTargets={microTargets} />}
           {loaded && activeKcal != null && (
             <div className="mt-2 flex items-center justify-between rounded-xl border border-border bg-card px-3 py-2" aria-label="Aktiva kalorier">
               <span className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground"><Flame className="h-4 w-4" />Aktiva kcal</span>
@@ -936,7 +946,7 @@ export default function NutritionView({ userId, isHonorary: isHonoraryProp = fal
             </div>
             <div className="flex gap-2">
               <button onClick={() => setQuickMeal(null)} className="flex-1 pill-btn-ghost py-2 text-xs">Avbryt</button>
-              <button onClick={requestQuickSave} disabled={quickHasErrors} className="flex-1 pill-btn-primary py-2 text-xs disabled:opacity-50">Spara</button>
+              <Button onClick={requestQuickSave} disabled={quickHasErrors || quickSaving} className="flex-1">{quickSaving ? "Sparar…" : "Spara"}</Button>
             </div>
           </div>
         </div>

@@ -1,5 +1,10 @@
 # Architecture rules
 
+- Settings search uses a shared catalogue and opens existing category controls; never create a second settings editor.
+- Training insights read unified workout history and compare identical counted exercise rosters and rep layouts; label volume as volume rather than inferred maximal strength.
+- New friend challenges are created atomically via an authenticated RPC; only accepted friends receive pending invitations, and new standings expose aggregates only to accepted participants.
+- Unsaved nutrition quick posts use user-scoped session drafts; a failed read must not be presented as an empty day or a successful save.
+
 - Home nutrition shortcuts use a consumed session-scoped intent to open existing food or weight entry; this avoids duplicate logging flows and delayed navigation events.
 
 - Shared button styles must pair background tokens with their corresponding foreground tokens, including hover states, so custom theme contrasts remain correct.

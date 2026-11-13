@@ -1,4 +1,6 @@
 import StrengthSection from "@/components/StrengthSection";
+import TrainingInsights from "@/components/TrainingInsights";
+import { Button } from "@/components/ui/button";
 import { formatTons, getWeightComparison } from "@/lib/weightComparisons";
 import { sessionVolumeKg } from "@/lib/checkedSets";
 import { WORKOUTS_CHANGED_EVENT } from "@/lib/workoutHistory";
@@ -249,6 +251,8 @@ const WorkoutStats = ({ userId }: WorkoutStatsProps) => {
   const [achievementUnlockedAt, setAchievementUnlockedAt] = useState<Record<string, string>>({});
   const [showAchievements, setShowAchievements] = useState(false);
   const [statsLoading, setStatsLoading] = useState(true);
+  const [statsError, setStatsError] = useState(false);
+  const [retry, setRetry] = useState(0);
   const getISOWeek = (d: Date) => {
     const date = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
     date.setUTCDate(date.getUTCDate() + 4 - (date.getUTCDay() || 7));
@@ -260,6 +264,7 @@ const WorkoutStats = ({ userId }: WorkoutStatsProps) => {
   };
 
   useEffect(() => {
+    setStatsLoading(true); setStatsError(false);
     Promise.all([
       supabase.from("profiles").select("weight_kg, plan_start_date").eq("user_id", userId).maybeSingle(),
       supabase.from("workout_completions")
@@ -278,7 +283,9 @@ const WorkoutStats = ({ userId }: WorkoutStatsProps) => {
         .select("achievement_id, unlocked_at")
         .eq("user_id", userId)
         .order("unlocked_at", { ascending: false }),
-    ]).then(async ([{ data: profileData }, { data: compData }, { data: planData }, { data: challengeData }, { data: archiveData }, { data: achievementData }]) => {
+    ]).then(async (responses) => {
+      if (responses.some(response => response.error)) throw new Error("Stats unavailable");
+      const [{ data: profileData }, { data: compData }, { data: planData }, { data: challengeData }, { data: archiveData }, { data: achievementData }] = responses;
       let profileStartDate: Date | null = null;
       if (profileData) {
         if ((profileData as any).weight_kg) setUserWeightKg(parseNum((profileData as any).weight_kg));
@@ -406,8 +413,8 @@ const WorkoutStats = ({ userId }: WorkoutStatsProps) => {
           year: isoStart.year
         });
       }
-    }).finally(() => setStatsLoading(false));
-  }, [userId]);
+    }).catch(() => setStatsError(true)).finally(() => setStatsLoading(false));
+  }, [userId, retry]);
 
   const hasLoggedData = (c: CompletionRecord) => hasCompletionEvidence(c);
   // A session is only "done" when the user actively marked it AND logged something.
@@ -678,10 +685,12 @@ const WorkoutStats = ({ userId }: WorkoutStatsProps) => {
         </div>
       )}
 
+      <TrainingInsights userId={userId} />
+      {statsError && <div role="alert" className="space-y-2"><p className="text-sm text-muted-foreground">Statistiken kunde inte hämtas. Det betyder inte att dina pass saknas.</p><Button variant="outline" size="sm" onClick={() => setRetry(n => n + 1)}>Försök igen</Button></div>}
       {show("nutrition") && <NutritionTrendCard userId={userId} />}
       {show("calorieIntake") && <CalorieIntakeChart userId={userId} />}
 
-      {statsLoading && completions.length === 0 ? <StatsSkeleton /> : <>
+      {statsLoading && completions.length === 0 ? <StatsSkeleton /> : statsError ? null : <>
 
 
       {show("summary") && <>

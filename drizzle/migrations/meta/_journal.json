@@ -267,6 +267,13 @@
       "when": 1794554061725,
       "tag": "0037_scope_suggestion_replies",
       "breakpoints": true
+    },
+    {
+      "idx": 38,
+      "version": "7",
+      "when": 1794571719714,
+      "tag": "0038_voluntary_challenge_days_and_private_standings",
+      "breakpoints": true
     }
   ]
 }

@@ -95,12 +95,15 @@ const toSession = (id: string, source: SessionSource, c: any, plans: any[], plan
 };
 
 export async function loadWorkoutHistory(userId: string): Promise<HistorySession[]> {
-  const [{ data: comps }, { data: plans }, { data: profile }, { data: archives }] = await Promise.all([
+  const responses = await Promise.all([
     supabase.from("workout_completions").select("*").eq("user_id", userId),
     supabase.from("workout_plans").select("id, week, day, session_name, details").eq("user_id", userId),
     supabase.from("profiles").select("plan_start_date").eq("user_id", userId).maybeSingle(),
     supabase.from("archived_plans").select("id, plan_start_date, plan_data, completion_data, archived_at").eq("user_id", userId),
   ]);
+  const failure = responses.find(response => response.error);
+  if (failure?.error) throw failure.error;
+  const [{ data: comps }, { data: plans }, { data: profile }, { data: archives }] = responses;
   const out: HistorySession[] = [];
   const planStart = (profile as any)?.plan_start_date || null;
   for (const c of (comps || []) as any[]) {

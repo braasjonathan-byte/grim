@@ -12,6 +12,7 @@ import RouteNavigationHost from "@/components/RouteNavigationHost";
 import HeartRateWidget from "@/components/HeartRateWidget";
 import { startWakeLockManager } from "@/lib/wakeLock";
 import AppErrorBoundary from "@/components/AppErrorBoundary";
+import ConnectionNotice from "@/components/ConnectionNotice";
 
 // Synlig laddning i stället för null: en tom Suspense-fallback gav en helt
 // tom skärm (bara temabakgrunden) medan/om sidchunken inte laddade.
@@ -43,6 +44,7 @@ const App = () => (
           <InAppBrowserDialog />
           <RouteNavigationHost />
           <HeartRateWidget />
+          <ConnectionNotice />
           <BrowserRouter>
             <Routes>
               <Route path="/" element={<Suspense fallback={<RouteFallback />}><Index /></Suspense>} />
