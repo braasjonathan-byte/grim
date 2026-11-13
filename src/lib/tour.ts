@@ -81,9 +81,9 @@ const SHORT: TourStep[] = [
     step: {
       element: '[data-tour="tab-calc"]',
       popover: {
-        title: "Verktyg",
-        description: "Profil, inställningar, kalkylatorer, hjälp och mycket mer.",
-        side: "top",
+        title: "Verktyg & inställningar",
+        description: "Tryck på ditt namn uppe till höger för profil, inställningar, kalkylatorer, hjälp och mycket mer.",
+        side: "bottom",
       },
     },
   },
@@ -398,7 +398,7 @@ const LONG: TourStep[] = [
       popover: {
         title: "Avsnitt 6 av 8 – Verktyg",
         description:
-          "Verktygsfliken samlar profil, inställningar, kalkylatorer, butik, kalender och hjälp.",
+          "Verktyg samlar profil, inställningar, kalkylatorer, butik, kalender och hjälp. Du når dem via ditt namn i sidhuvudet.",
       },
     },
   },
@@ -407,10 +407,10 @@ const LONG: TourStep[] = [
     step: {
       element: '[data-tour="tab-calc"]',
       popover: {
-        title: "Verktyg-fliken",
+        title: "Verktyg i sidhuvudet",
         description:
-          "Tryck här för att öppna allt som inte är ren träning eller statistik – inklusive 1RM-, puls- och kaloriberäknare samt din profil.",
-        side: "top",
+          "Tryck på ditt namn uppe till höger för att öppna allt som inte är ren träning eller statistik – inklusive 1RM-, puls- och kaloriberäknare samt din profil.",
+        side: "bottom",
       },
     },
   },

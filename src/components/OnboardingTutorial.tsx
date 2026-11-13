@@ -14,7 +14,7 @@ const STEPS = [
   },
   {
     title: "Vilotimer & verktyg",
-    body: "Kör timern längst ner mellan set, eller gå till Verktyg-fliken för 1RM, kalorier och pulszoner.",
+    body: "Kör timern längst ner mellan set, eller tryck på ditt namn uppe till höger (Verktyg) för 1RM, kalorier och pulszoner.",
   },
 ];
 

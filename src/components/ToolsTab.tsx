@@ -120,6 +120,7 @@ const SETTINGS_CATEGORIES: { id: SettingsCategory; title: string; subtitle: stri
 ];
 
 const STORAGE_KEY = "grim:tools-collapsed-groups";
+const ADVANCED_OPEN = "advanced:open";
 
 const normalize = (s: string) =>
   (s || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
@@ -242,7 +243,7 @@ const ToolsTab = ({ userId, isAdmin, isHonorary, userRole, onViewUserPlan, onLog
       },
       {
         id: "helpers",
-        title: "Hjälpmedel",
+        title: "Träningsverktyg",
         items: [
           {
             id: "helpers-page",
@@ -281,13 +282,11 @@ const ToolsTab = ({ userId, isAdmin, isHonorary, userRole, onViewUserPlan, onLog
             keywords: "puls pulsband bluetooth hjärtfrekvens bpm",
             content: () => <HeartRateConnectCard />,
           },
-          topicItem(help, "Verktyg", "Så fungerar kalkylatorerna", Sparkles, "topic-verktyg"),
-          topicItem(help, "Event & nedräkning", "Tävlingar, lopp och eventgrupper", Calendar, "topic-event"),
         ],
       },
       {
         id: "account",
-        title: "Konto",
+        title: "Inställningar",
         items: [
           {
             id: "settings-page",
@@ -325,7 +324,26 @@ const ToolsTab = ({ userId, isAdmin, isHonorary, userRole, onViewUserPlan, onLog
             keywords: "förslag feedback idé synpunkter",
             content: () => <SuggestionBox userId={userId} isAdmin={isAdmin} />,
           },
+        ],
+      },
+      {
+        // Hopfälld som standard: hjälptexter och (för admin) adminverktygen – en enda Admin-ingång.
+        id: "advanced",
+        title: "Avancerat",
+        items: [
+          topicItem(help, "Verktyg", "Så fungerar kalkylatorerna", Sparkles, "topic-verktyg"),
+          topicItem(help, "Event & nedräkning", "Tävlingar, lopp och eventgrupper", Calendar, "topic-event"),
           topicItem(help, "Inställningar & profil", "Tips om profil och inställningar", UserCog),
+          ...(isAdmin
+            ? [{
+                id: "admin-page",
+                title: "Admin",
+                subtitle: "Innehåll, livsmedel, användare och moderering",
+                icon: UserCog,
+                keywords: "admin moderering användare livsmedel innehåll",
+                onSelect: () => setSubView("admin"),
+              } as ToolItem]
+            : []),
         ],
       },
     ];
@@ -630,15 +648,12 @@ const ToolsTab = ({ userId, isAdmin, isHonorary, userRole, onViewUserPlan, onLog
     <div className="py-2 space-y-5">
       <h2 className="sr-only">Verktyg och inställningar</h2>
 
-      <div className="flex items-center gap-2">
-        {userRole === "admin" ? (
-          <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-primary/20 text-primary">👑 Admin</span>
-        ) : isHonorary ? (
+      {/* Admin visas en gång (kortet under Avancerat); ingen extra rollchip. */}
+      {isHonorary && userRole !== "admin" && (
+        <div className="flex items-center gap-2">
           <HonoraryBadge size="md" />
-        ) : (
-          <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-secondary text-muted-foreground">👤 Medlem</span>
-        )}
-      </div>
+        </div>
+      )}
 
       <ProfileCompletenessBanner userId={userId} />
 
@@ -686,7 +701,8 @@ const ToolsTab = ({ userId, isAdmin, isHonorary, userRole, onViewUserPlan, onLog
         </div>
       ) : (
         orderedGroups.map((group, gIndex) => {
-          const isCollapsed = collapsed.has(group.id) && !editLayout;
+          // «Avancerat» är hopfälld tills användaren öppnar den; övriga grupper är öppna som standard.
+          const isCollapsed = !editLayout && (group.id === "advanced" ? !collapsed.has(ADVANCED_OPEN) : collapsed.has(group.id));
           if (group.id === "start" && !editLayout) {
             return (
               <section key={group.id}>
@@ -701,28 +717,15 @@ const ToolsTab = ({ userId, isAdmin, isHonorary, userRole, onViewUserPlan, onLog
               </section>
             );
           }
-          if (group.id === "admin-edit" && !editLayout) {
-            return (
-              <section key={group.id}>
-                {renderCard({
-                  id: "admin-page",
-                  title: "Admin",
-                  subtitle: "Innehåll, livsmedel, användare och moderering",
-                  icon: UserCog,
-                  featured: true,
-                  onSelect: () => setSubView("admin"),
-                })}
-              </section>
-            );
-          }
           if (group.id.startsWith("admin-") && !editLayout) return null;
           return (
             <section key={group.id} className="space-y-2">
               <div className="flex items-center gap-1">
                 <button
                   type="button"
-                  onClick={() => toggleGroup(group.id)}
-                  className="flex-1 flex items-center justify-between gap-2 px-1 py-1"
+                  onClick={() => toggleGroup(group.id === "advanced" ? ADVANCED_OPEN : group.id)}
+                  aria-expanded={!isCollapsed}
+                  className="flex-1 flex items-center justify-between gap-2 px-1 py-1 min-h-[44px]"
                 >
                   <span className="flex items-center gap-2">
                     <span className="text-sm font-bold uppercase tracking-wider text-foreground">{group.title}</span>

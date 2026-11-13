@@ -4,7 +4,7 @@ import AppBanner from "@/components/admin/AppBanner";
 import { lazyRetry } from "@/lib/lazyRetry";
 import { useState, useEffect, useCallback, useRef, lazy, Suspense } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { Users, LogOut, Bell, BarChart3, MessageCircle, Dumbbell, Calculator, HelpCircle, Apple, Home } from "lucide-react";
+import { Users, LogOut, Bell, BarChart3, MessageCircle, Dumbbell, Settings, HelpCircle, Apple, Home } from "lucide-react";
 import { APP_VERSION } from "@/lib/version";
 import { applyTheme, getStoredThemeId, storeThemeId, isThemeLocked } from "@/lib/themes";
 import grimIcon from "@/assets/grim-icon.webp";
@@ -885,9 +885,23 @@ const Index = () => {
   { key: "workout", icon: Dumbbell, label: "Träning" },
   { key: "nutrition", icon: Apple, label: "Kost" },
   { key: "stats", icon: BarChart3, label: "Statistik" },
-  { key: "social", icon: Users, label: "Social", badge: socialBadge > 0 ? socialBadge : undefined },
-  { key: "calc", icon: Calculator, label: "Verktyg" }] as {key: Tab;icon: typeof Dumbbell;label: string;badge?: number;}[]).filter((t) => (t.key !== "nutrition" || modules.nutrition) && (t.key !== "social" || modules.social));
+  { key: "social", icon: Users, label: "Social", badge: socialBadge > 0 ? socialBadge : undefined }] as {key: Tab;icon: typeof Dumbbell;label: string;badge?: number;}[]).filter((t) => (t.key !== "nutrition" || modules.nutrition) && (t.key !== "social" || modules.social));
 
+
+  // Verktyg & inställningar nås från headern (profilknappen) – bottenmenyn har fem flikar.
+  const openTools = async () => {
+    hapticLight();
+    setTab("calc");
+    if (userRole === "admin") {
+      const { data: latestSug } = await supabase.
+      from("suggestions").
+      select("created_at").
+      order("created_at", { ascending: false }).
+      limit(1).
+      maybeSingle();
+      localStorage.setItem("grim_last_read_suggestions", latestSug?.created_at || new Date().toISOString());
+    }
+  };
 
   return (
     <div className="min-h-screen bg-background pb-20" style={{ paddingTop: "calc(44px + var(--grim-header-safe-top, env(safe-area-inset-top, 0px)))" }}>
@@ -1019,7 +1033,20 @@ const Index = () => {
                 <Download className="w-4 h-4 text-primary" />
               </button>
             )}
-            <span className="text-sm font-semibold text-primary text-center font-sans">{nickname}</span>
+            <button
+              type="button"
+              onClick={() => { void openTools(); }}
+              data-tour="tab-calc"
+              aria-label="Verktyg och inställningar"
+              aria-current={tab === "calc" ? "page" : undefined}
+              title="Verktyg och inställningar"
+              className={`flex items-center gap-1.5 min-h-[36px] max-w-[11rem] rounded-full pl-1.5 pr-2.5 py-1 transition-colors ${tab === "calc" ? "bg-brand/15" : "hover:bg-primary/10"}`}
+            >
+              <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary/10">
+                <Settings className="w-3.5 h-3.5 text-primary" aria-hidden="true" />
+              </span>
+              <span className="truncate text-sm font-semibold text-primary font-sans">{nickname}</span>
+            </button>
           </div>
         </div>
       </header>
@@ -1195,15 +1222,6 @@ const Index = () => {
                 maybeSingle();
                 localStorage.setItem("gymberget_last_read_announcements", latestAnn?.created_at || new Date().toISOString());
                 setUnreadAnnouncements(0);
-              }
-              if (key === "calc" && userRole === "admin") {
-                const { data: latestSug } = await supabase.
-                from("suggestions").
-                select("created_at").
-                order("created_at", { ascending: false }).
-                limit(1).
-                maybeSingle();
-                localStorage.setItem("grim_last_read_suggestions", latestSug?.created_at || new Date().toISOString());
               }
             }}
             className={`flex-1 min-w-0 flex flex-col items-center gap-1 pt-2 pb-2 text-xs relative transition-colors duration-300 ease-out ${
