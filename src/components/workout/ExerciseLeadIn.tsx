@@ -10,8 +10,8 @@ function ExerciseLeadIn({ prevSummary, ramp, onAddRamp, rpeSuggestion, onAcceptR
   return (
     <div className="space-y-1">
       {prevSummary && (
-        <p className="text-[10px] text-muted-foreground px-1 flex items-center gap-1">
-          <History className="w-3 h-3" /> Förra: <span className="font-mono font-semibold text-foreground/80">{prevSummary}</span>
+        <p className="text-xs text-muted-foreground px-1 py-2 flex flex-wrap items-center gap-1.5">
+          <History className="w-4 h-4" /> Senast: <span className="font-mono font-semibold text-foreground">{prevSummary}</span>
         </p>
       )}
       {rpeSuggestion && (

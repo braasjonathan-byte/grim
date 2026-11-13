@@ -1,5 +1,13 @@
 # Roadmap
 
+## Vardagsförbättringar 13 november 2026
+- [ ] 1. Lugnare Hem med tre snabbval och samlad vecköversikt.
+- [ ] 2. Kontrast i alla teman och tydligare primära/sekundära knappar.
+- [ ] 3. Större träningsfält och separat föregående resultat.
+- [ ] 4. Färre skuggor och rutor, behåll Grims rundade identitet.
+- [ ] 5. Matregistrering direkt under datumet, behåll kostringarna.
+- [ ] 8. Integritetsöversikt med nuvarande synlighet och äldre inlägg.
+
 ## Inställningar 9 november 2026
 - [x] Flytta statistikvisningens inställningar till en egen Statistik-kategori.
 - [x] Dölj valet Visa Spotify i träningsvyn helt.

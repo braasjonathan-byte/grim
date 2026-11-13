@@ -486,14 +486,14 @@ button:not([data-no-press]),
 @layer components {
   /* Soft card: no hard border, rounded 16px, diffuse shadow */
   .card-soft {
-    @apply bg-card rounded-card shadow-soft border border-border/70;
+    @apply bg-card rounded-card border border-border/70;
   }
   .card-soft-muted {
-    @apply bg-secondary/60 rounded-tile shadow-soft border border-transparent;
+    @apply bg-secondary/60 rounded-tile border border-transparent;
   }
   /* Liten ruta inne i ett kort – ingen egen skugga eller kant (färre kort-i-kort). */
   .tile-soft {
-    @apply bg-muted/40 rounded-tile;
+    @apply rounded-tile;
   }
 
   /* Round icon container – single consistent shape app-wide */

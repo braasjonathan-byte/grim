@@ -593,6 +593,19 @@ export default function NutritionView({ userId, isHonorary: isHonoraryProp = fal
   }
 
   const isToday = dateKey === toLocalDateKey(new Date());
+  useEffect(() => {
+    if (!loaded) return;
+    const action = sessionStorage.getItem("grim_nutrition_action");
+    if (!action) return;
+    sessionStorage.removeItem("grim_nutrition_action");
+    if (action === "food") {
+      const slot = slotForNow();
+      setPicker(allSlots.find((meal) => meal.toLowerCase() === slot) || allSlots[0] || slot);
+    } else if (action === "weight") {
+      document.getElementById("nutrition-weight-entry")?.scrollIntoView({ block: "center" });
+      document.getElementById("nutrition-weight-input")?.focus({ preventScroll: true });
+    }
+  }, [loaded, allSlots]);
   const dateLabel = date.toLocaleDateString("sv-SE", { weekday: "long", day: "numeric", month: "long" });
 
   return (
@@ -606,6 +619,33 @@ export default function NutritionView({ userId, isHonorary: isHonoraryProp = fal
         </div>
         <button onClick={() => shiftDay(1)} className="w-9 h-9 icon-round hover:bg-muted/60 transition-colors"><ChevronRight className="w-5 h-5" /></button>
       </div>
+
+        {/* Upprepade måltider: ett tryck från egen historik (MFP/Lifesum-stil), direkt i flödet. */}
+        {loaded && (() => {
+          const want = slotForNow();
+          const quickSlot = allSlots.find((m) => m.toLowerCase() === want) || allSlots[0] || want;
+          return (
+            <div className="space-y-3 py-3 border-b border-border" data-tour="nutrition-quick-repeat">
+              <MealSuggestions
+                key={`${dateKey}:${quickSlot}:${logs.length}`}
+                userId={userId}
+                meal={quickSlot}
+                onPick={(item) => { hapticLight(); void addLog(quickSlot, item, true); }}
+                onPickMany={async (items) => {
+                  hapticLight();
+                  for (const it of items) await addLog(quickSlot, it, true);
+                  toast({ title: `Loggade ${items.length} livsmedel i ${quickSlot}` });
+                }}
+              />
+              <div className="flex gap-1.5">
+                <Button variant="outline" onClick={() => setTemplatesOpen(true)} className="flex-1 px-2 text-xs"><Bookmark className="w-3 h-3" /> Mallar</Button>
+                <Button variant="outline" onClick={() => { hapticLight(); setPastOpen(true); }} className="flex-1 px-2 text-xs"><CopyPlus className="w-3 h-3" /> Senaste veckan</Button>
+                <Button onClick={() => { hapticLight(); setPicker(quickSlot); }} className="flex-1 px-2 text-xs"><Plus className="w-3 h-3" /> {logs.length === 0 ? `Logga ${quickSlot}` : "Sök"}</Button>
+              </div>
+            </div>
+          );
+        })()}
+
 
       {/* Snabbvalen ligger precis under veckodagen, före energikortet. */}
       <div>
@@ -649,32 +689,6 @@ export default function NutritionView({ userId, isHonorary: isHonoraryProp = fal
         {loaded && <AdaptiveTdeeCard userId={userId} currentKcal={targets.kcal} hasGoals={hasGoals} onApplied={load} enabled={adaptiveOn} />}
 
         <FastingWidget userId={userId} />
-
-        {/* Upprepade måltider: ett tryck från egen historik (MFP/Lifesum-stil), direkt i flödet. */}
-        {loaded && (() => {
-          const want = slotForNow();
-          const quickSlot = allSlots.find((m) => m.toLowerCase() === want) || allSlots[0] || want;
-          return (
-            <div className="tile-soft p-3 space-y-2" data-tour="nutrition-quick-repeat">
-              <MealSuggestions
-                key={`${dateKey}:${quickSlot}:${logs.length}`}
-                userId={userId}
-                meal={quickSlot}
-                onPick={(item) => { hapticLight(); void addLog(quickSlot, item, true); }}
-                onPickMany={async (items) => {
-                  hapticLight();
-                  for (const it of items) await addLog(quickSlot, it, true);
-                  toast({ title: `Loggade ${items.length} livsmedel i ${quickSlot}` });
-                }}
-              />
-              <div className="flex gap-1.5">
-                <button onClick={() => setTemplatesOpen(true)} className="flex-1 pill-btn-ghost py-1.5 text-[11px]"><Bookmark className="w-3 h-3" /> Mallar</button>
-                <button onClick={() => { hapticLight(); setPastOpen(true); }} className="flex-1 pill-btn-ghost py-1.5 text-[11px]"><CopyPlus className="w-3 h-3" /> Från senaste veckan</button>
-                <button onClick={() => { hapticLight(); setPicker(quickSlot); }} className="flex-1 pill-btn bg-primary text-primary-foreground py-1.5 text-[11px] font-semibold"><Plus className="w-3 h-3" /> {logs.length === 0 ? `Logga ${quickSlot}` : "Sök"}</button>
-              </div>
-            </div>
-          );
-        })()}
 
         {loaded && logs.length === 0 && !showEmptyMeals ? (
           <button onClick={() => setShowEmptyMeals(true)} className="link-quiet w-full justify-center text-xs text-muted-foreground">

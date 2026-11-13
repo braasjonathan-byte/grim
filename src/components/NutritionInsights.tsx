@@ -234,9 +234,9 @@ export default function NutritionInsights({ userId, dateKey, targets, refreshKey
       )}
 
       {tab === "weight" && (
-        <div className="space-y-2">
+        <div className="space-y-2" id="nutrition-weight-entry">
           <div className="flex gap-2">
-            <input inputMode="decimal" value={weightInput} onChange={(e) => setWeightInput(e.target.value)}
+            <input id="nutrition-weight-input" aria-label="Vikt i kg för dagen" inputMode="decimal" value={weightInput} onChange={(e) => setWeightInput(e.target.value)}
               placeholder={todayWeight ? `${String(todayWeight).replace(".", ",")} kg sparat` : "Vikt (kg) för dagen"}
               className="flex-1 rounded-full bg-muted/60 px-3 py-2 text-sm" />
             <button onClick={saveWeight} disabled={saving || !weightInput} className="pill-btn bg-primary text-primary-foreground px-4 text-xs disabled:opacity-40">Spara</button>

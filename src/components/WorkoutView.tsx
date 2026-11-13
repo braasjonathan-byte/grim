@@ -4682,7 +4682,7 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
                                 if (hasCurrentData) return null;
                                 const kgVal = parseNum(lastKg.kg);
                                 const isNegative = kgVal < 0;
-                                if ((!isNegative || profileWeight)) return null;
+                                
                                 const effectiveKg = isNegative && profileWeight ? profileWeight + kgVal : null;
                                 return (
                                   <div className="pl-1 mb-1">
@@ -4720,9 +4720,9 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
                                            <div className={`flex items-center gap-1.5 py-0.5 rounded px-1 ${isSetDone ? "opacity-60" : ""}`}>
                                            <Checkbox checked={isSetDone} onCheckedChange={() => toggleSetDone(0, plan.day, name, si, setsCountSingle, inheritedKg, inheritedReps)} className="h-5 w-5" />
                                            {<span className="text-xs text-muted-foreground w-7 flex-shrink-0 text-center font-mono">{si + 1}</span>}
-                                           <AutoSaveInput rule={unitRuleOv(name) ?? (/farmers?\s*walk|yoke\s*walk|sled|bear\s*crawl/i.test(name) || plan.is_circuit || /^(sido)?planka$|^vila$/i.test(name.trim()) || customExercises.find(ce => ce.name.toLowerCase() === name.trim().toLowerCase())?.is_time_based ? "setTimeDist" : "setReps")} type="number" inputMode="numeric" initialValue={circuitDefaultSec ? ((!saved?.reps || saved.reps === reps) ? "" : saved.reps) : (saved?.reps || "")} placeholder={circuitDefaultSec ? (findLastReps(name, si) || inheritedReps || circuitDefaultSec) : (findLastReps(name, si) || inheritedReps || defaultReps)} onSave={(v) => saveSetFieldData(0, plan.day, name, si, 'reps', v, setsCountSingle, inheritedKg, inheritedReps)} className="w-11 bg-primary/10 text-foreground text-xs px-1 py-0.5 rounded border border-primary/30 text-center font-mono focus:ring-1 focus:ring-primary outline-none placeholder:text-muted-foreground placeholder:opacity-60" />
+                                           <AutoSaveInput rule={unitRuleOv(name) ?? (/farmers?\s*walk|yoke\s*walk|sled|bear\s*crawl/i.test(name) || plan.is_circuit || /^(sido)?planka$|^vila$/i.test(name.trim()) || customExercises.find(ce => ce.name.toLowerCase() === name.trim().toLowerCase())?.is_time_based ? "setTimeDist" : "setReps")} type="number" inputMode="numeric" initialValue={circuitDefaultSec ? ((!saved?.reps || saved.reps === reps) ? "" : saved.reps) : (saved?.reps || "")} placeholder={circuitDefaultSec ? (findLastReps(name, si) || inheritedReps || circuitDefaultSec) : (findLastReps(name, si) || inheritedReps || defaultReps)} onSave={(v) => saveSetFieldData(0, plan.day, name, si, 'reps', v, setsCountSingle, inheritedKg, inheritedReps)} className="w-16 h-11 bg-background text-foreground text-base px-1 py-1 rounded border border-primary/30 text-center font-mono focus:ring-1 focus:ring-primary outline-none placeholder:text-muted-foreground" />
                                            <span className="text-[10px] text-muted-foreground">{unitLabelOv(name) ?? (/farmers?\s*walk|yoke\s*walk|sled|bear\s*crawl/i.test(name) ? "m" : (plan.is_circuit || /^(sido)?planka$|^vila$/i.test(name.trim()) || customExercises.find(ce => ce.name.toLowerCase() === name.trim().toLowerCase())?.is_time_based) ? "sek" : "reps")}</span>
-                                           <AutoSaveInput rule="setKg" confirmValue={(kg) => prDoubleWarning(prIndex, name, kg)} type="number" inputMode="decimal" initialValue={saved?.kg || ""} onSave={(v) => saveSetFieldData(0, plan.day, name, si, 'kg', v, setsCountSingle, inheritedKg, inheritedReps)} placeholder={inheritedKg || "—"} className="w-14 bg-primary/10 text-foreground text-xs px-1 py-0.5 rounded border border-primary/30 text-center font-mono focus:ring-1 focus:ring-primary outline-none placeholder:text-muted-foreground placeholder:opacity-60" />
+                                           <AutoSaveInput rule="setKg" confirmValue={(kg) => prDoubleWarning(prIndex, name, kg)} type="number" inputMode="decimal" initialValue={saved?.kg || ""} onSave={(v) => saveSetFieldData(0, plan.day, name, si, 'kg', v, setsCountSingle, inheritedKg, inheritedReps)} placeholder={inheritedKg || "—"} className="w-20 h-11 bg-background text-foreground text-base px-1 py-1 rounded border border-primary/30 text-center font-mono focus:ring-1 focus:ring-primary outline-none placeholder:text-muted-foreground" />
                                           <span className="text-[10px] text-muted-foreground">kg</span>
                                           </div>
                                           </SwipeableSetRow>
@@ -8264,7 +8264,7 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
                                 const hasCurrentData = getSetData(key, partName).some(s => s.kg && parseNum(s.kg) !== 0);
                                 if (hasCurrentData) return null;
                                 const isNegative = lastKg.kg < 0;
-                                if ((!isNegative || profileWeight)) return null;
+                                
                                 const effectiveKg = isNegative && profileWeight ? profileWeight + lastKg.kg : null;
                                 return (
                                   <div className="pl-1">
@@ -8319,9 +8319,9 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
                                     const v2Header = (
                                       <div key="hdr" className="flex items-center gap-1.5 px-1 text-[9px] font-semibold tracking-wider text-muted-foreground">
                                         <span className="w-7 text-center">SET</span>
-                                        <span className="w-11 text-center">{repsHeader}</span>
-                                        {!isBodyweight && <>{isWeightedBw && <span className="w-6" />}<span className="w-14 text-center">KG</span></>}
-                                        <span className="ml-auto w-5 text-center">✓</span>
+                                        <span className="w-16 text-center">{repsHeader}</span>
+                                        {!isBodyweight && <>{isWeightedBw && <span className="w-6" />}<span className="w-20 text-center">KG</span></>}
+                                        <span className="ml-auto w-11 text-center">✓</span>
                                       </div>
                                     );
                                     // «Förra gången» inline (Hevy/Strong-stil) + ghost-värden per set.

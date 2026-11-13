@@ -3,6 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Shield } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
+import { Button } from "@/components/ui/button";
 import {
   DEFAULT_PRIVACY,
   loadPrivacySettings,
@@ -21,16 +22,16 @@ const Segmented = <T extends string>({ value, options, onChange, label }: {
 }) => (
   <div className="flex gap-1 rounded-xl bg-secondary p-1" role="radiogroup" aria-label={label}>
     {options.map(([v, text]) => (
-      <button
+      <Button variant="ghost"
         key={v}
         type="button"
         role="radio"
         aria-checked={value === v}
         onClick={() => onChange(v)}
-        className={`flex-1 rounded-lg px-2 py-1.5 text-xs font-semibold transition-colors ${value === v ? "bg-card text-foreground shadow-soft" : "text-muted-foreground"}`}
+        className={`flex-1 h-auto min-h-11 whitespace-normal rounded-lg px-2 py-1.5 text-xs font-semibold transition-colors ${value === v ? "bg-card text-foreground" : "text-secondary-foreground"}`}
       >
         {text}
-      </button>
+      </Button>
     ))}
   </div>
 );
@@ -39,6 +40,7 @@ const PrivacySocialSettings = ({ userId }: Props) => {
   const [settings, setSettings] = useState<PrivacySettings>(DEFAULT_PRIVACY);
   const [blocked, setBlocked] = useState<Person[]>([]);
   const [muted, setMuted] = useState<Person[]>([]);
+  const [loaded, setLoaded] = useState(false);
 
   const loadPeople = async () => {
     const [{ data: blockRows }, { data: muteRows }] = await Promise.all([
@@ -58,7 +60,7 @@ const PrivacySocialSettings = ({ userId }: Props) => {
   };
 
   useEffect(() => {
-    loadPrivacySettings(userId).then(setSettings);
+    loadPrivacySettings(userId).then((value) => { setSettings(value); setLoaded(true); });
     loadPeople();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [userId]);
@@ -74,6 +76,18 @@ const PrivacySocialSettings = ({ userId }: Props) => {
 
   return (
     <div className="border-t border-border pt-3 space-y-4">
+      <section className="space-y-3 pb-4 border-b border-border" aria-label="Så syns du just nu" aria-busy={!loaded}>
+        <h3 className="flex items-center gap-2 text-base font-bold"><Shield className="h-5 w-5 text-primary" />Så syns du just nu</h3>
+        {!loaded ? <p className="text-sm text-muted-foreground">Hämtar dina val…</p> : <>
+          <dl className="divide-y divide-border text-sm">
+            <div className="flex justify-between gap-4 py-2"><dt className="text-muted-foreground">Träningsplan</dt><dd className="font-semibold text-right">{settings.share_plan_with_friends ? "Dina vänner" : "Bara du"}</dd></div>
+            <div className="flex justify-between gap-4 py-2"><dt className="text-muted-foreground">Nya inlägg</dt><dd className="font-semibold text-right">{settings.default_post_visibility === "public" ? "Alla medlemmar" : "Bara vänner"}</dd></div>
+            <div className="flex justify-between gap-4 py-2"><dt className="text-muted-foreground">Topplistan</dt><dd className="font-semibold text-right">{settings.show_on_leaderboard ? "Du visas" : "Du är dold"}</dd></div>
+            <div className="flex justify-between gap-4 py-2"><dt className="text-muted-foreground">Delning av pass</dt><dd className="font-semibold text-right">{settings.auto_share_workouts === "always" ? "Automatiskt" : settings.auto_share_workouts === "ask" ? "Du väljer varje gång" : "Bara när du delar själv"}</dd></div>
+          </dl>
+          <p className="text-xs text-muted-foreground">Standardsynlighet gäller nya inlägg. Äldre inlägg behåller sin synlighet och ändras separat i Social.</p>
+        </>}
+      </section>
       <p className="flex items-center gap-2 text-sm font-bold">
         <Shield className="w-4 h-4 text-primary" /> Integritet &amp; socialt
       </p>

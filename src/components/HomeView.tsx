@@ -18,6 +18,7 @@ import {
   Moon,
   Apple,
   Timer,
+  Scale,
   Route,
   Flame as FlameIcon,
 } from "lucide-react";
@@ -536,9 +537,15 @@ const HomeView = ({ userId, onNavigate, isHonorary = false }: HomeViewProps) => 
         </p>
       </header>
 
+      <nav className="grid grid-cols-3 gap-2" aria-label="Snabbval">
+        <Button className="h-auto min-h-14 flex-col gap-1 px-1 py-2 text-xs" onClick={() => onNavigate("workout")}><Dumbbell />Starta pass</Button>
+        {nutritionOn && <Button variant="outline" className="h-auto min-h-14 flex-col gap-1 px-1 py-2 text-xs" onClick={() => { sessionStorage.setItem("grim_nutrition_action", "food"); onNavigate("nutrition"); }}><Apple />Logga mat</Button>}
+        <Button variant="outline" className="h-auto min-h-14 flex-col gap-1 px-1 py-2 text-xs" onClick={() => { sessionStorage.setItem("grim_nutrition_action", "weight"); sessionStorage.setItem("grim_nutrition_insights_tab", "weight"); onNavigate("nutrition"); }}><Scale />Logga vikt</Button>
+      </nav>
+
       {/* 1. Today's workout — most important */}
       <section
-        className={`card-soft p-4 space-y-3 ${todayDone ? "border-success/50" : ""}`}
+        className={`py-4 space-y-3 border-b border-border ${todayDone ? "border-success/50" : ""}`}
         aria-label="Dagens pass"
       >
         <div className="flex items-center justify-between gap-2">
@@ -640,49 +647,12 @@ const HomeView = ({ userId, onNavigate, isHonorary = false }: HomeViewProps) => 
         )}
       </section>
 
-      {/* 2. Veckans framsteg: pass, minuter, km och svit */}
-      <section className="card-soft p-4 space-y-3" aria-label="Veckans framsteg">
-        <div className="flex items-center gap-2">
-          <Target className="w-4 h-4 text-success" />
-          <p className="text-sm font-semibold">Veckans framsteg</p>
-          <span
-            className={`ml-auto inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold ${streak > 0 ? "bg-warning/15 text-warning" : "bg-muted text-muted-foreground"}`}
-            aria-label={`Svit: ${streak} ${streak === 1 ? "dag" : "dagar"} i rad`}
-          >
-            <Flame className="w-3.5 h-3.5" />
-            {streak > 0 ? `${streak} ${streak === 1 ? "dag" : "dagar"} i rad` : "Ingen svit än"}
-          </span>
-        </div>
-        <div className="space-y-1.5">
-          <div className="flex items-baseline justify-between">
-            <p className="text-2xl font-bold leading-none tabular-nums">
-              {weekCompleted}
-              <span className="text-sm font-medium text-muted-foreground"> av {goal} pass</span>
-            </p>
-            <span className="text-xs font-semibold text-success tabular-nums">{progressPct} %</span>
-          </div>
-          <div className="h-2 w-full bg-muted rounded-full overflow-hidden" role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={progressPct}>
-            <div className="h-full bg-success rounded-full transition-all duration-500" style={{ width: `${progressPct}%` }} />
-          </div>
-        </div>
-        <div className="grid grid-cols-2 gap-2">
-          <div className="tile-soft p-3">
-            <p className="text-[11px] text-muted-foreground flex items-center gap-1"><Timer className="w-3.5 h-3.5" />Träningstid</p>
-            <p className="text-lg font-bold tabular-nums">{weekProgress.minutes > 0 ? formatDurationMin(weekProgress.minutes) : "–"}</p>
-          </div>
-          <div className="tile-soft p-3">
-            <p className="text-[11px] text-muted-foreground flex items-center gap-1"><Route className="w-3.5 h-3.5" />Distans</p>
-            <p className="text-lg font-bold tabular-nums">{weekProgress.km > 0 ? `${weekProgress.km.toLocaleString("sv-SE")} km` : "–"}</p>
-          </div>
-        </div>
-      </section>
-
       {/* 3. Dagens kost: kalorier och protein */}
       {nutritionOn && nutritionToday && (
         <button
           type="button"
           onClick={() => onNavigate("nutrition")}
-          className="w-full text-left card-soft p-4 space-y-3"
+          className="w-full text-left py-4 border-b border-border space-y-3 order-2"
           aria-label="Kost idag – öppna Kost"
         >
           <div className="flex items-center gap-2">
@@ -775,47 +745,52 @@ const HomeView = ({ userId, onNavigate, isHonorary = false }: HomeViewProps) => 
         </section>
       )}
 
-      {/* 5. Veckan i siffror (bara här – Statistik har veckorapporten) */}
-      <WeeklySummaryCard userId={userId} onStartWorkout={() => onNavigate("workout")} />
-
-      {/* 6. Träningsstatistik vecka/månad/år */}
-      <HomeTrainingStats userId={userId} onStartWorkout={() => onNavigate("workout")} />
-
       <DailyRecipeCard userId={userId} isHonorary={isHonorary} />
 
-      {/* Senaste utmärkelse */}
-      <button
-        onClick={() => onNavigate("stats")}
-        className="w-full text-left card-soft p-4 flex items-center gap-3"
-        aria-label="Visa utmärkelser"
-      >
-        <div className="h-11 w-11 rounded-tile bg-warning/15 flex items-center justify-center text-xl shrink-0">
-          {achievementDef ? achievementDef.emoji : <Trophy className="w-5 h-5 text-warning" />}
+      {/* 2. Veckans framsteg: pass, minuter, km och svit */}
+      <details className="group border-t border-border pt-4 order-last" id="home-week-overview">
+      <summary className="flex cursor-pointer list-none items-center justify-between text-base font-semibold py-2">Veckans översikt<ChevronRight className="h-5 w-5 transition-transform group-open:rotate-90" /></summary>
+      <section className="py-4 space-y-3" aria-label="Veckans framsteg">
+        <div className="flex items-center gap-2">
+          <Target className="w-4 h-4 text-success" />
+          <p className="text-sm font-semibold">Veckans framsteg</p>
+          <span
+            className={`ml-auto inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold ${streak > 0 ? "bg-warning/15 text-warning" : "bg-muted text-muted-foreground"}`}
+            aria-label={`Svit: ${streak} ${streak === 1 ? "dag" : "dagar"} i rad`}
+          >
+            <Flame className="w-3.5 h-3.5" />
+            {streak > 0 ? `${streak} ${streak === 1 ? "dag" : "dagar"} i rad` : "Ingen svit än"}
+          </span>
         </div>
-        <div className="min-w-0 flex-1">
-          <p className="text-[11px] uppercase tracking-wider text-muted-foreground font-semibold flex items-center gap-1">
-            <Sparkles className="w-3 h-3" />
-            Senaste utmärkelse
-          </p>
-          {achievementDef ? (
-            <>
-              <p className="text-sm font-semibold break-words">{achievementDef.title}</p>
-              <p className="text-[11px] text-muted-foreground">
-                {achievementCount} av {ACHIEVEMENTS.length} upplåsta
-                {latestAchievement?.unlocked_at
-                  ? ` · ${new Date(latestAchievement.unlocked_at).toLocaleDateString("sv-SE", { day: "numeric", month: "short" })}`
-                  : ""}
-              </p>
-            </>
-          ) : (
-            <>
-              <p className="text-sm font-semibold">Ingen upplåst ännu</p>
-              <p className="text-[11px] text-muted-foreground">Klarmarkera ditt första pass för att låsa upp.</p>
-            </>
-          )}
+        <div className="space-y-1.5">
+          <div className="flex items-baseline justify-between">
+            <p className="text-2xl font-bold leading-none tabular-nums">
+              {weekCompleted}
+              <span className="text-sm font-medium text-muted-foreground"> av {goal} pass</span>
+            </p>
+            <span className="text-xs font-semibold text-success tabular-nums">{progressPct} %</span>
+          </div>
+          <div className="h-2 w-full bg-muted rounded-full overflow-hidden" role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={progressPct}>
+            <div className="h-full bg-success rounded-full transition-all duration-500" style={{ width: `${progressPct}%` }} />
+          </div>
         </div>
-        <ChevronRight className="w-4 h-4 text-muted-foreground shrink-0" />
-      </button>
+        <div className="grid grid-cols-2 gap-2">
+          <div className="tile-soft p-3">
+            <p className="text-[11px] text-muted-foreground flex items-center gap-1"><Timer className="w-3.5 h-3.5" />Träningstid</p>
+            <p className="text-lg font-bold tabular-nums">{weekProgress.minutes > 0 ? formatDurationMin(weekProgress.minutes) : "–"}</p>
+          </div>
+          <div className="tile-soft p-3">
+            <p className="text-[11px] text-muted-foreground flex items-center gap-1"><Route className="w-3.5 h-3.5" />Distans</p>
+            <p className="text-lg font-bold tabular-nums">{weekProgress.km > 0 ? `${weekProgress.km.toLocaleString("sv-SE")} km` : "–"}</p>
+          </div>
+        </div>
+      </section>
+
+      <WeeklySummaryCard userId={userId} onStartWorkout={() => onNavigate("workout")} />
+      <HomeTrainingStats userId={userId} onStartWorkout={() => onNavigate("workout")} />
+      <Button variant="ghost" className="w-full justify-start h-auto py-4" onClick={() => onNavigate("stats")}><Trophy className="text-warning" /><span>{achievementDef ? achievementDef.title : "Utmärkelser"} · {achievementCount} av {ACHIEVEMENTS.length}</span><ChevronRight className="ml-auto" /></Button>
+      </details>
+
 
       {/* 7. Litet förslagskort sist, bara när inget är inplanerat */}
       {showSuggestion && suggestion && (

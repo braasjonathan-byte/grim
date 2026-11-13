@@ -1,5 +1,7 @@
 # Architecture rules
 
+- Home nutrition shortcuts use a consumed session-scoped intent to open existing food or weight entry; this avoids duplicate logging flows and delayed navigation events.
+
 - Shared button styles must pair background tokens with their corresponding foreground tokens, including hover states, so custom theme contrasts remain correct.
 
 - Recipe ingredient unit switching in the recipe view is display-only: convert from the original amount using shared nutrition helpers and linked food measure overrides, never mutate saved quantities or macros. In the recipe editor the unit choice is an explicit edit: convert with `convertedIngredient` so total grams and macros stay constant while amount+unit are saved.
