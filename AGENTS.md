@@ -1,5 +1,9 @@
 # Architecture rules
 
+- Direct and group conversations share cursor-paged newest-first history and confirmed writes; preserve user-scoped drafts on failure and deduplicate saved/realtime rows to prevent loss and duplicate messages.
+- Social person navigation reuses FriendsView profile/training and existing message/challenge flows; destination-first sharing and settings intents avoid duplicate editors and publication paths.
+- Display public posts as public, not member-only; audience labels must describe deployed access without changing permissions during presentation work.
+
 - Settings search uses a shared catalogue and opens existing category controls; never create a second settings editor.
 - First-start focus is user-scoped and prioritizes existing registration paths without disabling modules or requiring body data; welcome completion must be confirmed before closing.
 - Statistics answer three questions using UTC-bounded history: four seven-day activity periods and 90-day matched results/weigh-ins; missing evidence is never inferred progress.

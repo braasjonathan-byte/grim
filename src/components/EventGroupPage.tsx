@@ -8,6 +8,7 @@ import { toast } from "sonner";
 import HonoraryBadge from "./HonoraryBadge";
 import FriendProfileView from "./FriendProfileView";
 import { SocialImage } from "@/components/SocialImage";
+import { useSessionDraft } from "@/hooks/useSessionDraft";
 
 interface EventGroupPageProps {
   groupId: string;
@@ -104,12 +105,16 @@ const EventGroupPage = ({ groupId, userId, isAdmin, onBack, onDeleted }: EventGr
   const [myLikes, setMyLikes] = useState<Set<string>>(new Set());
 
   // Compose state
-  const [caption, setCaption] = useState("");
+  const [caption, setCaption] = useSessionDraft(`grim:event-post:${userId}:${groupId}`, "");
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
   const [showCompose, setShowCompose] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
+  const [groupError, setGroupError] = useState(false);
+  const [postsError, setPostsError] = useState(false);
+  const [postsLoading, setPostsLoading] = useState(true);
+  const [isMember, setIsMember] = useState(false);
   const [activeTab, setActiveTab] = useState<"feed" | "members">("feed");
 
   useEffect(() => {
@@ -119,20 +124,25 @@ const EventGroupPage = ({ groupId, userId, isAdmin, onBack, onDeleted }: EventGr
 
   const loadGroup = async () => {
     setLoading(true);
-    const [{ data: groupData }, { data: memberRows }] = await Promise.all([
+    setGroupError(false);
+    const [{ data: groupData, error: groupReadError }, { data: memberRows, error: memberError }, { data: membership, error: membershipError }] = await Promise.all([
       supabase.from("event_groups").select("id, event_name, event_date, event_end_date, event_type").eq("id", groupId).single(),
       supabase.from("event_group_members").select("user_id, joined_at").eq("group_id", groupId),
+      supabase.from("event_group_members").select("user_id").eq("group_id", groupId).eq("user_id", userId).maybeSingle(),
     ]);
 
+    if (groupReadError || memberError || membershipError) { setGroupError(true); setLoading(false); return; }
+    setIsMember(!!membership);
     if (groupData) setGroup(groupData as GroupInfo);
 
     if (memberRows && memberRows.length > 0) {
       const userIds = memberRows.map((m: any) => m.user_id);
-      const { data: profiles } = await supabase
+      const { data: profiles, error: profileError } = await supabase
         .from("profiles")
         .select("user_id, nickname, avatar_url, is_honorary")
         .in("user_id", userIds);
 
+      if (profileError) { setGroupError(true); setLoading(false); return; }
       const profileMap: Record<string, any> = {};
       profiles?.forEach((p: any) => { profileMap[p.user_id] = p; });
 
@@ -150,7 +160,8 @@ const EventGroupPage = ({ groupId, userId, isAdmin, onBack, onDeleted }: EventGr
   };
 
   const loadPosts = async () => {
-    const { data: postsData } = await supabase
+    setPostsError(false);
+    const { data: postsData, error } = await supabase
       .from("social_posts")
       .select("id, user_id, image_url, caption, created_at, pinned")
       .eq("group_id", groupId)
@@ -158,6 +169,8 @@ const EventGroupPage = ({ groupId, userId, isAdmin, onBack, onDeleted }: EventGr
       .order("created_at", { ascending: false })
       .limit(50);
 
+    setPostsLoading(false);
+    if (error) { setPostsError(true); return; }
     if (postsData) {
       setPosts(postsData as GroupPost[]);
       const userIds = [...new Set(postsData.map(p => p.user_id))];
@@ -208,6 +221,8 @@ const EventGroupPage = ({ groupId, userId, isAdmin, onBack, onDeleted }: EventGr
   };
 
   const submitPost = async () => {
+    if (uploading) return;
+    if (!isMember && !isAdmin) { toast.error("Gå med i eventgruppen innan du publicerar."); return; }
     if (!caption.trim() && !imageFile) { toast.error("Skriv något eller välj en bild"); return; }
     setUploading(true);
     try {
@@ -221,7 +236,7 @@ const EventGroupPage = ({ groupId, userId, isAdmin, onBack, onDeleted }: EventGr
         imageUrl = urlData.publicUrl;
       }
 
-      await supabase.from("social_posts").insert({
+      const { error: insertError } = await supabase.from("social_posts").insert({
         user_id: userId,
         image_url: imageUrl,
         caption: caption.trim() || null,
@@ -229,6 +244,7 @@ const EventGroupPage = ({ groupId, userId, isAdmin, onBack, onDeleted }: EventGr
         group_id: groupId,
       });
 
+      if (insertError) throw insertError;
       toast.success("Inlägg publicerat!");
       setShowCompose(false);
       setCaption("");
@@ -255,7 +271,8 @@ const EventGroupPage = ({ groupId, userId, isAdmin, onBack, onDeleted }: EventGr
   };
 
   const deletePost = async (postId: string) => {
-    await supabase.from("social_posts").delete().eq("id", postId);
+    const { error } = await supabase.from("social_posts").delete().eq("id", postId);
+    if (error) { toast.error("Kunde inte ta bort inlägget"); return; }
     setPosts(prev => prev.filter(p => p.id !== postId));
     toast.success("Inlägg borttaget");
   };
@@ -284,6 +301,7 @@ const EventGroupPage = ({ groupId, userId, isAdmin, onBack, onDeleted }: EventGr
     return <div className="py-8 text-center text-xs text-muted-foreground">Laddar grupp...</div>;
   }
 
+  if (groupError) return <div role="alert" className="space-y-2 text-center"><p className="text-sm text-muted-foreground">Eventgruppen kunde inte hämtas.</p><Button variant="outline" onClick={() => void loadGroup()}>Försök igen</Button><Button variant="ghost" onClick={onBack}>Tillbaka</Button></div>;
   if (!group) {
     return (
       <div className="py-8 text-center space-y-2">
@@ -323,6 +341,7 @@ const EventGroupPage = ({ groupId, userId, isAdmin, onBack, onDeleted }: EventGr
         )}
       </div>
 
+      <p className="text-xs text-muted-foreground">{isMember ? "Du är medlem · Inlägg syns för eventgruppens medlemmar" : "Du är inte medlem i eventgruppen"}</p>
       {/* Tab switcher */}
       <div className="flex gap-1 bg-muted/50 rounded-lg p-1">
         <button
@@ -343,7 +362,7 @@ const EventGroupPage = ({ groupId, userId, isAdmin, onBack, onDeleted }: EventGr
       {activeTab === "feed" && (
         <div className="space-y-4">
           {/* Compose button */}
-          {!showCompose ? (
+          {!isMember && !isAdmin ? <p className="text-sm text-muted-foreground">Gå med från Eventgrupper för att delta.</p> : !showCompose ? (
             <button
               onClick={() => setShowCompose(true)}
               className="w-full flex items-center gap-3 p-3 rounded-xl border border-border bg-card hover:bg-muted/50 transition-colors"
@@ -365,6 +384,7 @@ const EventGroupPage = ({ groupId, userId, isAdmin, onBack, onDeleted }: EventGr
                   <X className="w-4 h-4 text-muted-foreground" />
                 </button>
               </div>
+              <p className="text-xs text-muted-foreground">Synligt för: {group.event_name}</p>
               <textarea
                 value={caption}
                 onChange={(e) => setCaption(e.target.value)}
@@ -407,7 +427,9 @@ const EventGroupPage = ({ groupId, userId, isAdmin, onBack, onDeleted }: EventGr
           )}
 
           {/* Posts */}
-          {posts.length === 0 && (
+          {postsError && <div role="alert" className="space-y-2"><p className="text-sm text-muted-foreground">Inläggen kunde inte hämtas.</p><Button variant="outline" onClick={() => void loadPosts()}>Försök igen</Button></div>}
+          {postsLoading && <p role="status" className="text-sm text-muted-foreground">Laddar inlägg…</p>}
+          {!postsLoading && !postsError && posts.length === 0 && (
             <p className="text-center text-xs text-muted-foreground py-6">Inga inlägg i gruppen ännu. Var först att posta!</p>
           )}
           {posts.map(post => (
@@ -424,7 +446,7 @@ const EventGroupPage = ({ groupId, userId, isAdmin, onBack, onDeleted }: EventGr
                   <div>
                     <span className="text-sm font-semibold">{nicknames[post.user_id] || "Anonym"}</span>
                     <p className="text-[10px] text-muted-foreground">
-                      {format(new Date(post.created_at), "d MMM HH:mm", { locale: sv })}
+                      {format(new Date(post.created_at), "d MMM HH:mm", { locale: sv })} · {group.event_name}
                     </p>
                   </div>
                 </div>
@@ -443,7 +465,7 @@ const EventGroupPage = ({ groupId, userId, isAdmin, onBack, onDeleted }: EventGr
 
               <div className="px-4 py-2 border-t border-border/50 flex items-center gap-4">
                 <button onClick={() => toggleLike(post.id)} className="flex items-center gap-1.5 text-sm">
-                  <Heart className={`w-4 h-4 transition-colors ${myLikes.has(post.id) ? "fill-red-500 text-red-500" : "text-muted-foreground"}`} />
+                  <Heart className={`w-4 h-4 transition-colors ${myLikes.has(post.id) ? "fill-primary text-primary" : "text-muted-foreground"}`} />
                   <span className="text-xs text-muted-foreground">{likes[post.id] || 0}</span>
                 </button>
               </div>

@@ -12,6 +12,7 @@ import GroupChatConversation from "./GroupChatConversation";
 import CreateGroupDialog from "./CreateGroupDialog";
 import EmptyState from "@/components/EmptyState";
 import grimIcon from "@/assets/grim-icon.webp";
+import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 
 const GRIM_INFO_KEY = "gymberget_grim_info_seen";
@@ -25,6 +26,7 @@ interface ChatViewProps {
   isAdmin?: boolean;
   isPremium?: boolean;
   initialFriendId?: string | null;
+  onOpenProfile?: (id: string) => void;
 }
 
 interface Friend {
@@ -53,7 +55,7 @@ interface SupportConversation {
   unread_count: number;
 }
 
-const ChatView = ({ userId, isAdmin = false, isPremium = false, initialFriendId }: ChatViewProps) => {
+const ChatView = ({ userId, isAdmin = false, isPremium = false, initialFriendId, onOpenProfile }: ChatViewProps) => {
   const [friends, setFriends] = useState<Friend[]>([]);
   const { isTyping } = useTypingListener(userId);
   const [lastMessages, setLastMessages] = useState<Map<string, LastMessage>>(new Map());
@@ -66,29 +68,40 @@ const ChatView = ({ userId, isAdmin = false, isPremium = false, initialFriendId 
   const [groups, setGroups] = useState<{ id: string; name: string; updated_at: string }[]>([]);
   const [selectedGroup, setSelectedGroup] = useState<{ id: string; name: string } | null>(null);
   const [showCreateGroup, setShowCreateGroup] = useState(false);
+  const handledFriendId = useRef<string | null>(null);
+  const [showNewMessage, setShowNewMessage] = useState(false);
+  const [showGrimInfo, setShowGrimInfo] = useState(false);
+  const [loadError, setLoadError] = useState(false);
+  const [groupsError, setGroupsError] = useState(false);
+  const [infoError, setInfoError] = useState(false);
 
   const fetchGroups = async () => {
-    const { data: memberRows } = await supabase
+    setGroupsError(false);
+    const { data: memberRows, error: memberError } = await supabase
       .from("chat_group_members")
       .select("group_id")
       .eq("user_id", userId);
+    if (memberError) { setGroupsError(true); return; }
     const ids = (memberRows || []).map((m: any) => m.group_id);
     if (ids.length === 0) { setGroups([]); return; }
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from("chat_groups")
       .select("id, name, updated_at")
       .in("id", ids)
       .order("updated_at", { ascending: false });
+    if (error) { setGroupsError(true); return; }
     setGroups((data || []) as any);
   };
 
 
   const fetchAnnouncementPreview = async () => {
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from("announcements")
       .select("title, created_at")
       .order("created_at", { ascending: false })
       .limit(20);
+    if (error) { setInfoError(true); return; }
+    setInfoError(false);
     if (data && data.length > 0) {
       setAnnouncementPreview({ title: data[0].title, created_at: data[0].created_at });
       const lastRead = localStorage.getItem(ANNOUNCEMENTS_LAST_READ_KEY) || "1970-01-01T00:00:00Z";
@@ -110,6 +123,7 @@ const ChatView = ({ userId, isAdmin = false, isPremium = false, initialFriendId 
       .channel("chat-list")
       .on("postgres_changes", { event: "INSERT", schema: "public", table: "chat_messages" }, (payload) => {
         const msg = payload.new as any;
+        if (msg.group_id) { void fetchGroups(); return; }
         if (msg.sender_id === userId || msg.receiver_id === userId) {
           const friendId = msg.sender_id === userId ? msg.receiver_id : msg.sender_id;
           setLastMessages(prev => {
@@ -153,9 +167,9 @@ const ChatView = ({ userId, isAdmin = false, isPremium = false, initialFriendId 
   }, [userId, isPremium, isAdmin]);
 
   useEffect(() => {
-    if (initialFriendId && friends.length > 0) {
+    if (initialFriendId && friends.length > 0 && handledFriendId.current !== initialFriendId) {
       const f = friends.find(f => f.user_id === initialFriendId);
-      if (f) setSelectedFriend(f);
+      if (f) { handledFriendId.current = initialFriendId; setSelectedFriend(f); }
     }
   }, [initialFriendId, friends]);
 
@@ -232,12 +246,14 @@ const ChatView = ({ userId, isAdmin = false, isPremium = false, initialFriendId 
   };
 
   const fetchFriendsAndMessages = async () => {
-    const { data: friendships } = await supabase
+    setLoadError(false);
+    const { data: friendships, error: friendError } = await supabase
       .from("friendships")
       .select("user_id, friend_id")
       .eq("status", "accepted")
       .or(`user_id.eq.${userId},friend_id.eq.${userId}`);
 
+    if (friendError) { setLoadError(true); setLoading(false); return; }
     if (!friendships || friendships.length === 0) {
       setFriends([]);
       setLoading(false);
@@ -246,23 +262,25 @@ const ChatView = ({ userId, isAdmin = false, isPremium = false, initialFriendId 
 
     const friendIds = friendships.map(f => f.user_id === userId ? f.friend_id : f.user_id);
 
-    const { data: profiles } = await supabase
+    const { data: profiles, error: profileError } = await supabase
       .from("profiles")
       .select("user_id, nickname, avatar_url, is_honorary")
       .in("user_id", friendIds);
 
+    if (profileError) { setLoadError(true); setLoading(false); return; }
     const friendList = (profiles || []).sort((a, b) => a.nickname.localeCompare(b.nickname));
     setFriends(friendList);
 
     const msgMap = new Map<string, LastMessage>();
 
-    const { data: messages } = await supabase
+    const { data: messages, error: messageError } = await supabase
       .from("chat_messages")
       .select("*")
-      .or(`sender_id.eq.${userId},receiver_id.eq.${userId}`)
+      .or(`sender_id.eq.${userId},receiver_id.eq.${userId}`).is("group_id", null)
       .order("created_at", { ascending: false })
       .limit(500);
 
+    if (messageError) { setLoadError(true); setLoading(false); return; }
     if (messages) {
       for (const friendId of friendIds) {
         const friendMsgs = messages.filter(
@@ -325,6 +343,7 @@ const ChatView = ({ userId, isAdmin = false, isPremium = false, initialFriendId 
         <ChatConversation
           userId={userId}
           friend={selectedFriend}
+          onOpenProfile={() => onOpenProfile?.(selectedFriend.user_id)}
           onBack={() => {
             setSelectedFriend(null);
             fetchFriendsAndMessages();
@@ -363,26 +382,16 @@ const ChatView = ({ userId, isAdmin = false, isPremium = false, initialFriendId 
 
   return (
     <div className="flex h-full min-h-0 flex-col py-2">
-      <div className="flex items-center justify-between mb-3 shrink-0">
-        <h2 className="flex items-center gap-2 text-lg font-bold">
-          <MessageCircle className="w-5 h-5 text-primary" />
-          Chatt
-          {totalUnread > 0 && (
-            <span className="text-xs bg-destructive text-destructive-foreground px-2 py-0.5 rounded-full">
-              {totalUnread}
-            </span>
-          )}
-        </h2>
-        <button
-          onClick={() => setShowCreateGroup(true)}
-          data-tour="social-chat"
-          className="flex items-center gap-1.5 rounded-full px-3.5 py-1.5 bg-primary text-primary-foreground text-xs font-bold active:scale-95 transition-transform"
-        >
-          <Plus className="w-3.5 h-3.5" />
-          Grupp
-        </button>
+      <div className="flex flex-wrap items-center justify-between gap-2 mb-3 shrink-0">
+        <h2 className="text-lg font-bold">Meddelanden</h2>
+        <Button onClick={() => setShowNewMessage(v => !v)} variant="secondary"><Plus /> Nytt meddelande</Button>
       </div>
-
+      {showNewMessage && <div className="shrink-0 space-y-2 border-b border-border pb-3 mb-3">
+        <Button variant="outline" onClick={() => { setShowNewMessage(false); setShowCreateGroup(true); }}><Users /> Ny gruppchatt</Button>
+        <div className="max-h-48 overflow-y-auto">{friends.map(friend => <Button key={friend.user_id} variant="ghost" className="w-full justify-start" onClick={() => { setShowNewMessage(false); setSelectedFriend(friend); }}>{friend.nickname}</Button>)}</div>
+        {friends.length === 0 && <Button variant="ghost" onClick={() => window.dispatchEvent(new CustomEvent("grim:social-subtab", { detail: "friends" }))}>Hitta vänner</Button>}
+      </div>}
+      {groupsError && <div role="alert" className="shrink-0"><p className="text-sm text-muted-foreground">Gruppchattar kunde inte hämtas.</p><Button variant="outline" onClick={() => void fetchGroups()}>Försök igen</Button></div>}
       {showCreateGroup && (
         <CreateGroupDialog
           userId={userId}
@@ -396,27 +405,6 @@ const ChatView = ({ userId, isAdmin = false, isPremium = false, initialFriendId 
         />
       )}
 
-      {groups.length > 0 && (
-        <div className="mb-3 shrink-0 space-y-1.5">
-          <h3 className="text-sm font-semibold text-muted-foreground px-0.5">Grupper</h3>
-          <div className="rounded-2xl bg-card shadow-soft overflow-hidden divide-y divide-border/50">
-            {groups.map(g => (
-              <button
-                key={g.id}
-                onClick={() => setSelectedGroup({ id: g.id, name: g.name })}
-                className="w-full flex items-center gap-3 p-3 transition-colors text-left hover:bg-muted/40 active:bg-muted/70"
-              >
-                <div className="w-9 h-9 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
-                  <Users className="w-4 h-4 text-primary" />
-                </div>
-                <span className="flex-1 text-sm font-semibold truncate">{g.name}</span>
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
-
-
       {loading ? (
         <div className="flex flex-1 items-center justify-center py-8">
           <p className="text-sm text-muted-foreground text-center">Laddar...</p>
@@ -427,6 +415,9 @@ const ChatView = ({ userId, isAdmin = false, isPremium = false, initialFriendId 
           className="min-h-0 flex-1 space-y-1 overflow-y-auto overscroll-contain pr-1"
           style={{ WebkitOverflowScrolling: "touch", touchAction: "pan-y" }}
         >
+          {loadError && <div role="alert" className="space-y-2"><p className="text-sm text-muted-foreground">Samtalen kunde inte hämtas.</p><Button variant="outline" onClick={() => void fetchFriendsAndMessages()}>Försök igen</Button></div>}
+          <Button variant="ghost" className="w-full justify-between" aria-expanded={showGrimInfo} onClick={() => setShowGrimInfo(v => !v)}><span className="flex items-center gap-2"><Megaphone /> Grim-information & support</span>{(announcementUnread + (grimLastMessage?.unread_count || 0) + supportConversations.reduce((sum, row) => sum + row.unread_count, 0)) > 0 && <span className="text-primary">Nytt</span>}</Button>
+          {showGrimInfo && <div className="space-y-1 border-b border-border pb-2">{infoError && <div role="alert"><p className="text-sm text-muted-foreground">Grim-information kunde inte hämtas.</p><Button variant="outline" onClick={() => void fetchAnnouncementPreview()}>Försök igen</Button></div>}
           {/* Grim — official announcements (always pinned at top, for everyone) */}
           <button
             onClick={() => {
@@ -444,7 +435,7 @@ const ChatView = ({ userId, isAdmin = false, isPremium = false, initialFriendId 
             <div className="flex-1 min-w-0">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-1.5 min-w-0">
-                  <span className="text-sm font-semibold truncate">Grim</span>
+                  <span className="text-sm font-semibold truncate">Grim-information</span>
                   <Megaphone className="w-3 h-3 text-primary flex-shrink-0" />
                 </div>
                 {announcementPreview && (
@@ -480,7 +471,7 @@ const ChatView = ({ userId, isAdmin = false, isPremium = false, initialFriendId 
               <div className="flex-1 min-w-0">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-1.5">
-                    <span className="text-sm font-semibold">Grim</span>
+                    <span className="text-sm font-semibold">Grim-support</span>
                     <Crown className="w-3 h-3 text-primary" />
                   </div>
                   {grimLastMessage && (
@@ -557,8 +548,9 @@ const ChatView = ({ userId, isAdmin = false, isPremium = false, initialFriendId 
             </div>
           )}
 
+          </div>}
           {/* Regular friends */}
-          {friends.length === 0 && !isPremium && !isAdmin ? (
+          {!loadError && friends.length === 0 && groups.length === 0 ? (
             <EmptyState fill
               icon={MessageCircle}
               title="Inga chattar ännu"
@@ -568,8 +560,10 @@ const ChatView = ({ userId, isAdmin = false, isPremium = false, initialFriendId 
               onAction={() => window.dispatchEvent(new CustomEvent("grim:social-subtab", { detail: "friends" }))}
             />
           ) : (
-            <div className="rounded-2xl bg-card shadow-soft overflow-hidden divide-y divide-border/50">
-              {sortedFriends.map(friend => {
+            <div className="overflow-hidden divide-y divide-border/50">
+              {[...sortedFriends.map(friend => ({ kind: "friend" as const, friend, date: lastMessages.get(friend.user_id)?.created_at || "" })), ...groups.map(group => ({ kind: "group" as const, group, date: group.updated_at }))].sort((a, b) => b.date.localeCompare(a.date)).map(conversation => {
+                if (conversation.kind === "group") return <Button key={conversation.group.id} variant="ghost" className="w-full h-auto min-h-16 justify-start py-3" onClick={() => setSelectedGroup(conversation.group)}><Users /><span className="min-w-0 flex-1 text-left"><span className="block truncate font-semibold">{conversation.group.name}</span><span className="block text-xs text-muted-foreground">Gruppchatt</span></span><span className="text-xs text-muted-foreground">{formatTime(conversation.date)}</span></Button>;
+                const friend = conversation.friend;
                 const lastMsg = lastMessages.get(friend.user_id);
                 const unread = lastMsg?.unread_count || 0;
                 const av = avatarGradient(friend.nickname);

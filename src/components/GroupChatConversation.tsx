@@ -4,6 +4,11 @@ import ChatComposerPortal from "@/components/ChatComposerPortal";
 import { supabase } from "@/integrations/supabase/client";
 import { ArrowLeft, Send, Users, MoreVertical, LogOut, Loader2, X, Search, Reply, ChevronUp, ChevronDown } from "lucide-react";
 import { toast } from "sonner";
+import { Button } from "@/components/ui/button";
+import { useSessionDraft } from "@/hooks/useSessionDraft";
+import { useConversationMessages } from "@/hooks/useConversationMessages";
+import { confirmMessageWrite, mergeMessages } from "@/lib/socialConversation";
+import ConversationHistoryStatus from "./ConversationHistoryStatus";
 
 interface GroupChatConversationProps {
   userId: string;
@@ -30,13 +35,17 @@ interface MemberProfile {
 }
 
 const GroupChatConversation = ({ userId, groupId, groupName, onBack, onLeft }: GroupChatConversationProps) => {
-  const [messages, setMessages] = useState<Msg[]>([]);
+  const history = useConversationMessages<Msg>(userId, groupId, true);
+  const { messages, setMessages, loading } = history;
   const [members, setMembers] = useState<Record<string, MemberProfile>>({});
-  const [newMessage, setNewMessage] = useState("");
+  const [newMessage, setNewMessage] = useSessionDraft(`grim:group-draft:${userId}:${groupId}`, "");
+  const [sendError, setSendError] = useState(false);
+  const sendLock = useRef(false);
+  const olderScroll = useRef<{ height: number; top: number } | null>(null);
   const [sending, setSending] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
   const [showMembers, setShowMembers] = useState(false);
-  const [loading, setLoading] = useState(true);
+
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const msgRefs = useRef<Record<string, HTMLDivElement | null>>({});
@@ -66,16 +75,6 @@ const GroupChatConversation = ({ userId, groupId, groupName, onBack, onLeft }: G
         });
         if (!cancelled) setMembers(map);
       }
-      const { data: msgs } = await supabase
-        .from("chat_messages")
-        .select("id, sender_id, message, message_type, created_at, group_id, reply_to_id")
-        .eq("group_id", groupId)
-        .order("created_at", { ascending: true })
-        .limit(300);
-      if (!cancelled) {
-        setMessages((msgs || []) as Msg[]);
-        setLoading(false);
-      }
       // Update last_read
       await supabase
         .from("chat_group_members")
@@ -84,26 +83,21 @@ const GroupChatConversation = ({ userId, groupId, groupName, onBack, onLeft }: G
         .eq("user_id", userId);
     })();
 
-    const channel = supabase
-      .channel(`gc-${groupId}`)
-      .on(
-        "postgres_changes",
-        { event: "INSERT", schema: "public", table: "chat_messages", filter: `group_id=eq.${groupId}` },
-        (payload) => {
-          setMessages((prev) => [...prev, payload.new as Msg]);
-        }
-      )
-      .subscribe();
-
-    return () => {
-      cancelled = true;
-      supabase.removeChannel(channel);
-    };
+    return () => { cancelled = true; };
   }, [groupId, userId]);
-
   useEffect(() => {
-    scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
+    const el = scrollRef.current;
+    if (!el) return;
+    if (olderScroll.current) {
+      el.scrollTop = olderScroll.current.top + el.scrollHeight - olderScroll.current.height;
+      olderScroll.current = null;
+    } else el.scrollTo({ top: el.scrollHeight, behavior: "smooth" });
   }, [messages]);
+  const loadOlder = async () => {
+    const el = scrollRef.current;
+    if (el) olderScroll.current = { height: el.scrollHeight, top: el.scrollTop };
+    await history.loadOlder();
+  };
 
   const jumpToMessage = (id: string) => {
     const el = msgRefs.current[id];
@@ -125,29 +119,23 @@ const GroupChatConversation = ({ userId, groupId, groupName, onBack, onLeft }: G
   };
 
   const send = async () => {
-    if (!newMessage.trim()) return;
-    const text = newMessage.trim();
-    setSending(true);
-    const { error } = await supabase.from("chat_messages").insert({
-      sender_id: userId,
-      group_id: groupId,
-      message: text,
-      message_type: "text",
-      reply_to_id: replyTo?.id ?? null,
-    });
-    setSending(false);
-    if (error) {
-      toast.error("Kunde inte skicka");
-      return;
-    }
-    setNewMessage("");
-    setReplyTo(null);
-    inputRef.current?.focus();
+    if (!newMessage.trim() || sendLock.current) return;
+    sendLock.current = true; setSending(true); setSendError(false);
+    try {
+      const saved = await confirmMessageWrite(() => supabase.from("chat_messages").insert({
+        sender_id: userId, group_id: groupId, message: newMessage.trim(),
+        message_type: "text", reply_to_id: replyTo?.id ?? null,
+      }).select("*").single());
+      setMessages(previous => mergeMessages(previous, [saved as Msg]));
+      setNewMessage(""); setReplyTo(null); inputRef.current?.focus();
+    } catch { setSendError(true); }
+    finally { sendLock.current = false; setSending(false); }
   };
 
   const leaveGroup = async () => {
     if (!confirm("Lämna gruppen?")) return;
-    await supabase.from("chat_group_members").delete().eq("group_id", groupId).eq("user_id", userId);
+    const { error } = await supabase.from("chat_group_members").delete().eq("group_id", groupId).eq("user_id", userId);
+    if (error) { toast.error("Kunde inte lämna gruppchatten"); return; }
     toast.success("Du har lämnat gruppen");
     onLeft?.();
     onBack();
@@ -156,7 +144,7 @@ const GroupChatConversation = ({ userId, groupId, groupName, onBack, onLeft }: G
   const groupedByDate: { date: string; msgs: Msg[] }[] = [];
   let last = "";
   for (const m of messages) {
-    const d = new Date(m.created_at).toLocaleDateString("sv-SE");
+    const d = new Date(m.created_at).toLocaleDateString("sv-SE", { timeZone: "UTC" });
     if (d !== last) {
       groupedByDate.push({ date: d, msgs: [m] });
       last = d;
@@ -227,7 +215,7 @@ const GroupChatConversation = ({ userId, groupId, groupName, onBack, onLeft }: G
             value={searchQuery}
             onChange={(e) => { setSearchQuery(e.target.value); setSearchIndex(0); }}
             onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); stepSearch(1); } }}
-            placeholder="Sök i chatten..."
+            placeholder="Sök bland hämtade meddelanden..."
             className="flex-1 text-sm bg-muted rounded-full px-4 py-2 outline-none focus:ring-2 focus:ring-primary/30"
           />
           <span className="text-[11px] text-muted-foreground tabular-nums min-w-[42px] text-center">
@@ -299,15 +287,8 @@ const GroupChatConversation = ({ userId, groupId, groupName, onBack, onLeft }: G
         className="min-h-0 flex-1 overflow-y-auto py-3 space-y-1 overscroll-contain"
         style={{ WebkitOverflowScrolling: "touch", touchAction: "pan-y", paddingBottom: `calc(${COMPOSER_BOTTOM} + 72px)` }}
       >
-        {loading ? (
-          <div className="flex items-center justify-center py-12">
-            <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
-          </div>
-        ) : messages.length === 0 ? (
-          <p className="text-center text-sm text-muted-foreground py-12">
-            Skriv första meddelandet i gruppen!
-          </p>
-        ) : (
+        <ConversationHistoryStatus {...history} empty={messages.length === 0} loadOlder={() => void loadOlder()} />
+        {loading || history.error ? null : messages.length === 0 ? null : (
           groupedByDate.map((g) => (
             <div key={g.date}>
               <div className="text-center my-3">
@@ -376,6 +357,8 @@ const GroupChatConversation = ({ userId, groupId, groupName, onBack, onLeft }: G
       </div>
 
       <ChatComposerPortal className="px-3 pt-2 pb-2 flex flex-col gap-2">
+        {sendError && <div role="alert" className="flex items-center justify-between gap-2"><p className="text-sm text-muted-foreground">Kunde inte skickas. Texten finns kvar.</p><Button variant="outline" disabled={sending} onClick={() => void send()}>Försök igen</Button></div>}
+        {sending && <p role="status" className="text-xs text-muted-foreground">Skickar…</p>}
         {replyTo && (
           <div className="flex items-center gap-2 rounded-xl bg-muted px-3 py-2">
             <Reply className="w-3.5 h-3.5 text-primary shrink-0" />
@@ -402,16 +385,16 @@ const GroupChatConversation = ({ userId, groupId, groupName, onBack, onLeft }: G
             }
           }}
           placeholder="Skriv ett meddelande..."
-          className="flex-1 text-sm bg-muted rounded-full px-4 py-2.5 outline-none focus:ring-2 focus:ring-primary/30"
+          className="min-w-0 flex-1 text-sm bg-muted text-foreground rounded-full px-4 py-2.5 outline-none focus:ring-2 focus:ring-primary/30"
           disabled={sending}
         />
-        <button
+        <Button aria-label="Skicka meddelande" size="icon"
           onClick={send}
           disabled={!newMessage.trim() || sending}
           className="p-2.5 bg-primary text-primary-foreground rounded-full disabled:opacity-50 hover:bg-primary/90 flex-shrink-0"
         >
           <Send className="w-4 h-4" />
-        </button>
+        </Button>
         </div>
       </ChatComposerPortal>
     </div>

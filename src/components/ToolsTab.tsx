@@ -159,10 +159,10 @@ const ToolsTab = ({ userId, isAdmin, isHonorary, userRole, onViewUserPlan, onLog
   const [confirmLogout, setConfirmLogout] = useState(false);
   const [subView, setSubView] = useState<"home" | "helpers" | "settings" | "start" | "admin">(() => {
     const f = sessionStorage.getItem("grim_tools_open");
-    return f?.startsWith("settings") ? "settings" : "home";
+    return f?.startsWith("settings") ? "settings" : f === "event" ? "helpers" : "home";
   });
   const [settingsCategory, setSettingsCategory] = useState<SettingsCategory | null>(() =>
-    sessionStorage.getItem("grim_tools_open") === "settings:supporter" ? "account" : null
+    sessionStorage.getItem("grim_tools_open") === "settings:supporter" ? "account" : sessionStorage.getItem("grim_tools_open") === "settings:privacy" ? "privacy" : null
   );
   const [query, setQuery] = useState("");
   const [settingsQuery, setSettingsQuery] = useState("");
@@ -186,6 +186,7 @@ const ToolsTab = ({ userId, isAdmin, isHonorary, userRole, onViewUserPlan, onLog
   const [openItem, setOpenItem] = useState<string | null>(() => {
     const f = sessionStorage.getItem("grim_tools_open");
     sessionStorage.removeItem("grim_tools_open");
+    if (f === "event") window.setTimeout(() => document.getElementById("social-event-entry")?.scrollIntoView({ block: "start", behavior: "smooth" }), 300);
     return f === "settings:supporter" ? "supporter" : null;
   });
   useEffect(() => {
@@ -198,6 +199,13 @@ const ToolsTab = ({ userId, isAdmin, isHonorary, userRole, onViewUserPlan, onLog
     };
     window.addEventListener("grim:open-supporter", open);
     return () => window.removeEventListener("grim:open-supporter", open);
+  }, []);
+  useEffect(() => {
+    const privacy = () => { sessionStorage.removeItem("grim_tools_open"); setSettingsCategory("privacy"); setSubView("settings"); };
+    const event = () => { sessionStorage.removeItem("grim_tools_open"); setSubView("helpers"); window.setTimeout(() => document.getElementById("social-event-entry")?.scrollIntoView({ block: "start", behavior: "smooth" }), 200); };
+    if (sessionStorage.getItem("grim_tools_open") === "event") event();
+    window.addEventListener("grim:open-privacy", privacy); window.addEventListener("grim:open-event", event);
+    return () => { window.removeEventListener("grim:open-privacy", privacy); window.removeEventListener("grim:open-event", event); };
   }, []);
   const [editLayout, setEditLayout] = useState(false);
   const { order, save: saveLayout } = useToolLayout();
@@ -621,7 +629,7 @@ const ToolsTab = ({ userId, isAdmin, isHonorary, userRole, onViewUserPlan, onLog
                 <span className="font-semibold">Stoppur och nedräkning</span>
                 <span className="block text-xs text-muted-foreground">Öppnar den lilla timern ovanför menyn</span>
               </button>
-              <EventCountdown userId={userId} />
+              <div id="social-event-entry"><EventCountdown userId={userId} /></div>
               <CalorieCalculator />
               <OneRMCalculator />
               <PulseZoneCalculator />

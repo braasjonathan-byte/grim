@@ -14,6 +14,7 @@ import {
 } from "@/lib/buildWorkoutCardSvg";
 import { pickImage } from "@/lib/pickImage";
 import WorkoutPostThread from "./WorkoutPostThread";
+import { Button } from "@/components/ui/button";
 
 interface WorkoutShareCardProps {
   sessionName: string;
@@ -341,8 +342,8 @@ const WorkoutShareCard = ({
   };
 
   return (
-    <div className="fixed inset-0 z-[80] flex items-center justify-center p-4">
-      <div className="absolute inset-0 bg-black/70" onClick={onClose} />
+    <div className="fixed inset-0 z-[80] flex items-end justify-center p-4">
+      <div className="absolute inset-0 bg-background/90" onClick={onClose} />
       <div className="relative w-full max-w-sm max-h-[calc(100dvh-2rem)] overflow-y-auto space-y-3 animate-fade-in">
         {/* Theme selector */}
         <div className="flex items-center justify-center gap-2">
@@ -398,45 +399,13 @@ const WorkoutShareCard = ({
           </div>
         )}
 
-        {/* Action buttons */}
-        <div className="flex gap-2">
-          <button
-            onClick={onClose}
-            className="flex-1 py-3 bg-secondary text-secondary-foreground font-semibold rounded-lg hover:bg-muted transition-colors text-sm flex items-center justify-center gap-1.5"
-          >
-            <X className="w-4 h-4" /> Stäng
-          </button>
-          <button
-            onClick={handleDownload}
-            disabled={generating}
-            className="flex-1 py-3 bg-card text-card-foreground border border-border font-semibold rounded-lg hover:bg-accent transition-colors text-sm flex items-center justify-center gap-1.5 disabled:opacity-50"
-          >
-            <Download className="w-4 h-4" /> Ladda ner
-          </button>
-          <button
-            onClick={handleShare}
-            disabled={generating}
-            className="flex-1 py-3 bg-primary text-primary-foreground font-bold rounded-lg hover:opacity-90 transition-opacity text-sm flex items-center justify-center gap-1.5 disabled:opacity-50"
-          >
-            <Share2 className="w-4 h-4" /> Dela
-          </button>
+        <div className="space-y-2 border-t border-border pt-3">
+          <h3 className="text-sm font-semibold">Vart vill du dela passet?</h3>
+          {onPublishToSocial && <Button className="w-full h-11 justify-start" onClick={onPublishToSocial}><Share2 /> Publicera i flödet</Button>}
+          {onChatShare && <Button variant="secondary" className="w-full h-11 justify-start" onClick={onChatShare}><Send /> Skicka i meddelande</Button>}
+          <Button variant="outline" className="w-full h-11 justify-start" disabled={generating} onClick={handleShare}><Share2 /> Dela till annan app</Button>
+          <div className="flex gap-2"><Button className="flex-1" variant="ghost" onClick={onClose}><X /> Stäng</Button><Button className="flex-1" variant="ghost" disabled={generating} onClick={handleDownload}><Download /> Ladda ner bild</Button></div>
         </div>
-        {onPublishToSocial && (
-          <button
-            onClick={onPublishToSocial}
-            className="w-full py-3 border border-primary/40 bg-card text-card-foreground font-semibold rounded-lg hover:bg-accent hover:text-accent-foreground transition-colors text-sm flex items-center justify-center gap-1.5"
-          >
-            <Share2 className="w-4 h-4" /> Publicera i Social
-          </button>
-        )}
-        {onChatShare && (
-          <button
-            onClick={onChatShare}
-            className="w-full py-3 bg-accent text-accent-foreground font-semibold rounded-lg hover:bg-accent/80 transition-colors text-sm flex items-center justify-center gap-1.5"
-          >
-            <Send className="w-4 h-4" /> Dela via chatt
-          </button>
-        )}
         {onCopyToDate && (
           <button
             onClick={onCopyToDate}

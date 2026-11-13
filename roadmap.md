@@ -1,5 +1,15 @@
 # Roadmap
 
+## Social 13 november 2026
+- [ ] 1. Samlad vänsida med profil, träning, meddelande och utmaning; vänförfrågningar före vänlistan.
+- [ ] 2. Skilj gruppchattar från eventgrupper och ge direkt väg till event.
+- [ ] 3. Renodla Meddelanden, senaste samtal först och separat Grim-information.
+- [ ] 4. Tydliga flödesfilter, vänflödet först och målgrupp på varje inlägg.
+- [ ] 5. Destinationsstyrd delning och genväg till befintlig integritet.
+- [ ] 6. Kompakt utmaningsingång med inbjudningar, pågående och avslutade.
+- [ ] 7. Bevara meddelanden vid fel, senaste historik och tydliga fel-/tomlägen.
+- [ ] 8. Gemensamma tryckytor, rubriker, personrader och namngivna sekundära val; mobil-/datorverifiering.
+
 ## Tydligare vardag och första start 13 november 2026
 - [x] 1. Välj Träning, Kost eller Båda vid första starten utan att ta bort andra funktioner; användarspecifikt val prioriterar Hem-genvägen.
 - [x] 5. Statistik besvarar regelbundenhet, jämförbara resultat och vikt med period och underlag; faktisk historik verifierad på mobil och dator, 28/90-dagarsgränser testade.

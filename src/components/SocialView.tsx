@@ -20,7 +20,7 @@ import { isSocialInteractionId, mergeWorkoutComments, stripSocialInteractionId }
 import { parseDateKeyNoonUtc } from "@/lib/dateUtils";
 import { FeedSkeleton } from "@/components/LoadingSkeletons";
 import EmptyState from "@/components/EmptyState";
-import FriendChallenges from "@/components/FriendChallenges";
+import { socialAudience } from "@/lib/socialConversation";
 import ReportDialog from "@/components/ReportDialog";
 import { blockUser, muteUser, loadMutedIds, loadPrivacySettings } from "@/lib/socialPrivacy";
 import { Flag, VolumeX, Ban, Eye } from "lucide-react";
@@ -84,10 +84,7 @@ const readSocialUiV2 = (): boolean => {
   } catch { /* ignore */ }
   return SOCIAL_UI_V2_DEFAULT;
 };
-const setSocialUiV2 = (on: boolean) => {
-  try { window.localStorage.setItem("grim_social_ui_v2", on ? "1" : "0"); } catch { /* ignore */ }
-  window.location.reload();
-};
+
 
 const resolveWorkoutPostDate = (post: SocialPost, planStartDate?: string | null) => {
   const dateMatch = post.workout_day?.match(/^(\d{4}-\d{2}-\d{2})/);
@@ -140,7 +137,17 @@ const SocialView = ({ userId, isAdmin, isHonorary = false, friendActivities, unr
   }, [userId]);
   const [postGroupId, setPostGroupId] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
-  const [feedFilter, setFeedFilter] = useState<"all" | "friends">("all");
+  const [feedFilter, setFeedFilter] = useState<"all" | "friends">("friends");
+  const [feedError, setFeedError] = useState(false);
+  const [groupsError, setGroupsError] = useState(false);
+  const [groupsLoading, setGroupsLoading] = useState(true);
+  const [membershipBusy, setMembershipBusy] = useState<string | null>(null);
+  const [feedLimit, setFeedLimit] = useState(50);
+  const [hasMorePosts, setHasMorePosts] = useState(false);
+  const [chatFriendId, setChatFriendId] = useState<string | null>(null);
+  const feedFilterRef = useRef(feedFilter);
+  const feedLimitRef = useRef(feedLimit);
+  feedFilterRef.current = feedFilter; feedLimitRef.current = feedLimit;
   const [uiV2] = useState<boolean>(() => readSocialUiV2());
   const [friendIds, setFriendIds] = useState<Set<string>>(new Set());
   const [openGroupId, setOpenGroupId] = useState<string | null>(null);
@@ -157,7 +164,8 @@ const SocialView = ({ userId, isAdmin, isHonorary = false, friendActivities, unr
 
   useLockBodyScroll(isChatTab);
 
-  useEffect(() => { loadFeed(); loadGroups(); loadFriendIds(); }, [userId]);
+  useEffect(() => { loadGroups(); loadFriendIds(); }, [userId]);
+  useEffect(() => { setFeedLoading(true); void loadFeed(); }, [userId, feedFilter, feedLimit]);
 
   // Live-sync new posts, comments and likes (e.g. when added from a workout card)
   useEffect(() => {
@@ -295,18 +303,26 @@ const SocialView = ({ userId, isAdmin, isHonorary = false, friendActivities, unr
 
   const loadFeed = async () => {
     try {
+      setFeedError(false);
       await loadFeedInner();
-    } finally {
+    } catch { setFeedError(true); } finally {
       setFeedLoading(false);
     }
   };
 
   const loadFeedInner = async () => {
-    const { data: postsData } = await supabase
-      .from("social_posts")
-      .select("*")
-      .order("created_at", { ascending: false })
-      .limit(50);
+    const selectedFilter = feedFilterRef.current;
+    const limit = feedLimitRef.current;
+    let query = supabase.from("social_posts").select("*");
+    if (selectedFilter === "friends") {
+      const { data: friendships, error: friendError } = await supabase.from("friendships").select("user_id,friend_id").eq("status", "accepted").or(`user_id.eq.${userId},friend_id.eq.${userId}`);
+      if (friendError) throw friendError;
+      query = query.in("user_id", [userId, ...(friendships || []).map(f => f.user_id === userId ? f.friend_id : f.user_id)]);
+    }
+    const { data: postsData, error: postsError } = await query.order("created_at", { ascending: false }).limit(limit);
+    if (postsError) throw postsError;
+    if (selectedFilter !== feedFilterRef.current || limit !== feedLimitRef.current) return;
+    setHasMorePosts((postsData?.length || 0) === limit);
     if (postsData) {
       setPosts(postsData as SocialPost[]);
       // Load nicknames
@@ -371,22 +387,26 @@ const SocialView = ({ userId, isAdmin, isHonorary = false, friendActivities, unr
   };
 
   const loadGroups = async () => {
-    const { data: groupsData } = await supabase
+    setGroupsError(false);
+    const { data: groupsData, error: groupError } = await supabase
       .from("event_groups")
       .select("*")
       .order("event_date", { ascending: true });
+    if (groupError) { setGroupsError(true); setGroupsLoading(false); return; }
     if (groupsData) {
       // Get member counts
-      const [{ data: countRows }, { data: mine }] = await Promise.all([
+      const [{ data: countRows, error: countError }, { data: mine, error: mineError }] = await Promise.all([
         supabase.rpc("get_event_group_member_counts"),
         supabase.from("event_group_members").select("group_id").eq("user_id", userId),
       ]);
+      if (countError || mineError) { setGroupsError(true); setGroupsLoading(false); return; }
       const counts: Record<string, number> = {};
       (countRows ?? []).forEach((r: { group_id: string; member_count: number }) => { counts[r.group_id] = Number(r.member_count); });
       const myGroupIds: string[] = (mine ?? []).map((m: { group_id: string }) => m.group_id);
       setGroups(groupsData.map(g => ({ ...g, member_count: counts[g.id] || 0 })) as EventGroup[]);
       setMyGroups(myGroupIds);
     }
+    setGroupsLoading(false);
   };
 
   const resizeImage = (file: File, maxDim = 1920, maxBytes = 2 * 1024 * 1024): Promise<File> =>
@@ -438,6 +458,7 @@ const SocialView = ({ userId, isAdmin, isHonorary = false, friendActivities, unr
   const submitPost = async () => {
     const hasImages = isAdmin ? imageFiles.length > 0 : !!imageFile;
     if (!caption.trim() && !hasImages) { toast.error("Skriv något eller välj en bild"); return; }
+    if (uploading) return;
     setUploading(true);
     try {
       let imageUrl: string | null = null;
@@ -493,7 +514,8 @@ const SocialView = ({ userId, isAdmin, isHonorary = false, friendActivities, unr
           });
         }
         if (imageRows.length > 0) {
-          await supabase.from("social_post_images").insert(imageRows);
+          const { error } = await supabase.from("social_post_images").insert(imageRows);
+          if (error) throw error;
         }
       }
 
@@ -661,7 +683,7 @@ const SocialView = ({ userId, isAdmin, isHonorary = false, friendActivities, unr
     const { error } = await supabase.from("social_posts").update({ visibility }).eq("id", postId);
     if (error) { toast.error("Synligheten kunde inte ändras."); return; }
     setPosts(prev => prev.map(p => p.id === postId ? { ...p, visibility } : p));
-    toast.success(visibility === "public" ? "Inlägget syns nu för alla" : "Inlägget syns nu bara för vänner");
+    toast.success(visibility === "public" ? "Inlägget är nu offentligt" : "Inlägget syns nu bara för vänner");
   };
 
   const handleMute = async (otherId: string) => {
@@ -681,23 +703,27 @@ const SocialView = ({ userId, isAdmin, isHonorary = false, friendActivities, unr
   };
 
   const togglePin = async (postId: string, currentlyPinned: boolean) => {
-    await supabase.from("social_posts").update({ pinned: !currentlyPinned }).eq("id", postId);
+    const { error } = await supabase.from("social_posts").update({ pinned: !currentlyPinned }).eq("id", postId);
+    if (error) { toast.error("Kunde inte ändra nålningen"); return; }
     setPosts(prev => prev.map(p => p.id === postId ? { ...p, pinned: !currentlyPinned } : p));
     toast.success(currentlyPinned ? "Inlägg lossat" : "Inlägg nålat");
   };
 
   const joinGroup = async (groupId: string) => {
-    await supabase.from("event_group_members").insert({ group_id: groupId, user_id: userId });
-    setMyGroups(prev => [...prev, groupId]);
-    setGroups(prev => prev.map(g => g.id === groupId ? { ...g, member_count: (g.member_count || 0) + 1 } : g));
-    toast.success("Du gick med i gruppen!");
+    if (membershipBusy || !confirm("Gå med i eventgruppen? Gruppens inlägg delas med medlemmarna. Ditt deltagande skapar inget inlägg i flödet.")) return;
+    setMembershipBusy(groupId);
+    const { error } = await supabase.from("event_group_members").insert({ group_id: groupId, user_id: userId });
+    setMembershipBusy(null);
+    if (error) { toast.error("Kunde inte gå med i eventgruppen"); return; }
+    toast.success("Du gick med i eventgruppen"); void loadGroups();
   };
-
   const leaveGroup = async (groupId: string) => {
-    await supabase.from("event_group_members").delete().eq("group_id", groupId).eq("user_id", userId);
-    setMyGroups(prev => prev.filter(id => id !== groupId));
-    setGroups(prev => prev.map(g => g.id === groupId ? { ...g, member_count: Math.max(0, (g.member_count || 1) - 1) } : g));
-    toast.success("Du lämnade gruppen");
+    if (membershipBusy) return;
+    setMembershipBusy(groupId);
+    const { error } = await supabase.from("event_group_members").delete().eq("group_id", groupId).eq("user_id", userId);
+    setMembershipBusy(null);
+    if (error) { toast.error("Kunde inte lämna eventgruppen"); return; }
+    toast.success("Du lämnade eventgruppen"); void loadGroups();
   };
 
   const deleteGroup = async (groupId: string) => {
@@ -717,25 +743,26 @@ const SocialView = ({ userId, isAdmin, isHonorary = false, friendActivities, unr
       className={isChatTab ? "box-border flex min-h-0 flex-col gap-4 overflow-hidden overscroll-none pt-2 pb-0 touch-none" : "py-2 space-y-4"}
       style={isChatTab ? { height: "calc(100dvh - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px) - 10.5rem)" } : undefined}
     >
-      <h2 className="sr-only">Socialt – flöde, vänner, chatt och grupper</h2>
+      <h2 className="sr-only">Social – vänner, meddelanden, eventgrupper och flöde</h2>
+      {!isChatTab && <div className="flex justify-end"><Button variant="ghost" onClick={() => { sessionStorage.setItem("grim_tools_open", "settings:privacy"); window.dispatchEvent(new CustomEvent("grim:set-tab", { detail: "calc" })); window.dispatchEvent(new CustomEvent("grim:open-privacy")); }}><Eye /> Integritet & delning</Button></div>}
       {/* Sub-tab navigation */}
       {(() => {
         const tabs = [
           { key: "friends" as SubTab, label: "Vänner", icon: Users },
-          { key: "chat" as SubTab, label: "Chatt", icon: MessageCircle, badge: unreadChats },
-          { key: "groups" as SubTab, label: "Grupper", icon: UsersRound },
+          { key: "chat" as SubTab, label: "Meddelanden", icon: MessageCircle, badge: unreadChats },
+          { key: "groups" as SubTab, label: "Eventgrupper", icon: UsersRound },
           { key: "feed" as SubTab, label: "Flöde", icon: Globe },
         ];
         const activeIndex = Math.max(0, tabs.findIndex(t => t.key === subTab));
         return (
           <div className="relative shrink-0 border-b border-border/60 touch-none">
-            <div className="flex">
+            <div className="flex" role="tablist" aria-label="Social">
               {tabs.map(st => (
-                <button
+                <Button variant="ghost" role="tab" aria-selected={subTab === st.key}
                   key={st.key}
                   onClick={() => setSubTab(st.key)}
                   data-tour={st.key === "friends" ? "social-friends" : st.key === "groups" ? "social-groups" : undefined}
-                  className={`flex-1 flex items-center justify-center gap-1.5 pb-2 pt-1 text-xs font-semibold transition-colors ${
+                  className={`min-w-0 flex-1 h-14 flex-col items-center justify-center gap-1 px-0 text-[11px] font-semibold transition-colors ${
                     subTab === st.key ? "text-foreground" : "text-muted-foreground"
                   }`}
                 >
@@ -751,7 +778,7 @@ const SocialView = ({ userId, isAdmin, isHonorary = false, friendActivities, unr
                       {(st.badge || 0) > 9 ? "9+" : st.badge}
                     </span>
                   )}
-                </button>
+                </Button>
               ))}
             </div>
             <span
@@ -768,54 +795,15 @@ const SocialView = ({ userId, isAdmin, isHonorary = false, friendActivities, unr
         <div className={uiV2 ? "space-y-3" : "space-y-4"}>
           {/* Feed filter – compact segment */}
           <div className="flex items-center justify-between gap-2">
-            {uiV2 ? (
-              <button
-                type="button"
-                onClick={() => setFeedFilter(feedFilter === "all" ? "friends" : "all")}
-                className="inline-flex items-center gap-1 rounded-full border border-border/60 px-2.5 py-0.5 text-[11px] font-semibold text-muted-foreground transition-colors hover:text-foreground"
-                aria-label="Byt filter"
-              >
-                {feedFilter === "all" ? <Globe className="h-3 w-3" /> : <Users className="h-3 w-3" />}
-                {feedFilter === "all" ? "Alla" : "Vänner"}
-              </button>
-            ) : (
-            <div className="relative inline-flex rounded-full bg-muted/40 p-1">
-              <span
-                aria-hidden
-                className="absolute inset-y-1 left-1 w-[calc(50%-0.25rem)] rounded-full bg-card transition-transform duration-300 ease-out"
-                style={{ transform: `translateX(${feedFilter === "all" ? 0 : 100}%)` }}
-              />
-              {(["all", "friends"] as const).map(f => (
-                <button
-                  key={f}
-                  onClick={() => setFeedFilter(f)}
-                  className={`relative z-10 w-[72px] rounded-full px-3 py-1 text-[11px] font-semibold transition-colors ${
-                    feedFilter === f ? "text-foreground" : "text-muted-foreground"
-                  }`}
-                >
-                  {f === "all" ? "Alla" : "Vänner"}
-                </button>
-              ))}
+            <div className="flex gap-1" role="group" aria-label="Flödesfilter">
+              {(["friends", "all"] as const).map(value => <Button key={value} variant={feedFilter === value ? "secondary" : "ghost"} aria-pressed={feedFilter === value} onClick={() => { setFeedLimit(50); setFeedFilter(value); }}><span>{value === "friends" ? "Vänner" : "Alla"}</span></Button>)}
             </div>
-            )}
             {feedLoading && posts.length > 0 && (
               <span className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
                 <span className="h-3 w-3 animate-spin rounded-full border-2 border-primary/30 border-t-primary" />
                 Uppdaterar
               </span>
             )}
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <button type="button" aria-label="Fler alternativ" className="ml-auto rounded-full p-1 text-muted-foreground hover:bg-muted/60">
-                  <MoreHorizontal className="h-4 w-4" />
-                </button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuItem onClick={() => setSocialUiV2(!uiV2)}>
-                  {uiV2 ? "Klassisk vy" : "Ny vy"}
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
           </div>
 
           {/* Compose – compact pill row */}
@@ -927,8 +915,8 @@ const SocialView = ({ userId, isAdmin, isHonorary = false, friendActivities, unr
                   }}
                   className="flex-1 rounded-lg border border-input bg-background px-2 py-1 text-xs outline-none"
                 >
-                  <option value="public">🌍 Alla</option>
-                  <option value="friends">👫 Bara vänner</option>
+                  <option value="public">Offentligt</option>
+                  <option value="friends">Bara vänner</option>
                   {groupsForPosting.map(g => (
                     <option key={g.id} value={`group:${g.id}`}>
                       👥 {g.event_name}
@@ -946,16 +934,16 @@ const SocialView = ({ userId, isAdmin, isHonorary = false, friendActivities, unr
             </div>
           )}
 
+          {feedError && <div role="alert" className="space-y-2"><p className="text-sm text-muted-foreground">Flödet kunde inte hämtas.{posts.length > 0 ? " Tidigare inlägg visas." : ""}</p><Button variant="outline" onClick={() => void loadFeed()}>Försök igen</Button></div>}
           {/* Posts feed */}
           {(() => {
             if (feedLoading && posts.length === 0) return <FeedSkeleton count={3} />;
 
             const visiblePosts = posts.filter(p => !mutedIds.has(p.user_id));
-            const filteredPosts = feedFilter === "friends"
-              ? visiblePosts.filter(p => friendIds.has(p.user_id) || p.user_id === userId)
-              : visiblePosts;
+            const filteredPosts = visiblePosts;
             
             
+            if (feedError && filteredPosts.length === 0) return null;
             if (filteredPosts.length === 0) return (
               <EmptyState
                 icon={Camera}
@@ -1015,7 +1003,7 @@ const SocialView = ({ userId, isAdmin, isHonorary = false, friendActivities, unr
                       (nicknames[post.user_id] || "?")[0]?.toUpperCase()
                     )}
                   </div>
-                  <div className={uiV2 ? "flex min-w-0 items-baseline gap-1.5 leading-tight" : "min-w-0 leading-tight"}>
+                  <div className={uiV2 ? "flex min-w-0 flex-wrap items-baseline gap-1.5 leading-tight" : "min-w-0 leading-tight"}>
                     <span className={uiV2 ? "truncate text-sm font-bold" : "block truncate text-sm font-bold"}>{nicknames[post.user_id] || "Anonym"}</span>
                     <span className="shrink-0 text-[11px] text-muted-foreground">
                       {(() => {
@@ -1023,7 +1011,7 @@ const SocialView = ({ userId, isAdmin, isHonorary = false, friendActivities, unr
                         if (workoutDate) return format(workoutDate, "d MMM", { locale: sv });
                         return format(new Date(post.created_at), "d MMM HH:mm", { locale: sv });
                       })()}
-                      {uiV2 ? "" : post.visibility === "group" ? " · 👥 Grupp" : post.visibility === "public" ? " · 🌍 Alla" : " · 👫 Vänner"}
+                      <span className="block text-xs text-muted-foreground">{socialAudience(post.visibility, groups.find(g => g.id === post.group_id)?.event_name)}</span>
                     </span>
                   </div>
                 </button>
@@ -1268,19 +1256,20 @@ const SocialView = ({ userId, isAdmin, isHonorary = false, friendActivities, unr
             );
             });
           })()}
+          {hasMorePosts && !feedError && <Button className="w-full" variant="outline" disabled={feedLoading} onClick={() => setFeedLimit(v => v + 50)}>Visa fler inlägg</Button>}
         </div>
       )}
 
       {/* FRIENDS TAB */}
       {subTab === "friends" && (
         <Suspense fallback={<div className="py-4 text-center text-xs text-muted-foreground">Laddar...</div>}>
-          <FriendChallenges userId={userId} />
           <FriendsView
             userId={userId}
             isAdmin={isAdmin}
             friendActivities={friendActivities}
             onClearActivitiesForFriend={onClearActivitiesForFriend}
             initialFriendId={pendingFriendId || initialFriendId || undefined}
+            onMessage={id => { setChatFriendId(id); setSubTab("chat"); }}
           />
         </Suspense>
       )}
@@ -1290,7 +1279,7 @@ const SocialView = ({ userId, isAdmin, isHonorary = false, friendActivities, unr
         <div className="min-h-0 flex-1 flex flex-col overflow-hidden touch-none">
           <div className="min-h-0 flex-1 overflow-hidden">
             <Suspense fallback={<div className="py-4 text-center text-xs text-muted-foreground">Laddar...</div>}>
-              <ChatView userId={userId} isAdmin={isAdmin} isPremium={isHonorary} />
+              <ChatView userId={userId} isAdmin={isAdmin} isPremium={isHonorary} initialFriendId={chatFriendId} onOpenProfile={id => { setPendingFriendId(id); setSubTab("friends"); }} />
             </Suspense>
           </div>
         </div>
@@ -1298,7 +1287,7 @@ const SocialView = ({ userId, isAdmin, isHonorary = false, friendActivities, unr
 
       {/* GROUPS TAB */}
       {subTab === "groups" && (
-        openGroupId ? (
+        groupsLoading ? <p role="status" className="text-sm text-muted-foreground">Laddar eventgrupper…</p> : groupsError ? <div role="alert" className="space-y-2"><p className="text-sm text-muted-foreground">Eventgrupperna kunde inte hämtas.</p><Button variant="outline" onClick={() => void loadGroups()}>Försök igen</Button></div> : openGroupId ? (
           <Suspense fallback={<div className="py-4 text-center text-xs text-muted-foreground">Laddar...</div>}>
             <EventGroupPage
               groupId={openGroupId}
@@ -1356,14 +1345,14 @@ const SocialView = ({ userId, isAdmin, isHonorary = false, friendActivities, unr
 
           {/* All groups */}
           <div className="space-y-1.5">
-            <h3 className="text-sm font-semibold text-muted-foreground">Alla grupper</h3>
+            <div className="flex items-center justify-between"><h3 className="text-sm font-semibold text-muted-foreground">Tillgängliga eventgrupper</h3><Button variant="outline" onClick={() => { sessionStorage.setItem("grim_tools_open", "event"); window.dispatchEvent(new CustomEvent("grim:set-tab", { detail: "calc" })); window.dispatchEvent(new CustomEvent("grim:open-event")); }}>Lägg till event</Button></div>
             {groups.filter(g => !myGroups.includes(g.id)).length === 0 ? (
               <div className="card-soft px-4 py-6 text-center">
                 <div className="mx-auto mb-2 flex h-10 w-10 items-center justify-center rounded-full bg-muted">
                   <UsersRound className="h-5 w-5 text-muted-foreground" />
                 </div>
                 <p className="text-xs text-muted-foreground">
-                  Inga fler grupper tillgängliga. Lägg till ett event i verktygsfliken så skapas en grupp automatiskt!
+                  Inga fler eventgrupper tillgängliga.
                 </p>
               </div>
             ) : (
@@ -1382,7 +1371,7 @@ const SocialView = ({ userId, isAdmin, isHonorary = false, friendActivities, unr
                         </p>
                       </div>
                     </button>
-                    <Button onClick={(e) => { e.stopPropagation(); joinGroup(g.id); }} size="sm" className="rounded-full text-xs">
+                    <Button disabled={membershipBusy !== null} onClick={(e) => { e.stopPropagation(); joinGroup(g.id); }} size="sm" className="rounded-full text-xs">
                       Gå med
                     </Button>
                     {isAdmin && (

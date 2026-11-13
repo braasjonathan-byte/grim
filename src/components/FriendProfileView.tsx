@@ -10,7 +10,9 @@ import IdentityTitleBadge from "@/components/IdentityTitleBadge";
 import AchievementsView from "@/components/AchievementsView";
 import ReportDialog from "@/components/ReportDialog";
 import { blockUser, muteUser } from "@/lib/socialPrivacy";
-import { Flag, VolumeX } from "lucide-react";
+import { Flag, VolumeX, MoreHorizontal } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { calculateAchievementMetrics, getEarnedAchievements } from "@/lib/achievements";
 import { hasCompletionEvidence, isCompletedWorkout } from "@/lib/completionCounting";
 
@@ -18,6 +20,7 @@ interface FriendProfileViewProps {
   friendUserId: string;
   nickname: string;
   onClose: () => void;
+  embedded?: boolean;
 }
 
 interface StarredPR {
@@ -162,10 +165,12 @@ interface SocialData {
   spotify_anthem_name: string | null;
 }
 
-const FriendProfileView = ({ friendUserId, nickname, onClose }: FriendProfileViewProps) => {
+const FriendProfileView = ({ friendUserId, nickname, onClose, embedded = false }: FriendProfileViewProps) => {
   const [reportOpen, setReportOpen] = useState(false);
   const [meId, setMeId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
+  const [reloadKey, setReloadKey] = useState(0);
   const [challengeCount, setChallengeCount] = useState(0);
   const [starredPRs, setStarredPRs] = useState<StarredPR[]>([]);
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
@@ -190,7 +195,9 @@ const FriendProfileView = ({ friendUserId, nickname, onClose }: FriendProfileVie
 
   useEffect(() => {
     const load = async () => {
-      const [{ data: starsData }, { data: completions }, { data: profileData }, { data: plansData }, { data: roleData }, { count: challengeTotal }, { data: achievementData }] = await Promise.all([
+      setLoading(true); setLoadError(false);
+      try {
+      const [{ data: starsData }, { data: completions, error: completionsError }, { data: profileData, error: profileError }, { data: plansData, error: plansError }, { data: roleData }, { count: challengeTotal }, { data: achievementData }] = await Promise.all([
         supabase.from("pr_stars").select("exercise").eq("user_id", friendUserId),
         supabase.from("workout_completions").select("logged_weights, done, skipped, logged_distance_km, logged_tempo, logged_pulse, week, day, updated_at").eq("user_id", friendUserId),
         supabase.from("profiles").select("avatar_url, instagram, tiktok, snapchat, spotify_anthem_url, spotify_anthem_name, is_honorary, plan_start_date, theme").eq("user_id", friendUserId).single(),
@@ -200,6 +207,7 @@ const FriendProfileView = ({ friendUserId, nickname, onClose }: FriendProfileVie
         supabase.from("user_achievements" as any).select("achievement_id, unlocked_at").eq("user_id", friendUserId).order("unlocked_at", { ascending: false }),
       ]);
 
+      if (completionsError || profileError || plansError) throw new Error("profile read");
       setAvatarUrl(profileData?.avatar_url || null);
       const totalChallenges = challengeTotal || 0;
       setChallengeCount(totalChallenges);
@@ -280,10 +288,10 @@ const FriendProfileView = ({ friendUserId, nickname, onClose }: FriendProfileVie
       prs.sort((a, b) => b.weight - a.weight);
 
       setStarredPRs(prs);
-      setLoading(false);
+      } catch { setLoadError(true); } finally { setLoading(false); }
     };
-    load();
-  }, [friendUserId]);
+    void load();
+  }, [friendUserId, reloadKey]);
 
   const filtered = useMemo(() => filterByPeriod(allCompletions, period, planStartDate), [allCompletions, period, planStartDate]);
 
@@ -306,25 +314,15 @@ const FriendProfileView = ({ friendUserId, nickname, onClose }: FriendProfileVie
     return { done, skipped, distanceKm: Math.round(distanceKm * 10) / 10, liftedTons };
   }, [filtered, planDetailsMap, plansWithExercises]);
 
-  const cyclePeriod = () => {
-    const order: TimePeriod[] = ["year", "month", "week"];
-    setPeriod(order[(order.indexOf(period) + 1) % order.length]);
-  };
-
-  if (loading) {
-    return (
-      <div className="fixed inset-0 z-[60] bg-black/60 flex items-center justify-center">
-        <Loader2 className="w-6 h-6 animate-spin text-primary" />
-      </div>
-    );
-  }
+  if (loading) return <div className="py-8 text-center"><Loader2 className="mx-auto animate-spin text-primary" aria-label="Laddar profil" /></div>;
+  if (loadError) return <div role="alert" className="space-y-3 py-6 text-center"><p className="text-sm text-muted-foreground">Profilen kunde inte hämtas.</p><Button variant="outline" onClick={() => setReloadKey(k => k + 1)}>Försök igen</Button>{!embedded && <Button variant="ghost" onClick={onClose}>Stäng</Button>}</div>;
 
   const periodLabel = periodLabels[period];
 
   return (
     <>
-      <div className="fixed inset-0 z-[60] bg-black/60" onClick={handleClose} />
-      <div className="fixed inset-x-3 top-1/2 -translate-y-1/2 z-[70] max-w-sm mx-auto bg-card border border-border rounded-2xl overflow-hidden flex flex-col max-h-[85vh]">
+      {!embedded && <div className="fixed inset-0 z-[60] bg-background/80" onClick={handleClose} />}
+      <div className={embedded ? "flex flex-col" : "fixed inset-x-3 bottom-3 z-[70] max-w-sm mx-auto bg-card border border-border rounded-2xl overflow-hidden flex flex-col max-h-[85dvh]"}>
          <div className="flex items-center justify-between p-4 border-b border-border">
            <div className="flex items-center gap-3">
              <button
@@ -353,80 +351,46 @@ const FriendProfileView = ({ friendUserId, nickname, onClose }: FriendProfileVie
               </div>
             </div>
            <div className="flex items-center gap-1">
-             <button
-               onClick={async () => {
-                 const { data: auth } = await supabase.auth.getUser();
-                 if (auth.user?.id) { setMeId(auth.user.id); setReportOpen(true); }
-               }}
-               className="p-1.5 text-muted-foreground hover:text-destructive"
-               title="Rapportera användare"
-               aria-label="Rapportera användare"
-             >
-               <Flag className="w-4 h-4" />
-             </button>
-             <button
-               onClick={async () => {
-                 const { data: auth } = await supabase.auth.getUser();
-                 if (!auth.user?.id) return;
-                 if (await muteUser(auth.user.id, friendUserId)) toast.success(`${nickname} är tystad`);
-                 else toast.error("Kunde inte tysta användaren.");
-               }}
-               className="p-1.5 text-muted-foreground hover:text-foreground"
-               title="Tysta"
-               aria-label="Tysta"
-             >
-               <VolumeX className="w-4 h-4" />
-             </button>
-             <button
-               onClick={async () => {
-                 if (!confirm(`Blockera ${nickname}? Ni kommer inte längre se varandras inlägg.`)) return;
-                 const { data: auth } = await supabase.auth.getUser();
-                 const me = auth.user?.id;
-                 if (!me) return;
-                 const blockError = await blockUser(me, friendUserId);
-                 if (blockError) {
-                   toast.error("Kunde inte blockera: " + blockError);
-                   return;
-                 }
-                 toast.success(`${nickname} är nu blockerad`);
-                 handleClose();
-               }}
-               className="p-1.5 text-muted-foreground hover:text-destructive"
-               title="Blockera användare"
-             >
-               <Ban className="w-4 h-4" />
-             </button>
-             <button onClick={handleClose} className="p-1 text-muted-foreground hover:text-foreground">
-               <X className="w-4 h-4" />
-             </button>
+             <DropdownMenu>
+               <DropdownMenuTrigger asChild><Button variant="ghost" size="icon" className="h-11 w-11" aria-label="Fler profilval"><MoreHorizontal /></Button></DropdownMenuTrigger>
+               <DropdownMenuContent align="end">
+                 <DropdownMenuItem onClick={async () => { const { data } = await supabase.auth.getUser(); if (data.user) { setMeId(data.user.id); setReportOpen(true); } }}><Flag /> Rapportera användare</DropdownMenuItem>
+                 <DropdownMenuItem onClick={async () => { const { data } = await supabase.auth.getUser(); if (!data.user) return; if (await muteUser(data.user.id, friendUserId)) toast.success(`${nickname} är tystad`); else toast.error("Kunde inte tysta användaren."); }}><VolumeX /> Tysta inlägg</DropdownMenuItem>
+                 <DropdownMenuItem onClick={async () => { if (!confirm(`Blockera ${nickname}? Ni kommer inte längre se varandras inlägg.`)) return; const { data } = await supabase.auth.getUser(); if (!data.user) return; const error = await blockUser(data.user.id, friendUserId); if (error) toast.error("Kunde inte blockera användaren."); else { toast.success(`${nickname} är blockerad`); handleClose(); } }}><Ban /> Blockera användare</DropdownMenuItem>
+               </DropdownMenuContent>
+             </DropdownMenu>
+             {!embedded && <Button variant="ghost" size="icon" className="h-11 w-11" aria-label="Stäng profil" onClick={handleClose}><X /></Button>}
            </div>
          </div>
 
          <div className="p-4 space-y-4 overflow-y-auto flex-1">
+           <div className="flex gap-1" role="group" aria-label="Statistikperiod">
+             {(["week", "month", "year"] as TimePeriod[]).map(value => <Button key={value} variant={period === value ? "secondary" : "ghost"} aria-pressed={period === value} onClick={() => setPeriod(value)} className="flex-1 px-2">{value === "week" ? "Vecka" : value === "month" ? "Månad" : "År"}</Button>)}
+           </div>
            <div className="grid grid-cols-2 gap-2">
-             <button onClick={cyclePeriod} className="bg-secondary rounded-xl p-3 text-center active:scale-95 transition-transform">
+             <div className="bg-secondary rounded-xl p-3 text-center active:scale-95 transition-transform">
                <CheckCircle className="w-4 h-4 text-success mx-auto mb-1" />
                <p className="text-lg font-bold">{stats.done}</p>
                <p className="text-[10px] text-muted-foreground">Genomförda ({periodLabel})</p>
-             </button>
-              <button onClick={cyclePeriod} className="bg-secondary rounded-xl p-3 text-center active:scale-95 transition-transform">
+             </div>
+              <div className="bg-secondary rounded-xl p-3 text-center active:scale-95 transition-transform">
                 <Swords className="w-4 h-4 text-warning mx-auto mb-1" />
                 <p className="text-lg font-bold">{challengeCount}</p>
                 <p className="text-[10px] text-muted-foreground">Utmaningar klarade</p>
-              </button>
-             <button onClick={cyclePeriod} className="bg-secondary rounded-xl p-3 text-center active:scale-95 transition-transform">
+              </div>
+             <div className="bg-secondary rounded-xl p-3 text-center active:scale-95 transition-transform">
                 <Weight className="w-4 h-4 text-primary mx-auto mb-1" />
                 <p className="text-lg font-bold">{formatTons(stats.liftedTons)} <span className="text-xs font-normal text-muted-foreground">ton</span></p>
                 <p className="text-[10px] text-muted-foreground">Lyft ({periodLabel})</p>
                 {getWeightComparison(stats.liftedTons) && (
                   <p className="text-[11px] text-muted-foreground mt-0.5">≈ {getWeightComparison(stats.liftedTons)}</p>
                 )}
-              </button>
-             <button onClick={cyclePeriod} className="bg-secondary rounded-xl p-3 text-center active:scale-95 transition-transform">
+              </div>
+             <div className="bg-secondary rounded-xl p-3 text-center active:scale-95 transition-transform">
                <Footprints className="w-4 h-4 text-warning mx-auto mb-1" />
                <p className="text-lg font-bold">{stats.distanceKm}</p>
                <p className="text-[10px] text-muted-foreground">km sprungit ({periodLabel})</p>
-             </button>
+             </div>
            </div>
 
           {starredPRs.length > 0 && (

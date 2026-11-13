@@ -8,6 +8,11 @@ import { useTypingListener, useTypingSender } from "@/hooks/useTypingIndicator";
 import TypingDots from "@/components/TypingDots";
 import RouteBubble from "@/components/RouteBubble";
 import { toast } from "sonner";
+import { Button } from "@/components/ui/button";
+import { useSessionDraft } from "@/hooks/useSessionDraft";
+import { useConversationMessages } from "@/hooks/useConversationMessages";
+import { confirmMessageWrite, mergeMessages } from "@/lib/socialConversation";
+import ConversationHistoryStatus from "./ConversationHistoryStatus";
 
 interface Friend {
   user_id: string;
@@ -31,6 +36,7 @@ interface ChatConversationProps {
   userId: string;
   friend: Friend;
   onBack: () => void;
+  onOpenProfile?: () => void;
 }
 
 interface PlanSlot {
@@ -43,9 +49,13 @@ interface PlanSlot {
 
 const DAYS = ["Mån", "Tis", "Ons", "Tors", "Fre", "Lör", "Sön"];
 
-const ChatConversation = ({ userId, friend, onBack }: ChatConversationProps) => {
-  const [messages, setMessages] = useState<ChatMessage[]>([]);
-  const [newMessage, setNewMessage] = useState("");
+const ChatConversation = ({ userId, friend, onBack, onOpenProfile }: ChatConversationProps) => {
+  const history = useConversationMessages<ChatMessage>(userId, friend.user_id);
+  const { messages, setMessages } = history;
+  const [newMessage, setNewMessage] = useSessionDraft(`grim:chat-draft:${userId}:${friend.user_id}`, "");
+  const [sendError, setSendError] = useState(false);
+  const sendLock = useRef(false);
+  const olderScroll = useRef<{ height: number; top: number } | null>(null);
   const { isTyping } = useTypingListener(userId);
   const { notifyTyping, stopTyping } = useTypingSender(userId, friend.user_id);
   const friendIsTyping = isTyping(friend.user_id);
@@ -74,56 +84,29 @@ const ChatConversation = ({ userId, friend, onBack }: ChatConversationProps) => 
   // Last message I sent that the friend has read → carries the "Sedd" label
   const lastReadMineId = [...messages].reverse().find(m => m.sender_id === userId && m.read)?.id;
 
+  useEffect(() => { void markAsRead(); }, [friend.user_id, messages.length]);
   useEffect(() => {
-    fetchMessages();
-    markAsRead();
-
-    const channel = supabase
-      .channel(`chat-${friend.user_id}`)
-      .on("postgres_changes", { event: "INSERT", schema: "public", table: "chat_messages" }, (payload) => {
-        const msg = payload.new as ChatMessage;
-        if (
-          (msg.sender_id === friend.user_id && msg.receiver_id === userId) ||
-          (msg.sender_id === userId && msg.receiver_id === friend.user_id)
-        ) {
-          setMessages(prev => [...prev, msg]);
-          if (msg.receiver_id === userId) markAsRead();
-        }
-      })
-      .on("postgres_changes", { event: "UPDATE", schema: "public", table: "chat_messages" }, (payload) => {
-        const msg = payload.new as ChatMessage;
-        setMessages(prev => prev.map(m => (m.id === msg.id ? { ...m, ...msg } : m)));
-      })
-      .subscribe();
-
-    return () => { supabase.removeChannel(channel); };
-  }, [friend.user_id]);
-
-
-  useEffect(() => {
-    scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
+    const el = scrollRef.current;
+    if (!el) return;
+    if (olderScroll.current) {
+      el.scrollTop = olderScroll.current.top + el.scrollHeight - olderScroll.current.height;
+      olderScroll.current = null;
+    } else el.scrollTo({ top: el.scrollHeight, behavior: "smooth" });
   }, [messages]);
-
-  const fetchMessages = async () => {
-    const { data } = await supabase
-      .from("chat_messages")
-      .select("*")
-      .or(
-        `and(sender_id.eq.${userId},receiver_id.eq.${friend.user_id}),and(sender_id.eq.${friend.user_id},receiver_id.eq.${userId})`
-      )
-      .order("created_at", { ascending: true })
-      .limit(200);
-
-    if (data) setMessages(data as ChatMessage[]);
+  const loadOlder = async () => {
+    const el = scrollRef.current;
+    if (el) olderScroll.current = { height: el.scrollHeight, top: el.scrollTop };
+    await history.loadOlder();
   };
 
   const markAsRead = async () => {
-    await supabase
+    const { error } = await supabase
       .from("chat_messages")
       .update({ read: true })
       .eq("sender_id", friend.user_id)
       .eq("receiver_id", userId)
       .eq("read", false);
+    if (error) return;
     setMessages(prev => prev.map(m => (m.sender_id === friend.user_id && !m.read ? { ...m, read: true } : m)));
   };
 
@@ -166,28 +149,21 @@ const ChatConversation = ({ userId, friend, onBack }: ChatConversationProps) => 
   };
 
   const sendMessage = async () => {
-    if (!newMessage.trim()) return;
+    if (!newMessage.trim() || sendLock.current) return;
     const msgText = newMessage.trim();
-    setSending(true);
-    await supabase.from("chat_messages").insert({
-      sender_id: userId,
-      receiver_id: friend.user_id,
-      message: msgText,
-      message_type: "text",
-      reply_to_id: replyTo?.id ?? null,
-    });
-    setNewMessage("");
-    setReplyTo(null);
-    stopTyping();
-    setSending(false);
-    inputRef.current?.focus();
-
-    // Send push notification (fire and forget)
-    supabase.functions.invoke("notify-chat", {
-      body: { receiverId: friend.user_id, messagePreview: msgText },
-    }).then(({ error }) => {
-      if (error) console.error("notify-chat error:", error);
-    }).catch((err) => console.error("notify-chat invoke failed:", err));
+    sendLock.current = true;
+    setSending(true); setSendError(false);
+    try {
+      const saved = await confirmMessageWrite(() => supabase.from("chat_messages").insert({
+        sender_id: userId, receiver_id: friend.user_id, message: msgText,
+        message_type: "text", reply_to_id: replyTo?.id ?? null,
+      }).select("*").single());
+      setMessages(previous => mergeMessages(previous, [saved as ChatMessage]));
+      setNewMessage(""); setReplyTo(null); stopTyping();
+      void supabase.functions.invoke("notify-chat", { body: { receiverId: friend.user_id, messagePreview: msgText } }).catch(() => {});
+      inputRef.current?.focus();
+    } catch { setSendError(true); }
+    finally { setSending(false); sendLock.current = false; }
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -272,7 +248,7 @@ const ChatConversation = ({ userId, friend, onBack }: ChatConversationProps) => 
   const groupedMessages: { date: string; msgs: ChatMessage[] }[] = [];
   let lastDate = "";
   for (const msg of messages) {
-    const d = new Date(msg.created_at).toLocaleDateString("sv-SE");
+    const d = new Date(msg.created_at).toLocaleDateString("sv-SE", { timeZone: "UTC" });
     if (d !== lastDate) {
       groupedMessages.push({ date: d, msgs: [msg] });
       lastDate = d;
@@ -294,9 +270,9 @@ const ChatConversation = ({ userId, friend, onBack }: ChatConversationProps) => 
     <div className="flex h-full min-h-0 flex-col overflow-hidden">
       {/* Header */}
       <div className="flex shrink-0 items-center gap-3 border-b border-border/50 pb-3">
-        <button onClick={onBack} className="p-1.5 hover:bg-muted rounded-full transition-colors">
+        <Button variant="ghost" size="icon" aria-label="Tillbaka till meddelanden" onClick={onBack} className="h-11 w-11 shrink-0">
           <ArrowLeft className="w-5 h-5" />
-        </button>
+        </Button>
         <div className="relative w-9 h-9 shrink-0">
           <div
             className="w-9 h-9 rounded-full flex items-center justify-center overflow-hidden"
@@ -316,10 +292,10 @@ const ChatConversation = ({ userId, friend, onBack }: ChatConversationProps) => 
             </span>
           )}
         </div>
-        <div className="min-w-0 flex-1">
-          <span className="block font-semibold text-sm truncate">{friend.nickname}</span>
+        <Button variant="ghost" onClick={onOpenProfile} aria-label={`Visa ${friend.nickname}s profil`} className="min-w-0 flex-1 h-auto min-h-11 flex-col items-start px-1">
+          <span className="block max-w-full font-semibold text-sm truncate">{friend.nickname}</span>
           {friendIsTyping && <TypingDots className="text-[11px]" />}
-        </div>
+        </Button>
         <button
           onClick={() => {
             setSearchOpen(v => !v);
@@ -340,7 +316,7 @@ const ChatConversation = ({ userId, friend, onBack }: ChatConversationProps) => 
             value={searchQuery}
             onChange={e => { setSearchQuery(e.target.value); setSearchIndex(0); }}
             onKeyDown={e => { if (e.key === "Enter") { e.preventDefault(); stepSearch(1); } }}
-            placeholder="Sök i chatten..."
+            placeholder="Sök bland hämtade meddelanden..."
             className="flex-1 text-sm bg-muted rounded-full px-4 py-2 outline-none focus:ring-2 focus:ring-primary/30"
           />
           <span className="text-[11px] text-muted-foreground tabular-nums min-w-[42px] text-center">
@@ -363,6 +339,7 @@ const ChatConversation = ({ userId, friend, onBack }: ChatConversationProps) => 
         className="min-h-0 flex-1 overflow-y-auto py-3 space-y-1 overscroll-contain"
         style={{ WebkitOverflowScrolling: "touch", touchAction: "pan-y", paddingBottom: `calc(${COMPOSER_BOTTOM} + 72px)` }}
       >
+        <ConversationHistoryStatus {...history} empty={messages.length === 0} loadOlder={() => void loadOlder()} />
         {groupedMessages.map(group => (
           <div key={group.date}>
             <div className="text-center my-3">
@@ -602,6 +579,8 @@ const ChatConversation = ({ userId, friend, onBack }: ChatConversationProps) => 
 
       {/* Input - sticky above timer */}
       <ChatComposerPortal className="px-3 pt-2 pb-2 flex flex-col gap-2">
+        {sendError && <div role="alert" className="flex items-center justify-between gap-2"><p className="text-sm text-muted-foreground">Kunde inte skickas. Texten finns kvar.</p><Button variant="outline" disabled={sending} onClick={() => void sendMessage()}>Försök igen</Button></div>}
+        {sending && <p role="status" className="text-xs text-muted-foreground">Skickar…</p>}
         {replyTo && (
           <div className="flex items-center gap-2 rounded-xl bg-muted px-3 py-2">
             <Reply className="w-3.5 h-3.5 text-primary shrink-0" />
@@ -623,16 +602,16 @@ const ChatConversation = ({ userId, friend, onBack }: ChatConversationProps) => 
           onChange={e => { setNewMessage(e.target.value); if (e.target.value.trim()) notifyTyping(); else stopTyping(); }}
           onKeyDown={handleKeyDown}
           placeholder="Skriv ett meddelande..."
-          className="flex-1 text-sm bg-muted rounded-full px-4 py-2.5 outline-none focus:ring-2 focus:ring-primary/30"
+          className="min-w-0 flex-1 text-sm bg-muted text-foreground rounded-full px-4 py-2.5 outline-none focus:ring-2 focus:ring-primary/30"
           disabled={sending}
         />
-        <button
+        <Button aria-label="Skicka meddelande" size="icon"
           onClick={sendMessage}
           disabled={!newMessage.trim() || sending}
           className="p-2.5 bg-primary text-primary-foreground rounded-full disabled:opacity-50 transition-colors hover:bg-primary/90 flex-shrink-0"
         >
           <Send className="w-4 h-4" />
-        </button>
+        </Button>
         </div>
       </ChatComposerPortal>
     </div>

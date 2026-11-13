@@ -11,6 +11,9 @@ import { format, parseISO } from "date-fns";
 import { sv } from "date-fns/locale";
 import FriendProfileView from "@/components/FriendProfileView";
 import EmptyState from "@/components/EmptyState";
+import { Button } from "@/components/ui/button";
+import { toast } from "sonner";
+import FriendChallenges from "./FriendChallenges";
 import HonoraryBadge from "./HonoraryBadge";
 import { getWorkoutPostId } from "@/lib/workoutSocialSync";
 import { emitPostInteraction } from "@/lib/postInteractionBus";
@@ -28,6 +31,7 @@ interface FriendsViewProps {
   friendActivities?: FriendActivity[];
   onClearActivitiesForFriend?: (nickname: string) => void;
   initialFriendId?: string | null;
+  onMessage?: (id: string) => void;
 }
 
 interface FriendProfile {
@@ -144,7 +148,7 @@ const getSessionColor = (session: string) => {
   return "text-secondary-foreground";
 };
 
-const FriendsView = ({ userId, isAdmin = false, friendActivities = [], onClearActivitiesForFriend, initialFriendId }: FriendsViewProps) => {
+const FriendsView = ({ userId, isAdmin = false, friendActivities = [], onClearActivitiesForFriend, initialFriendId, onMessage }: FriendsViewProps) => {
   const [searchQuery, setSearchQuery] = useState("");
   const searchInputRef = useRef<HTMLInputElement>(null);
   const focusFriendSearch = () => {
@@ -161,6 +165,13 @@ const FriendsView = ({ userId, isAdmin = false, friendActivities = [], onClearAc
   const originalThemeRef = useRef<string>(getStoredThemeId());
   const [viewingFriend, setViewingFriend] = useState<(Friendship & { profile: FriendProfile }) | null>(null);
   const [showFriendProfile, setShowFriendProfile] = useState(true);
+  const [friendLoading, setFriendLoading] = useState(false);
+  const [friendError, setFriendError] = useState(false);
+  const [listLoading, setListLoading] = useState(true);
+  const [listError, setListError] = useState(false);
+  const [searchError, setSearchError] = useState(false);
+  const [searched, setSearched] = useState(false);
+  const [requestBusy, setRequestBusy] = useState<string | null>(null);
   const [friendPlans, setFriendPlans] = useState<FriendPlanDay[]>([]);
   const [friendCompletions, setFriendCompletions] = useState<Record<string, FriendCompletion>>({});
   const [friendWeeks, setFriendWeeks] = useState<number[]>([]);
@@ -265,12 +276,13 @@ const FriendsView = ({ userId, isAdmin = false, friendActivities = [], onClearAc
   );
 
   const fetchFriends = async () => {
-    const { data: friendships } = await supabase
+    setListError(false);
+    const { data: friendships, error: friendshipsError } = await supabase
       .from("friendships")
       .select("*")
       .or(`user_id.eq.${userId},friend_id.eq.${userId}`);
 
-    if (!friendships) return;
+    if (friendshipsError || !friendships) { setListError(true); setListLoading(false); return; }
 
     const otherIds = friendships.map((f) =>
       f.user_id === userId ? f.friend_id : f.user_id
@@ -278,15 +290,16 @@ const FriendsView = ({ userId, isAdmin = false, friendActivities = [], onClearAc
 
     if (otherIds.length === 0) {
       setFriends([]);
-      setPendingRequests([]);
+      setPendingRequests([]); setListLoading(false);
       return;
     }
 
-    const { data: profiles } = await supabase
+    const { data: profiles, error: profilesError } = await supabase
       .from("profiles")
       .select("user_id, nickname, avatar_url, is_honorary")
       .in("user_id", otherIds);
 
+    if (profilesError) { setListError(true); setListLoading(false); return; }
     const profileMap = new Map((profiles || []).map((p) => [p.user_id, p]));
 
     const accepted: typeof friends = [];
@@ -316,7 +329,7 @@ const FriendsView = ({ userId, isAdmin = false, friendActivities = [], onClearAc
     );
 
     setFriends(accepted);
-    setPendingRequests(pending);
+    setPendingRequests(pending); setListLoading(false);
   };
 
   const fetchSuggestions = async () => {
@@ -340,64 +353,53 @@ const FriendsView = ({ userId, isAdmin = false, friendActivities = [], onClearAc
 
   const searchUsers = async () => {
     if (searchQuery.trim().length < 2) return;
-    setSearching(true);
+    setSearching(true); setSearchError(false); setSearched(true);
 
-    const { data } = await supabase
+    const { data, error } = await supabase
       .rpc("search_users_by_nickname", {
         search_term: searchQuery.trim(),
         requesting_user_id: userId,
       });
 
-    setSearchResults((data || []).map((d: any) => ({ ...d, avatar_url: null })));
+    setSearchError(!!error);
+    if (!error) setSearchResults((data || []).map((d: any) => ({ ...d, avatar_url: null })));
     setSearching(false);
   };
 
   const sendRequest = async (friendId: string) => {
-    // Check if a friendship already exists in either direction
-    const { data: existing } = await supabase
-      .from("friendships")
-      .select("id, status, user_id, friend_id")
-      .or(`and(user_id.eq.${userId},friend_id.eq.${friendId}),and(user_id.eq.${friendId},friend_id.eq.${userId})`)
-      .limit(1);
-
-    if (existing && existing.length > 0) {
-      const row = existing[0];
-      // If they sent us a pending request, auto-accept it
-      if (row.status === "pending" && row.friend_id === userId) {
-        await supabase.from("friendships").update({ status: "accepted" }).eq("id", row.id);
+    if (requestBusy) return;
+    setRequestBusy(friendId);
+    try {
+      const { data: existing, error: readError } = await supabase.from("friendships").select("id,status,user_id,friend_id").or(`and(user_id.eq.${userId},friend_id.eq.${friendId}),and(user_id.eq.${friendId},friend_id.eq.${userId})`).limit(1);
+      if (readError) throw readError;
+      const row = existing?.[0];
+      if (row) {
+        if (row.status === "pending" && row.friend_id === userId) {
+          const { error } = await supabase.from("friendships").update({ status: "accepted" }).eq("id", row.id);
+          if (error) throw error;
+          toast.success("Vänförfrågan accepterad");
+        } else toast.info(row.status === "accepted" ? "Ni är redan vänner" : "Vänförfrågan väntar på svar");
+      } else {
+        const { error } = await supabase.from("friendships").insert({ user_id: userId, friend_id: friendId, status: "pending" });
+        if (error) throw error;
+        toast.success("Vänförfrågan skickad");
+        void supabase.functions.invoke("notify-friend-request", { body: { friendId } }).catch(() => {});
       }
-      // Otherwise already friends or we already sent a request — do nothing
-    } else {
-      await supabase.from("friendships").insert({
-        user_id: userId,
-        friend_id: friendId,
-        status: "pending",
-      });
-
-      // Send push notification to the recipient
-      supabase.functions.invoke("notify-friend-request", {
-        body: { friendId },
-      }).catch((err) => console.error("Failed to notify friend request:", err));
-    }
-
-    setSearchResults([]);
-    setSearchQuery("");
-    fetchFriends();
-    fetchSuggestions();
+      setSearchResults([]); setSearchQuery(""); setSearched(false);
+      void fetchFriends(); void fetchSuggestions();
+    } catch { toast.error("Kunde inte skicka vänförfrågan. Försök igen."); }
+    finally { setRequestBusy(null); }
   };
-
-  const acceptRequest = async (friendshipId: string) => {
-    await supabase
-      .from("friendships")
-      .update({ status: "accepted" })
-      .eq("id", friendshipId);
-    fetchFriends();
+  const respondRequest = async (id: string, accept: boolean) => {
+    if (requestBusy) return;
+    setRequestBusy(id);
+    const { error } = accept ? await supabase.from("friendships").update({ status: "accepted" }).eq("id", id) : await supabase.from("friendships").delete().eq("id", id);
+    setRequestBusy(null);
+    if (error) { toast.error("Förfrågan kunde inte ändras"); return; }
+    void fetchFriends();
   };
-
-  const rejectRequest = async (friendshipId: string) => {
-    await supabase.from("friendships").delete().eq("id", friendshipId);
-    fetchFriends();
-  };
+  const acceptRequest = (id: string) => respondRequest(id, true);
+  const rejectRequest = (id: string) => respondRequest(id, false);
 
   const isAlreadyFriend = (uid: string) =>
     friends.some((f) => f.profile.user_id === uid) ||
@@ -408,11 +410,12 @@ const FriendsView = ({ userId, isAdmin = false, friendActivities = [], onClearAc
     // Save current theme and lock it
     originalThemeRef.current = getStoredThemeId();
     lockTheme("friend-view");
-    setViewingFriend(friend);
+    setViewingFriend(friend); setShowFriendProfile(true); setFriendLoading(true); setFriendError(false);
+    setFriendPlans([]); setFriendCompletions({});
     onClearActivitiesForFriend?.(friend.profile.nickname);
     const fid = friend.profile.user_id;
 
-    const [{ data: plans }, { data: completions }, { data: commentsData }, { data: likesData }, { data: friendProfile }] = await Promise.all([
+    const [{ data: plans, error: plansError }, { data: completions, error: completionsError }, { data: commentsData }, { data: likesData }, { data: friendProfile, error: profileError }] = await Promise.all([
       supabase.from("workout_plans").select("id, week, day, session_name, details, tempo, created_at").eq("user_id", fid).order("week").order("day"),
       supabase.from("workout_completions").select("week, day, done, user_comment, logged_weights, logged_distance_km").eq("user_id", fid),
       supabase.from("workout_comments").select("*").eq("target_user_id", fid),
@@ -420,6 +423,8 @@ const FriendsView = ({ userId, isAdmin = false, friendActivities = [], onClearAc
       supabase.from("profiles").select("theme, plan_start_date").eq("user_id", fid).single(),
     ]);
 
+    if (plansError || completionsError || profileError) { setFriendError(true); setFriendLoading(false); return; }
+    setFriendLoading(false);
     // Apply friend's theme
     const friendTheme = (friendProfile as any)?.theme || "default";
     applyTheme(friendTheme);
@@ -870,21 +875,17 @@ const FriendsView = ({ userId, isAdmin = false, friendActivities = [], onClearAc
             )}
           </button>
           <h2 className="text-xl font-black">{viewingFriend.profile.nickname}</h2>
-          <button
-            onClick={() => setShowFriendProfile(true)}
-            className="text-xs text-primary font-semibold flex items-center gap-1 mx-auto hover:opacity-80"
-          >
-            <User className="w-3 h-3" /> Visa profil
-          </button>
         </div>
-
-        {showFriendProfile && (
-          <FriendProfileView
-            friendUserId={viewingFriend.profile.user_id}
-            nickname={viewingFriend.profile.nickname}
-            onClose={() => setShowFriendProfile(false)}
-          />
-        )}
+        <div className="flex gap-1" role="group" aria-label="Vänsida">
+          <Button className="flex-1" variant={showFriendProfile ? "secondary" : "ghost"} aria-pressed={showFriendProfile} onClick={() => setShowFriendProfile(true)}><User /> Profil</Button>
+          <Button className="flex-1" variant={!showFriendProfile ? "secondary" : "ghost"} aria-pressed={!showFriendProfile} onClick={() => setShowFriendProfile(false)}><Dumbbell /> Träning</Button>
+        </div>
+        <FriendChallenges userId={userId} />
+        <div className="flex gap-2">
+          <Button className="flex-1" onClick={() => onMessage?.(viewingFriend.profile.user_id)}><MessageSquare /> Meddelande</Button>
+          <Button className="flex-1" variant="outline" onClick={() => window.dispatchEvent(new CustomEvent("grim:create-friend-challenge", { detail: { friendId: viewingFriend.profile.user_id } }))}><Plus /> Utmana</Button>
+        </div>
+        {showFriendProfile && <FriendProfileView embedded friendUserId={viewingFriend.profile.user_id} nickname={viewingFriend.profile.nickname} onClose={() => { unlockTheme("friend-view"); applyTheme(originalThemeRef.current); setViewingFriend(null); }} />}
 
         {/* Fullscreen avatar overlay */}
         {showFullFriendAvatar && viewingFriend.profile.avatar_url && (
@@ -907,10 +908,10 @@ const FriendsView = ({ userId, isAdmin = false, friendActivities = [], onClearAc
           </div>
         )}
 
-        {friendPlans.length === 0 ? (
+        {showFriendProfile ? null : friendLoading ? <p role="status" className="py-6 text-center text-sm text-muted-foreground">Laddar träning…</p> : friendError ? <div role="alert" className="space-y-2 text-center"><p className="text-sm text-muted-foreground">Träningen kunde inte hämtas.</p><Button variant="outline" onClick={() => void viewFriendWorkouts(viewingFriend)}>Försök igen</Button></div> : friendPlans.length === 0 ? (
           <div className="text-center py-8">
             <Dumbbell className="w-10 h-10 text-muted-foreground mx-auto mb-2" />
-            <p className="text-sm text-muted-foreground">Inget schema ännu</p>
+            <p className="text-sm text-muted-foreground">Ingen delad träning att visa</p>
           </div>
         ) : (
           <>
@@ -1368,6 +1369,36 @@ const FriendsView = ({ userId, isAdmin = false, friendActivities = [], onClearAc
     <div className="space-y-6">
       <h2 className="text-xl font-black">Vänner</h2>
 
+      {/* Pending requests */}
+      {pendingRequests.length > 0 && (
+        <div className="space-y-2">
+          <h3 className="text-sm font-semibold text-muted-foreground">Vänförfrågningar</h3>
+          {pendingRequests.map((req) => (
+            <div key={req.id} className="flex items-center justify-between p-3 bg-card border border-primary/30 rounded-lg">
+              <span className="font-semibold text-sm">{req.profile.nickname}</span>
+              <div className="flex gap-2">
+                <button
+                  aria-label={`Acceptera ${req.profile.nickname}s vänförfrågan`} disabled={requestBusy !== null}
+                  onClick={() => acceptRequest(req.id)}
+                  className="h-11 w-11 flex items-center justify-center bg-success text-success-foreground rounded-md"
+                >
+                  <Check className="w-4 h-4" />
+                </button>
+                <button
+                  aria-label={`Avböj ${req.profile.nickname}s vänförfrågan`} disabled={requestBusy !== null}
+                  onClick={() => rejectRequest(req.id)}
+                  className="h-11 w-11 flex items-center justify-center bg-destructive text-destructive-foreground rounded-md"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      <FriendChallenges userId={userId} />
+      {listError && <div role="alert" className="space-y-2"><p className="text-sm text-muted-foreground">Vännerna kunde inte hämtas.</p><Button variant="outline" onClick={() => void fetchFriends()}>Försök igen</Button></div>}
       {/* Search */}
       <div className="space-y-2">
         <div className="relative">
@@ -1391,7 +1422,10 @@ const FriendsView = ({ userId, isAdmin = false, friendActivities = [], onClearAc
         </div>
 
 
-        {searchResults.length > 0 && (
+        {searching && <p role="status" className="text-sm text-muted-foreground">Söker…</p>}
+        {searchError && <div role="alert"><p className="text-sm text-muted-foreground">Sökningen misslyckades.</p><Button variant="outline" onClick={() => void searchUsers()}>Försök igen</Button></div>}
+        {searched && !searching && !searchError && searchResults.length === 0 && <p className="text-sm text-muted-foreground">Ingen användare hittades.</p>}
+        {!searchError && searchResults.length > 0 && (
           <div className="bg-card border border-border rounded-lg divide-y divide-border animate-fade-in">
             {searchResults.map((profile) => (
               <div key={profile.user_id} className="flex items-center justify-between p-3">
@@ -1412,38 +1446,12 @@ const FriendsView = ({ userId, isAdmin = false, friendActivities = [], onClearAc
         )}
       </div>
 
-      {/* Pending requests */}
-      {pendingRequests.length > 0 && (
-        <div className="space-y-2">
-          <h3 className="text-sm font-semibold text-muted-foreground">Vänförfrågningar</h3>
-          {pendingRequests.map((req) => (
-            <div key={req.id} className="flex items-center justify-between p-3 bg-card border border-primary/30 rounded-lg">
-              <span className="font-semibold text-sm">{req.profile.nickname}</span>
-              <div className="flex gap-2">
-                <button
-                  onClick={() => acceptRequest(req.id)}
-                  className="p-1.5 bg-success text-success-foreground rounded-md"
-                >
-                  <Check className="w-4 h-4" />
-                </button>
-                <button
-                  onClick={() => rejectRequest(req.id)}
-                  className="p-1.5 bg-destructive text-destructive-foreground rounded-md"
-                >
-                  <X className="w-4 h-4" />
-                </button>
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
-
       {/* Friends list */}
       <div className="space-y-1.5">
         <h3 className="text-sm font-semibold text-muted-foreground">
           Dina vänner ({friends.length})
         </h3>
-        {friends.length === 0 ? (
+        {listLoading ? <p role="status" className="text-sm text-muted-foreground">Laddar vänner…</p> : listError ? null : friends.length === 0 ? (
           <EmptyState fill
             icon={Users}
             title="Inga vänner ännu"

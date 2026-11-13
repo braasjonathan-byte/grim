@@ -8,6 +8,10 @@ import { Trophy, Plus, Medal, Loader2, Trash2, ChevronDown } from "lucide-react"
 import { toast } from "sonner";
 import { summarizeCompletion } from "@/lib/workoutSummary";
 import { getWorkoutDistanceKm } from "@/lib/workoutDistance";
+import { challengePhase } from "@/lib/socialConversation";
+import { format } from "date-fns";
+import { sv } from "date-fns/locale";
+import { parseDateKeyNoonUtc } from "@/lib/dateUtils";
 
 type Metric = "pass" | "days" | "distance" | "volume";
 
@@ -43,6 +47,14 @@ export default function FriendChallenges({ userId }: Props) {
   const [expanded, setExpanded] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [createOpen, setCreateOpen] = useState(false);
+  const [showAll, setShowAll] = useState(false);
+  const [section, setSection] = useState<"invites" | "active" | "finished">("active");
+  const [friendsError, setFriendsError] = useState(false);
+  useEffect(() => {
+    const open = (event: Event) => { const id = (event as CustomEvent<{ friendId?: string }>).detail?.friendId; setInvited(id ? [id] : []); setCreateOpen(true); };
+    window.addEventListener("grim:create-friend-challenge", open);
+    return () => window.removeEventListener("grim:create-friend-challenge", open);
+  }, []);
   const [saving, setSaving] = useState(false);
   const [friends, setFriends] = useState<{ user_id: string; nickname: string }[]>([]);
 
@@ -108,17 +120,20 @@ export default function FriendChallenges({ userId }: Props) {
   };
 
   const loadFriends = useCallback(async () => {
-    const { data: friendships } = await supabase
+    setFriendsError(false);
+    const { data: friendships, error: friendshipError } = await supabase
       .from("friendships")
       .select("user_id, friend_id, status")
       .or(`user_id.eq.${userId},friend_id.eq.${userId}`)
       .eq("status", "accepted");
+    if (friendshipError) { setFriendsError(true); return; }
     const otherIds = (friendships || []).map((f) => (f.user_id === userId ? f.friend_id : f.user_id));
     if (otherIds.length === 0) { setFriends([]); return; }
-    const { data: profiles } = await supabase
+    const { data: profiles, error: profileError } = await supabase
       .from("profiles")
       .select("user_id, nickname")
       .in("user_id", otherIds);
+    if (profileError) { setFriendsError(true); return; }
     setFriends((profiles || []) as { user_id: string; nickname: string }[]);
   }, [userId]);
 
@@ -198,8 +213,9 @@ export default function FriendChallenges({ userId }: Props) {
           <Trophy className={`w-4 h-4 ${done ? "text-muted-foreground" : "text-warning"}`} />
           <div className="flex-1 min-w-0">
             <div className="text-sm font-bold truncate">{c.title}</div>
+            <span className="text-xs text-muted-foreground">{challengePhase(c.start_date, c.end_date, todayIso()) === "upcoming" ? "Kommande" : done ? "Avslutad" : "Pågår"}</span>
             <div className="text-[11px] text-muted-foreground">
-              {METRICS.find((m) => m.key === c.metric)?.label || "Tidigare utmaning"} · {c.start_date} – {c.end_date}
+              {METRICS.find((m) => m.key === c.metric)?.label || "Tidigare utmaning"} · {format(parseDateKeyNoonUtc(c.start_date), "d MMM", { locale: sv })} – {format(parseDateKeyNoonUtc(c.end_date), "d MMM yyyy", { locale: sv })}
               {c.target ? ` · mål ${fmt(c.target)} ${unitFor(c.metric)}` : ""}
             </div>
           </div>
@@ -208,8 +224,10 @@ export default function FriendChallenges({ userId }: Props) {
 
         {expanded === c.id && (
           <div className="px-3 pb-3 space-y-1.5 animate-fade-in">
-            {standingError === c.id ? <div className="space-y-2"><p className="text-xs text-muted-foreground">{c.metric === "pass" || c.metric === "days" ? "Ställningen kunde inte hämtas." : "Den här äldre utmaningstypen stöds inte av den nya ställningen."}</p>{(c.metric === "pass" || c.metric === "days") && <Button size="sm" variant="outline" onClick={() => void loadStandings(c)}>Försök igen</Button>}</div> : list.length === 0 ? (
+            {standingError === c.id ? <div className="space-y-2"><p className="text-xs text-muted-foreground">{c.metric === "pass" || c.metric === "days" ? "Ställningen kunde inte hämtas." : "Den här äldre utmaningstypen stöds inte av den nya ställningen."}</p>{(c.metric === "pass" || c.metric === "days") && <Button size="sm" variant="outline" onClick={() => void loadStandings(c)}>Försök igen</Button>}</div> : !standings[c.id] ? (
               <p className="text-xs text-muted-foreground">Laddar ställning…</p>
+            ) : list.length === 0 ? (
+              <p className="text-xs text-muted-foreground">Ingen ställning att visa ännu.</p>
             ) : (
               list.map((s, i) => {
                 const pct = leader && leader.value > 0 ? (s.value / leader.value) * 100 : 0;
@@ -243,24 +261,20 @@ export default function FriendChallenges({ userId }: Props) {
 
   return (
     <div className="space-y-2">
-      <div className="flex items-center justify-between">
-        <h3 className="text-sm font-bold flex items-center gap-1.5">
-          <Trophy className="w-4 h-4 text-warning" /> Utmaningar
-        </h3>
-        <Button size="sm" variant="secondary" onClick={() => setCreateOpen(true)}><Plus className="w-3.5 h-3.5" /> Ny</Button>
-      </div>
-
+      <Button variant="ghost" className="w-full h-auto min-h-11 justify-between px-0" aria-expanded={showAll} onClick={() => setShowAll(v => !v)}>
+        <span className="flex items-center gap-2"><Trophy className="text-warning" /><span className="text-sm font-semibold">Utmaningar</span><span className="text-xs text-muted-foreground">{invites.length > 0 ? `${invites.length} inbjudningar · ` : ""}{loading ? "Laddar…" : loadError ? "Kunde inte hämtas" : `${active.length} aktiva`}</span></span><ChevronDown className={showAll ? "rotate-180" : ""} />
+      </Button>
+      {showAll && <>
+        <div className="flex flex-wrap gap-1" role="group" aria-label="Utmaningsöversikt">
+          {(["invites", "active", "finished"] as const).map(value => <Button key={value} variant={section === value ? "secondary" : "ghost"} aria-pressed={section === value} onClick={() => setSection(value)} className="px-2 text-xs">{value === "invites" ? `Inbjudningar (${invites.length})` : value === "active" ? "Pågående" : "Avslutade"}</Button>)}
+          <Button variant="outline" onClick={() => setCreateOpen(true)}><Plus /> Ny utmaning</Button>
+        </div>
       {loadError ? <div role="alert" className="space-y-2"><p className="text-xs text-muted-foreground">Utmaningarna kunde inte hämtas.</p><Button variant="outline" size="sm" onClick={() => void loadChallenges()}>Försök igen</Button></div> : loading ? (
         <p className="text-xs text-muted-foreground">Laddar…</p>
-      ) : (active.length + finished.length + invites.length) === 0 ? (
-        <div className="bg-card border border-border rounded-2xl p-4 text-center space-y-1">
-          <p className="text-xs font-semibold">Inga utmaningar än</p>
-          <p className="text-[11px] text-muted-foreground">Inga pågående eller avslutade utmaningar.</p>
-        </div>
       ) : (
         <div className="space-y-2">
-          {invites.length > 0 && <h4 className="text-sm font-semibold text-primary" role="status">Väntande inbjudningar ({invites.length})</h4>}
-          {invites.map((c) => (
+          {section === "invites" && invites.length > 0 && <h4 className="text-sm font-semibold text-primary" role="status">Väntande inbjudningar ({invites.length})</h4>}
+          {section === "invites" && invites.map((c) => (
             <div key={c.id} className="bg-card border border-primary/40 rounded-2xl p-3 space-y-2">
               <div className="flex items-center gap-2">
                 <Trophy className="w-4 h-4 text-primary" />
@@ -268,7 +282,7 @@ export default function FriendChallenges({ userId }: Props) {
                   <div className="text-[10px] font-bold uppercase tracking-wide text-primary">Inbjudan väntar</div>
                   <div className="text-sm font-bold truncate">{c.title}</div>
                   <div className="text-[11px] text-muted-foreground">
-                    {inviterNames[c.created_by] || "En vän"} · {METRICS.find((m) => m.key === c.metric)?.label || "Tidigare utmaning"} · {c.start_date} – {c.end_date}
+                    {inviterNames[c.created_by] || "En vän"} · {METRICS.find((m) => m.key === c.metric)?.label || "Tidigare utmaning"} · {format(parseDateKeyNoonUtc(c.start_date), "d MMM", { locale: sv })} – {format(parseDateKeyNoonUtc(c.end_date), "d MMM yyyy", { locale: sv })}
                   </div>
                 </div>
               </div>
@@ -278,8 +292,8 @@ export default function FriendChallenges({ userId }: Props) {
               </div>
             </div>
           ))}
-          {active.map((c) => card(c, false))}
-          {finished.length > 0 && (
+          {section === "active" && active.map((c) => card(c, false))}
+          {section === "finished" && finished.length > 0 && (
             <>
               <p className="text-[11px] text-muted-foreground pt-1">Avslutade</p>
               {finished.map((c) => card(c, true))}
@@ -288,6 +302,8 @@ export default function FriendChallenges({ userId }: Props) {
         </div>
       )}
 
+        {!loading && !loadError && ((section === "invites" && invites.length === 0) || (section === "active" && active.length === 0) || (section === "finished" && finished.length === 0)) && <p className="py-2 text-sm text-muted-foreground">{section === "invites" ? "Inga väntande inbjudningar." : section === "active" ? "Inga pågående utmaningar." : "Inga avslutade utmaningar."}</p>}
+      </>}
       <Dialog open={createOpen} onOpenChange={setCreateOpen}>
         <DialogContent className="max-w-md max-h-[85dvh] overflow-y-auto">
           <DialogHeader><DialogTitle className="text-base">Ny utmaning</DialogTitle></DialogHeader>
@@ -331,7 +347,7 @@ export default function FriendChallenges({ userId }: Props) {
 
             <div className="space-y-1">
               <label className="text-xs font-semibold">Bjud in vänner</label>
-              {friends.length === 0 ? (
+              {friendsError ? <div role="alert"><p className="text-sm text-muted-foreground">Vännerna kunde inte hämtas.</p><Button variant="outline" onClick={() => void loadFriends()}>Försök igen</Button></div> : friends.length === 0 ? (
                 <p className="text-[11px] text-muted-foreground">Du har inga vänner att bjuda in än.</p>
               ) : (
                 <div className="flex flex-wrap gap-1.5">
