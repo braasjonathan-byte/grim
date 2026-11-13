@@ -377,13 +377,13 @@ const SocialView = ({ userId, isAdmin, isHonorary = false, friendActivities, unr
       .order("event_date", { ascending: true });
     if (groupsData) {
       // Get member counts
-      const { data: members } = await supabase.from("event_group_members").select("group_id, user_id");
+      const [{ data: countRows }, { data: mine }] = await Promise.all([
+        supabase.rpc("get_event_group_member_counts"),
+        supabase.from("event_group_members").select("group_id").eq("user_id", userId),
+      ]);
       const counts: Record<string, number> = {};
-      const myGroupIds: string[] = [];
-      members?.forEach((m: { group_id: string; user_id: string }) => {
-        counts[m.group_id] = (counts[m.group_id] || 0) + 1;
-        if (m.user_id === userId) myGroupIds.push(m.group_id);
-      });
+      (countRows ?? []).forEach((r: { group_id: string; member_count: number }) => { counts[r.group_id] = Number(r.member_count); });
+      const myGroupIds: string[] = (mine ?? []).map((m: { group_id: string }) => m.group_id);
       setGroups(groupsData.map(g => ({ ...g, member_count: counts[g.id] || 0 })) as EventGroup[]);
       setMyGroups(myGroupIds);
     }

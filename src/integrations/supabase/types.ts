@@ -3131,6 +3131,13 @@ export type Database = {
       can_view_post: { Args: { _post_id: string }; Returns: boolean }
       complete_forced_password_change: { Args: never; Returns: undefined }
       count_implausible_sets: { Args: { lw: Json }; Returns: number }
+      get_event_group_member_counts: {
+        Args: never
+        Returns: {
+          group_id: string
+          member_count: number
+        }[]
+      }
       get_inactive_users_for_nudge: {
         Args: { cutoff_date: string }
         Returns: {
@@ -3212,6 +3219,10 @@ export type Database = {
         Returns: boolean
       }
       is_chat_group_member: {
+        Args: { _group_id: string; _user_id: string }
+        Returns: boolean
+      }
+      is_event_group_member: {
         Args: { _group_id: string; _user_id: string }
         Returns: boolean
       }
