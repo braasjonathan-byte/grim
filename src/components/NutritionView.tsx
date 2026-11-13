@@ -620,33 +620,6 @@ export default function NutritionView({ userId, isHonorary: isHonoraryProp = fal
         <button onClick={() => shiftDay(1)} className="w-9 h-9 icon-round hover:bg-muted/60 transition-colors"><ChevronRight className="w-5 h-5" /></button>
       </div>
 
-        {/* Upprepade måltider: ett tryck från egen historik (MFP/Lifesum-stil), direkt i flödet. */}
-        {loaded && (() => {
-          const want = slotForNow();
-          const quickSlot = allSlots.find((m) => m.toLowerCase() === want) || allSlots[0] || want;
-          return (
-            <div className="space-y-3 py-3 border-b border-border" data-tour="nutrition-quick-repeat">
-              <MealSuggestions
-                key={`${dateKey}:${quickSlot}:${logs.length}`}
-                userId={userId}
-                meal={quickSlot}
-                onPick={(item) => { hapticLight(); void addLog(quickSlot, item, true); }}
-                onPickMany={async (items) => {
-                  hapticLight();
-                  for (const it of items) await addLog(quickSlot, it, true);
-                  toast({ title: `Loggade ${items.length} livsmedel i ${quickSlot}` });
-                }}
-              />
-              <div className="flex gap-1.5">
-                <Button variant="outline" onClick={() => setTemplatesOpen(true)} className="flex-1 px-2 text-xs"><Bookmark className="w-3 h-3" /> Mallar</Button>
-                <Button variant="outline" onClick={() => { hapticLight(); setPastOpen(true); }} className="flex-1 px-2 text-xs"><CopyPlus className="w-3 h-3" /> Senaste veckan</Button>
-                <Button onClick={() => { hapticLight(); setPicker(quickSlot); }} className="flex-1 px-2 text-xs"><Plus className="w-3 h-3" /> {logs.length === 0 ? `Logga ${quickSlot}` : "Sök"}</Button>
-              </div>
-            </div>
-          );
-        })()}
-
-
       {/* Snabbvalen ligger precis under veckodagen, före energikortet. */}
       <div>
         <DropdownMenu>
@@ -730,6 +703,32 @@ export default function NutritionView({ userId, isHonorary: isHonoraryProp = fal
 
 
       </div>
+
+      {/* Upprepade måltider: ett tryck från egen historik (MFP/Lifesum-stil), under dagens måltider. */}
+      {loaded && (() => {
+        const want = slotForNow();
+        const quickSlot = allSlots.find((m) => m.toLowerCase() === want) || allSlots[0] || want;
+        return (
+          <div className="space-y-3 py-3 border-t border-border" data-tour="nutrition-quick-repeat">
+            <MealSuggestions
+              key={`${dateKey}:${quickSlot}:${logs.length}`}
+              userId={userId}
+              meal={quickSlot}
+              onPick={(item) => { hapticLight(); void addLog(quickSlot, item, true); }}
+              onPickMany={async (items) => {
+                hapticLight();
+                for (const it of items) await addLog(quickSlot, it, true);
+                toast({ title: `Loggade ${items.length} livsmedel i ${quickSlot}` });
+              }}
+            />
+            <div className="flex gap-1.5">
+              <Button variant="outline" onClick={() => setTemplatesOpen(true)} className="flex-1 px-2 text-xs"><Bookmark className="w-3 h-3" /> Mallar</Button>
+              <Button variant="outline" onClick={() => { hapticLight(); setPastOpen(true); }} className="flex-1 px-2 text-xs"><CopyPlus className="w-3 h-3" /> Senaste veckan</Button>
+              <Button onClick={() => { hapticLight(); setPicker(quickSlot); }} className="flex-1 px-2 text-xs"><Plus className="w-3 h-3" /> {logs.length === 0 ? `Logga ${quickSlot}` : "Sök"}</Button>
+            </div>
+          </div>
+        );
+      })()}
 
       {isHonorary && (
         <DayFoodDialog
