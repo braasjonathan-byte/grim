@@ -1,7 +1,7 @@
 import { lazyRetry } from "@/lib/lazyRetry";
 import { useState, useEffect, useRef, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { Users, Flame, ImagePlus, Send, Trash2, MessageCircle, Globe, UsersRound, X, Camera, Pin, MoreHorizontal, Dumbbell } from "lucide-react";
+import { Users, Flame, ImagePlus, Send, Trash2, MessageCircle, Globe, UsersRound, X, Camera, Pin, MoreHorizontal, Dumbbell, Weight } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
 import { format } from "date-fns";
@@ -1084,7 +1084,7 @@ const SocialView = ({ userId, isAdmin, isHonorary = false, friendActivities, unr
                       <h3 className="font-sans text-[15px] font-bold leading-snug tracking-normal">{parsed.title}</h3>
                     </div>
                   )}
-                  {parsed.chips.length > 0 && (
+                  {parsed.chips.length > 0 && parsed.exercises.length === 0 && parsed.cardioStats.length === 0 && (
                     <div className="flex flex-wrap gap-1.5">
                       {parsed.chips.map((chip, i) => {
                         const ChipIcon = chip.icon;
@@ -1104,11 +1104,20 @@ const SocialView = ({ userId, isAdmin, isHonorary = false, friendActivities, unr
               )}
 
               {/* Träningslogg */}
-              {parsed.exercises.length > 0 && (
+              {(parsed.exercises.length > 0 || parsed.cardioStats.length > 0) && (
                 <div className="px-4 pb-2">
                   <div className="rounded-xl border border-border/50 bg-muted/30 p-3">
                     <p className="mb-2 text-[10px] font-bold uppercase tracking-wide text-muted-foreground">Träningslogg</p>
                     <ul className="space-y-2">
+                      {parsed.cardioStats.length > 0 && (
+                        <li className="flex items-start gap-2 text-[13px] leading-snug">
+                          <KindIcon className="mt-0.5 h-3.5 w-3.5 shrink-0 text-primary/70" />
+                          <span className="min-w-0 flex-1">
+                            <span className="font-semibold">{parsed.kind === "running" ? "Löpning" : parsed.kind === "cycling" ? "Cykling" : parsed.kind === "swimming" ? "Simning" : "Kondition"}</span>
+                            <span className="text-muted-foreground"> · {parsed.cardioStats.map(stat => stat.label).join(" · ")}</span>
+                          </span>
+                        </li>
+                      )}
                       {parsed.exercises.map((ex, i) => (
                         <li key={i} className="flex items-start gap-2 text-[13px] leading-snug">
                           <Dumbbell className="mt-0.5 h-3.5 w-3.5 shrink-0 text-primary/70" />
@@ -1119,15 +1128,20 @@ const SocialView = ({ userId, isAdmin, isHonorary = false, friendActivities, unr
                         </li>
                       ))}
                     </ul>
-                    {parsed.text && (
-                      <p className="mt-3 border-t border-border/50 pt-3 whitespace-pre-line text-sm leading-relaxed">{parsed.text}</p>
+                    {parsed.chips.length > 0 && (
+                      <div className="mt-3 border-t border-border/50 pt-3 space-y-2">
+                        <p className="text-[10px] font-bold uppercase tracking-wide text-muted-foreground">Summering av passet</p>
+                        <div className="flex flex-wrap gap-x-4 gap-y-2">
+                          {parsed.chips.map((stat, i) => <span key={i} className="inline-flex items-center gap-1.5 text-xs"><stat.icon className="h-3.5 w-3.5 text-muted-foreground" />{stat.label}{stat.icon === Weight ? " volym" : ""}</span>)}
+                        </div>
+                      </div>
                     )}
                   </div>
                 </div>
               )}
 
               {/* Free text */}
-              {parsed.text && parsed.exercises.length === 0 && (
+              {parsed.text && (
                 <div className="px-4 pb-2">
                   <p className="whitespace-pre-line text-sm leading-snug">{parsed.text}</p>
                 </div>

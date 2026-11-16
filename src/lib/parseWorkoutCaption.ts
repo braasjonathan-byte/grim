@@ -1,5 +1,5 @@
 import type { LucideIcon } from "lucide-react";
-import { Activity, Bike, Dumbbell, Footprints, Heart, Ruler, Timer, Waves, Weight } from "lucide-react";
+import { Activity, Bike, Dumbbell, Footprints, Heart, Ruler, Timer, Waves, Weight, Zap, Gauge } from "lucide-react";
 
 export type ChipTone = "primary" | "success" | "warning" | "muted";
 
@@ -18,6 +18,7 @@ export interface CaptionExercise {
 
 interface ParsedCaption {
   chips: CaptionStatChip[];
+  cardioStats: CaptionStatChip[];
   text: string;
   title: string;
   kind: WorkoutKind;
@@ -32,6 +33,8 @@ const STAT_MATCHERS: {
 }[] = [
   { emoji: "📏", icon: Ruler, tone: "primary", format: (r) => r },
   { emoji: "⏱", icon: Timer, tone: "muted", format: (r) => r },
+  { emoji: "🚀", icon: Gauge, tone: "primary", format: (r) => r },
+  { emoji: "⚡", icon: Zap, tone: "primary", format: (r) => r },
   { emoji: "❤️", icon: Heart, tone: "warning", format: (r) => r },
   { emoji: "💪", icon: Dumbbell, tone: "success", format: (r) => r },
   { emoji: "🏋️‍♂️", icon: Weight, tone: "primary", format: (r) => r.replace(/\s*volym$/i, "") },
@@ -83,10 +86,11 @@ export const CHIP_TONE_CLASS: Record<ChipTone, string> = {
  * recognisable structure degrade gracefully to plain text.
  */
 export const parseWorkoutCaption = (caption: string | null | undefined): ParsedCaption => {
-  if (!caption) return { chips: [], text: "", title: "", kind: "other", exercises: [] };
+  if (!caption) return { chips: [], cardioStats: [], text: "", title: "", kind: "other", exercises: [] };
 
   const lines = caption.split("\n");
   const chips: CaptionStatChip[] = [];
+  const cardioStats: CaptionStatChip[] = [];
   const exercises: CaptionExercise[] = [];
   const kept: string[] = [];
   let title = "";
@@ -116,12 +120,16 @@ export const parseWorkoutCaption = (caption: string | null | undefined): ParsedC
     const parsed = tokens.map(parseToken);
     const isStatLine = trimmed.length > 0 && parsed.every((p) => p !== null);
     if (isStatLine) {
-      parsed.forEach((p) => p && chips.push(p));
+      parsed.forEach((p, i) => {
+        if (!p) return;
+        if (/^(📏|⏱|🚀|⚡|❤️)/u.test(tokens[i].trim())) cardioStats.push(p);
+        else chips.push(p);
+      });
     } else {
       kept.push(line);
     }
   });
 
   const text = kept.join("\n").replace(/\n{3,}/g, "\n\n").trim();
-  return { chips, text, title, kind: detectKind(title || text), exercises };
+  return { chips, cardioStats, text, title, kind: detectKind(title || text), exercises };
 };
