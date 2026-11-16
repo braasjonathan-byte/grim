@@ -1,5 +1,10 @@
 # Roadmap
 
+## Träningsprestanda och databas 16 november 2026
+- [x] Isolera passvyns sparning och synkstatus utan ändrad registreringslogik; befintliga separata setrader och vilotimer behålls. Stabil kontext hindrar sparindikatorn från att rendera om hela passvyn.
+- [x] Undersök startkontroll och passhistorik; två partiella historikindex används i verifierad frågeplan (31 → 6 bufferträffar). Startkontrollen har redan relevanta index och lämnades oförändrad; inga historiska data kapas. HTTP-mätningen varierar även för oförändrad startkontroll och bevisar inte förbättrad laddtid.
+- [x] 46 relevanta tester och 7 inloggade måltids-/pass-/omladdnings-/offlinekontroller godkända, testdata återställda.
+
 ## Social 13 november 2026
 - [x] 1. Samlad vänsida med profil, träning, meddelande och utmaning; vänförfrågningar före vänlistan.
 - [x] 2. Skilj gruppchattar från eventgrupper och ge direkt väg till event.

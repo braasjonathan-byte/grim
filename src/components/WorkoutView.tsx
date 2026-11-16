@@ -1,3 +1,5 @@
+import WorkoutSyncStatus from "@/components/workout/WorkoutSyncStatus";
+import { useWorkoutCompletionWriter } from "@/components/workout/useWorkoutCompletionWriter";
 import { SingleWorkoutForm } from "@/components/workout/SingleWorkoutForm";
 import EmptyState from "@/components/EmptyState";
 import { openMiniTimer } from "@/components/MiniTimer";
@@ -26,9 +28,9 @@ import { PastWorkoutsDialog, DeleteWorkoutConfirm } from "@/components/workout/W
 import { WORKOUTS_CHANGED_EVENT, notifyWorkoutsChanged } from "@/lib/workoutHistory";
 import SetRowsEditor, { validateSetRows, type SetRow } from "@/components/workout/SetRowsEditor";
 import { supabase } from "@/integrations/supabase/client";
-import { queueOfflineUpsert, dequeueOfflineUpsert, getPendingRows, useOfflineStatus, OFFLINE_FLUSHED_EVENT } from "@/hooks/useOfflineSync";
-import { readOfflineWorkoutCache, writeOfflineWorkoutCache, patchOfflineWorkoutCache } from "@/lib/offlineWorkoutCache";
-import { countCheckmarks, detectDestructiveWrite, getKnownCheckmarkCount, rememberCheckmarkCount, seedCheckmarkCounts, logDestructiveWrite } from "@/lib/completionGuard";
+import { getPendingRows, OFFLINE_FLUSHED_EVENT } from "@/hooks/useOfflineSync";
+import { readOfflineWorkoutCache, writeOfflineWorkoutCache } from "@/lib/offlineWorkoutCache";
+import { seedCheckmarkCounts } from "@/lib/completionGuard";
 import { Check, MessageSquare, ChevronDown, ChevronUp, Dumbbell, Footprints, Moon, Bike, Waves, ChevronLeft, ChevronRight, LogOut, Plus, Trash2, Search, CalendarIcon, X, TrendingUp, Equal, Weight, MessageCircle, XCircle, Timer, Route, Info, Pencil, Share2, Swords, ArrowLeftRight, Send, Settings, ArrowLeft, Flame, Download, Play, Save, Lock, RefreshCw, MapPin, Square, Maximize2, Minimize2, Pause, Heart, HeartOff, Sparkles, GripVertical, MoreHorizontal, CalendarRange, History } from "lucide-react";
 import { ExerciseDndContext, SortableLine } from "@/components/workout/ExerciseDnd";
 import { GPS_FIX_MAX_ACCURACY_M, useGpsTracker } from "@/hooks/useGpsTracker";
@@ -119,7 +121,6 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
   const readyWorkoutCategories = useReadyWorkouts();
   const { triggerSave } = useSaveIndicator();
   const isMobile = useIsMobile();
-  const offlineStatus = useOfflineStatus();
   const [activeDayIndex, setActiveDayIndex] = useState(0);
   const [swipeDirection, setSwipeDirection] = useState<"left" | "right" | null>(null);
   const touchStartX = useRef<number | null>(null);
@@ -1570,139 +1571,7 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
     }));
   };
 
-  // Safe upsert that always preserves ALL existing fields to prevent data loss
-  const safeUpsertCompletion = async (
-    week: number,
-    day: string,
-    updates: Partial<Completion & { logged_weights: Record<string, any> | null }>
-  ) => {
-    const entryKey = `${week}-${day}`;
-
-    // Build payload from current state synchronously using a promise that resolves inside setState
-    const payload = await new Promise<Record<string, any>>((resolve) => {
-      setCompletions((prev: Record<string, any>) => {
-        const prevComp = prev[entryKey] || {};
-        const merged = {
-          week,
-          day,
-          done: prevComp.done || false,
-          skipped: prevComp.skipped || false,
-          user_comment: prevComp.user_comment || "",
-          logged_tempo: prevComp.logged_tempo ?? null,
-          logged_pulse: prevComp.logged_pulse ?? null,
-          logged_distance_km: prevComp.logged_distance_km ?? null,
-          logged_weights: prevComp.logged_weights ?? null,
-          ...updates,
-        };
-
-        resolve(merged);
-
-        return {
-          ...prev,
-          [entryKey]: merged as any,
-        };
-      });
-    });
-
-    const upsertData = {
-        user_id: userId,
-        week,
-        day,
-        done: payload.done,
-        skipped: payload.skipped,
-        user_comment: payload.user_comment,
-        logged_tempo: payload.logged_tempo,
-        logged_pulse: payload.logged_pulse,
-        logged_distance_km: payload.logged_distance_km,
-        logged_weights: payload.logged_weights,
-      };
-
-    // Safety net: never let a write silently remove more than one checkmark
-    // compared to what we know is already stored in the backend.
-    const nextCount = countCheckmarks(payload.logged_weights, !!payload.done);
-    const destructive = detectDestructiveWrite(getKnownCheckmarkCount(userId, week, day), nextCount);
-    if (destructive && !(typeof navigator !== "undefined" && navigator.onLine === false)) {
-      const { data: serverRow } = await supabase
-        .from("workout_completions")
-        .select("done, logged_weights")
-        .eq("user_id", userId)
-        .eq("week", week)
-        .eq("day", day)
-        .maybeSingle();
-      const serverCount = serverRow
-        ? countCheckmarks((serverRow as any).logged_weights, !!(serverRow as any).done)
-        : 0;
-      if (nextCount < serverCount - 1) {
-        logDestructiveWrite("safeUpsertCompletion", userId, week, day, { previousCount: serverCount, nextCount }, true);
-        // Restore the authoritative backend state into the UI instead of saving.
-        if (serverRow) {
-          setCompletions((prev: Record<string, any>) => ({
-            ...prev,
-            [entryKey]: { ...prev[entryKey], ...(serverRow as any), week, day },
-          }));
-        }
-        rememberCheckmarkCount(userId, week, day, serverCount);
-        toast.error("Sparningen stoppades – den skulle ha raderat loggad träningsdata. Data laddades om.");
-        return;
-      }
-      logDestructiveWrite("safeUpsertCompletion", userId, week, day, { previousCount: serverCount, nextCount }, false);
-    }
-
-    // Queue to localStorage first so data survives if the page is killed before network completes
-    queueOfflineUpsert("workout_completions", upsertData as any, "user_id,week,day");
-    // Mirror into the offline snapshot so a reload without coverage still shows it
-    patchOfflineWorkoutCache(userId, upsertData as any);
-
-    // Offline: lita på kön (synkas när nät finns) i stället för att vänta på ett anrop som timeoutar.
-    const { error } = (typeof navigator !== "undefined" && navigator.onLine === false)
-      ? { error: { message: "offline" } as any }
-      : await supabase.from("workout_completions").upsert(
-          upsertData as any,
-          { onConflict: "user_id,week,day" }
-        );
-
-    // If network save succeeded, remove the queued fallback so it can never be replayed later
-    if (!error) {
-      rememberCheckmarkCount(userId, week, day, nextCount);
-      dequeueOfflineUpsert("workout_completions", { user_id: userId, week, day });
-    }
-
-    // Notify friends when a workout is marked done (server dedups per user+week+day)
-    if (payload.done === true) {
-      try {
-        const { notifyFriendsOfCompletion } = await import("@/hooks/usePushNotifications");
-        const [{ data: plans }, { data: prof }] = await Promise.all([
-          supabase.from("workout_plans").select("session_name").eq("user_id", userId).eq("week", week).eq("day", day),
-          supabase.from("profiles").select("plan_start_date").eq("user_id", userId).maybeSingle(),
-        ]);
-        const sessionName = (plans || []).map((p: any) => p.session_name).filter(Boolean).join(" + ");
-        void notifyFriendsOfCompletion(day, week, sessionName, (prof as any)?.plan_start_date ?? null);
-      } catch (e) {
-        console.warn("notifyFriendsOfCompletion failed", e);
-      }
-    }
-    triggerSave();
-  };
-
-  const updateCompletionWeights = async (
-    week: number,
-    day: string,
-    updater: (current: Record<string, any>) => Record<string, any>
-  ) => {
-    const entryKey = `${week}-${day}`;
-
-    // Compute the new weights using current state via promise
-    const nextWeights = await new Promise<Record<string, any>>((resolve) => {
-      setCompletions((prev: Record<string, any>) => {
-        const prevComp = prev[entryKey] || {};
-        const currentWeights = (prevComp.logged_weights || {}) as Record<string, any>;
-        resolve(updater(currentWeights));
-        return prev; // Don't update yet - safeUpsertCompletion will do it
-      });
-    });
-
-    await safeUpsertCompletion(week, day, { logged_weights: nextWeights });
-  };
+  const { safeUpsertCompletion, updateCompletionWeights } = useWorkoutCompletionWriter({ userId, setCompletions, triggerSave });
 
   const toggleSetDone = async (week: number, day: string, exerciseName: string, setIndex: number, totalSets: number, defaultKg?: string, defaultReps?: string) => {
     const k = `${week}-${day}`;
@@ -3977,21 +3846,7 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
       onCancel={() => setConfirmStartPlanOpen(false)}
     />
   );
-  const offlineBanner = (!offlineStatus.online || offlineStatus.pending > 0) ? (
-    // Flytande märke – tar ingen plats i layouten så inga knappar flyttas.
-    <div
-      role="status"
-      className={`pointer-events-none fixed left-1/2 z-40 flex max-w-[calc(100%-2rem)] -translate-x-1/2 items-center gap-2 rounded-full px-3 py-1.5 text-xs shadow-soft backdrop-blur ${offlineStatus.online ? "bg-card/95 text-primary" : "bg-card/95 text-warning"}`}
-      style={{ top: "calc(env(safe-area-inset-top, 0px) + 0.5rem)" }}
-    >
-      <RefreshCw className={`w-3.5 h-3.5 shrink-0 ${offlineStatus.online ? "animate-spin" : ""}`} />
-      <span>
-        {offlineStatus.online
-          ? `Synkar ${offlineStatus.pending} sparad${offlineStatus.pending === 1 ? "" : "e"} loggning${offlineStatus.pending === 1 ? "" : "ar"}…`
-          : "Offline – du kan logga som vanligt. Allt sparas i mobilen och synkas när täckningen är tillbaka."}
-      </span>
-    </div>
-  ) : null;
+  const offlineBanner = <WorkoutSyncStatus />;
 
   const adminBanner = onBack ? (
     <div className="bg-warning/10 border border-warning/30 rounded-lg p-3 mb-4 flex items-center justify-between">

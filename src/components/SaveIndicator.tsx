@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, createContext, useContext } from "react";
+import { useState, useMemo, useCallback, createContext, useContext } from "react";
 import { Check, Loader2 } from "lucide-react";
 
 type SaveState = "idle" | "saving" | "saved";
@@ -24,8 +24,11 @@ export const SaveIndicatorProvider = ({ children }: { children: React.ReactNode 
     return () => clearTimeout(t);
   }, []);
 
+  // Indicator animation must not broadcast a new context value to every field.
+  const contextValue = useMemo(() => ({ triggerSave }), [triggerSave]);
+
   return (
-    <SaveIndicatorContext.Provider value={{ triggerSave }}>
+    <SaveIndicatorContext.Provider value={contextValue}>
       {children}
       {state !== "idle" && (
         <div className="fixed top-3 right-3 z-[100] flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-card/90 backdrop-blur border border-border text-xs font-medium animate-in fade-in slide-in-from-top-2 duration-200">

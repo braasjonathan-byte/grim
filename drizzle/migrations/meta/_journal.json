@@ -295,6 +295,13 @@
       "when": 1794825931390,
       "tag": "0041_app_settings_signed_in_read",
       "breakpoints": true
+    },
+    {
+      "idx": 42,
+      "version": "7",
+      "when": 1794830643020,
+      "tag": "0042_workout_history_lookup_indexes",
+      "breakpoints": true
     }
   ]
 }

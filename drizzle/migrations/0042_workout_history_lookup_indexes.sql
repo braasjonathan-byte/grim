@@ -1,0 +1,2 @@
+CREATE INDEX IF NOT EXISTS idx_workout_completions_done_user_updated ON public.workout_completions (user_id, updated_at DESC) WHERE done = true;
+CREATE INDEX IF NOT EXISTS idx_workout_completions_done_updated ON public.workout_completions (updated_at DESC) WHERE done = true;
