@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { ChevronDown, Loader2, Sparkles, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -8,9 +8,9 @@ import { loadDayGoalFoods, saveDayGoalSuggestion } from "@/lib/dayGoalFoods";
 import { showUndoToast } from "@/lib/undoToast";
 import { supabase } from "@/integrations/supabase/client";
 
-interface Props { userId: string; dateKey: string; remaining: GoalNutrition; slots: string[]; hasGoals: boolean; onSaved: () => void }
+interface Props { userId: string; dateKey: string; remaining: GoalNutrition; slots: string[]; hasGoals: boolean; onSaved: () => void; shortcuts?: ReactNode }
 
-export default function DayGoalSuggestions({ userId, dateKey, remaining, slots, hasGoals, onSaved }: Props) {
+export default function DayGoalSuggestions({ userId, dateKey, remaining, slots, hasGoals, onSaved, shortcuts }: Props) {
   const [open, setOpen] = useState(false);
   const [foods, setFoods] = useState<PickedItem[]>([]);
   const [excluded, setExcluded] = useState<Set<string>>(new Set());
@@ -46,9 +46,12 @@ export default function DayGoalSuggestions({ userId, dateKey, remaining, slots, 
     finally { lock.current = false; setSaving(false); }
   }
   return <section className="space-y-3 border-t border-border py-3" aria-label="Rädda dagsmålet">
-    <Button variant="outline" className="w-full min-h-11 justify-between" aria-expanded={open} onClick={() => setOpen(value => !value)} disabled={saving}>
-      <span className="flex items-center gap-2"><Sparkles className="h-4 w-4" /> Rädda dagsmålet</span><ChevronDown className="h-4 w-4" />
-    </Button>
+    <div className={shortcuts ? "grid grid-cols-2 gap-2" : ""}>
+      <Button variant="outline" className="w-full h-auto min-h-12 rounded-lg px-3 justify-start gap-2 whitespace-normal text-left text-xs" aria-expanded={open} onClick={() => setOpen(value => !value)} disabled={saving}>
+        <Sparkles className="h-4 w-4 shrink-0" /><span className="flex-1">Rädda dagsmålet</span><ChevronDown className="h-4 w-4 shrink-0" />
+      </Button>
+      {shortcuts}
+    </div>
     {open && <div className="space-y-3">
       <p className="text-sm text-muted-foreground">{Math.round(Math.max(0, remaining.kcal))} kcal och {Math.round(Math.max(0, remaining.protein_g))} g protein kvar av {hasGoals ? "ditt mål" : "standardmålet"}. Näringsvärden är ungefärliga, inte ett krav att äta mer.</p>
       {remaining.kcal <= 0 ? <p className="text-sm">Kalorimålet är uppnått. Inga extra matförslag för att fylla målet.</p> : <>

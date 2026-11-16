@@ -734,7 +734,11 @@ export default function NutritionView({ userId, isHonorary: isHonoraryProp = fal
       </div>
 
       {/* Upprepade måltider: ett tryck från egen historik (MFP/Lifesum-stil), under dagens måltider. */}
-      {loaded && !loadError && <DayGoalSuggestions key={dateKey} userId={userId} dateKey={dateKey} slots={allSlots} hasGoals={hasGoals} onSaved={() => void load()} remaining={{ kcal: targets.kcal - totals.kcal, protein_g: targets.protein_g - totals.protein, fat_g: Math.max(0, targets.fat_g - totals.fat), carbs_g: Math.max(0, targets.carbs_g - totals.carbs) }} />}
+      {loaded && !loadError && <DayGoalSuggestions key={dateKey} userId={userId} dateKey={dateKey} slots={allSlots} hasGoals={hasGoals} onSaved={() => void load()} remaining={{ kcal: targets.kcal - totals.kcal, protein_g: targets.protein_g - totals.protein, fat_g: Math.max(0, targets.fat_g - totals.fat), carbs_g: Math.max(0, targets.carbs_g - totals.carbs) }} shortcuts={<>
+        <Button variant="outline" className="min-h-12 h-auto rounded-lg px-3 justify-start gap-2 whitespace-normal text-left text-xs" onClick={() => { setCuratedTargetMeal(null); setCuratedOpen(true); }}><ChefHat className="h-4 w-4 shrink-0" /> Recept</Button>
+        <Button variant="outline" className="min-h-12 h-auto rounded-lg px-3 justify-start gap-2 whitespace-normal text-left text-xs" onClick={() => setTemplatesOpen(true)}><Bookmark className="h-4 w-4 shrink-0" /> Måltidsmallar</Button>
+        <Button variant="outline" className="min-h-12 h-auto rounded-lg px-3 justify-start gap-2 whitespace-normal text-left text-xs" onClick={() => setAddNameOpen(true)}><Plus className="h-4 w-4 shrink-0" /> Lägg till måltid</Button>
+      </>} />}
       {loaded && (() => {
         const want = slotForNow();
         const quickSlot = allSlots.find((m) => m.toLowerCase() === want) || allSlots[0] || want;
