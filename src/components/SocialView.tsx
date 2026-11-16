@@ -1119,12 +1119,15 @@ const SocialView = ({ userId, isAdmin, isHonorary = false, friendActivities, unr
                         </li>
                       ))}
                     </ul>
+                    {parsed.text && (
+                      <p className="mt-3 border-t border-border/50 pt-3 whitespace-pre-line text-sm leading-relaxed">{parsed.text}</p>
+                    )}
                   </div>
                 </div>
               )}
 
               {/* Free text */}
-              {parsed.text && (
+              {parsed.text && parsed.exercises.length === 0 && (
                 <div className="px-4 pb-2">
                   <p className="whitespace-pre-line text-sm leading-snug">{parsed.text}</p>
                 </div>
