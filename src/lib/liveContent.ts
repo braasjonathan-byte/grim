@@ -172,3 +172,8 @@ export const saveHelpTips = (title: string, tips: string[], userId?: string) =>
 export const resetHelpTips = () => clearSetting("help_tips");
 export const saveNewsPopup = (popup: NewsPopup, userId?: string) => writeSetting("news_popup", popup, userId);
 export const clearNewsPopup = () => clearSetting("news_popup");
+
+// Innehållet kan bara läsas inloggad: läs om när någon loggar in.
+supabase.auth.onAuthStateChange((event) => {
+  if (event === "SIGNED_IN" && started) refreshLiveContent().catch(() => {});
+});

@@ -52,3 +52,8 @@ export function useAppSettings(): AppSettings {
   }, []);
   return s;
 }
+
+// Inställningarna kan bara läsas inloggad: läs om när någon loggar in.
+supabase.auth.onAuthStateChange((event) => {
+  if (event === "SIGNED_IN") refreshAppSettings().catch(() => {});
+});
