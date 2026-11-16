@@ -302,6 +302,20 @@
       "when": 1794830643020,
       "tag": "0042_workout_history_lookup_indexes",
       "breakpoints": true
+    },
+    {
+      "idx": 43,
+      "version": "7",
+      "when": 1794834164931,
+      "tag": "0043_shared_workout_sparring",
+      "breakpoints": true
+    },
+    {
+      "idx": 44,
+      "version": "7",
+      "when": 1794834596338,
+      "tag": "0044_sparring_preserve_roster_format",
+      "breakpoints": true
     }
   ]
 }

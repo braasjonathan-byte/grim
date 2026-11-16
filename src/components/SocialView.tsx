@@ -25,6 +25,7 @@ import ReportDialog from "@/components/ReportDialog";
 import { blockUser, muteUser, loadMutedIds, loadPrivacySettings } from "@/lib/socialPrivacy";
 import { Flag, VolumeX, Ban, Eye } from "lucide-react";
 import { SocialImage } from "@/components/SocialImage";
+import WorkoutSparringButton from "@/components/WorkoutSparringButton";
 
 const FriendsView = lazyRetry(() => import("./FriendsView"));
 const ChatView = lazyRetry(() => import("./ChatView"));
@@ -1193,6 +1194,7 @@ const SocialView = ({ userId, isAdmin, isHonorary = false, friendActivities, unr
               </div>
 
 
+              {friendIds.has(post.user_id) && post.workout_week !== null && post.workout_day && <div className="px-3 pb-3"><WorkoutSparringButton postId={post.id} /></div>}
               {/* Comments */}
               {openComments.has(post.id) && (
                 <div className="px-3 py-2.5 border-t border-border/40 space-y-2 bg-secondary/20">

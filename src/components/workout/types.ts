@@ -16,6 +16,7 @@ export interface PlanDay {
   details: string;
   tempo: string | null;
   is_circuit?: boolean;
+  sparring_reference?: unknown;
 }
 
 export interface Completion {

@@ -17,6 +17,7 @@ import FriendChallenges from "./FriendChallenges";
 import HonoraryBadge from "./HonoraryBadge";
 import { getWorkoutPostId } from "@/lib/workoutSocialSync";
 import { emitPostInteraction } from "@/lib/postInteractionBus";
+import WorkoutSparringButton from "@/components/WorkoutSparringButton";
 
 interface FriendActivity {
   nickname: string;
@@ -1288,6 +1289,7 @@ const FriendsView = ({ userId, isAdmin = false, friendActivities = [], onClearAc
                           })()
                         )}
 
+                        {completion?.done && <WorkoutSparringButton friendId={viewingFriend.profile.user_id} week={plan.week} day={plan.day} />}
                         {/* User's own comment */}
                         {completion?.user_comment && (
                           <div className="bg-secondary/50 rounded-md p-2">

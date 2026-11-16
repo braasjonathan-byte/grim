@@ -3021,6 +3021,7 @@ export type Database = {
           id: string
           is_circuit: boolean
           session_name: string
+          sparring_reference: Json | null
           tempo: string | null
           updated_at: string
           user_id: string
@@ -3033,6 +3034,7 @@ export type Database = {
           id?: string
           is_circuit?: boolean
           session_name?: string
+          sparring_reference?: Json | null
           tempo?: string | null
           updated_at?: string
           user_id: string
@@ -3045,6 +3047,7 @@ export type Database = {
           id?: string
           is_circuit?: boolean
           session_name?: string
+          sparring_reference?: Json | null
           tempo?: string | null
           updated_at?: string
           user_id?: string
@@ -3141,6 +3144,7 @@ export type Database = {
         }
         Returns: string
       }
+      create_workout_sparring: { Args: { _post_id: string }; Returns: string }
       get_event_group_member_counts: {
         Args: never
         Returns: {

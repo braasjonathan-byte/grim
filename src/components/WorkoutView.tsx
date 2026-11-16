@@ -1,4 +1,5 @@
 import WorkoutSyncStatus from "@/components/workout/WorkoutSyncStatus";
+import SparringSummary, { SparringSetNote } from "@/components/workout/SparringSummary";
 import { useWorkoutCompletionWriter } from "@/components/workout/useWorkoutCompletionWriter";
 import { SingleWorkoutForm } from "@/components/workout/SingleWorkoutForm";
 import EmptyState from "@/components/EmptyState";
@@ -197,6 +198,7 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
   const [showCopyPicker, setShowCopyPicker] = useState(false);
   const [singleCurrentWeek, setSingleCurrentWeek] = useState(getISOWeek(new Date()));
   const [singleActiveDayIdx, setSingleActiveDayIdx] = useState(0);
+  const sparringOpenedRef = useRef(false);
 
   // Add extra workout to an already-completed day in plan-week view
   const [addExtraDay, setAddExtraDay] = useState<{ week: number; day: string } | null>(null);
@@ -844,7 +846,18 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
           setMode(prev => (prev === "loading" || prev === "choose") ? "choose" : prev);
         } else {
           const allSingle = planData.every((p) => p.week === 0);
-          setMode(allSingle ? "single" : "plan");
+          const sparringPlans = planData.filter(p => p.sparring_reference);
+          setMode(prev => allSingle || (prev === "single" && sparringPlans.length > 0) ? "single" : "plan");
+          try {
+            const intent = sparringOpenedRef.current ? null : JSON.parse(sessionStorage.getItem(`grim_sparring_open_${userId}`) || "null");
+            const target = planData.find(p => p.id === intent?.id && p.sparring_reference);
+            if (target) {
+              setMode("single");
+              setSingleCurrentWeek(getISOWeek(parseDateKey(target.day.slice(0, 10)) ?? new Date()));
+              setSingleActiveDayIdx(Math.max(0, getDayIndex(getWeekdayFromDayKey(target.day))));
+              sparringOpenedRef.current = true;
+            }
+          } catch { /* Ignore an invalid navigation intent. */ }
         }
       }
     }
@@ -4317,6 +4330,7 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
 
 
                     {/* Exercises / details */}
+                    <SparringSummary reference={plan.sparring_reference} weights={completion?.logged_weights} details={plan.details} done={isDone} />
                     {plan.details &&
                   (() => { const exerciseLines = plan.details.split("\n").filter(Boolean); return <div className="space-y-2">
                         <ExerciseDndContext count={exerciseLines.length} onReorder={(a, b) => reorderExercise(plan.id, a, b)}>
@@ -4571,6 +4585,7 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
                                        const inheritedKg = prevSaved?.kg && prevSaved.kg.trim() ? prevSaved.kg : defaultKg;
                                        return (
                                          <div key={si}>
+                                           <SparringSetNote reference={plan.sparring_reference} name={name} index={si} />
                                            <SwipeableSetRow done={isSetDone} isPR={isPrWeight(prIndex, name, saved?.kg)} celebrationKey={`${name}-${si}-${saved?.kg ?? ""}`} onToggle={() => toggleSetDone(0, plan.day, name, si, setsCountSingle, inheritedKg, inheritedReps)}>
                                            <div className={`flex items-center gap-1.5 py-0.5 rounded px-1 ${isSetDone ? "opacity-60" : ""}`}>
                                            <Checkbox checked={isSetDone} onCheckedChange={() => toggleSetDone(0, plan.day, name, si, setsCountSingle, inheritedKg, inheritedReps)} className="h-5 w-5" />

@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { loadWorkoutHistory, WORKOUTS_CHANGED_EVENT } from "@/lib/workoutHistory";
 import { insightAnswers, type InsightAnswer } from "@/lib/trainingInsights";
+import { hybridAnswers } from "@/lib/hybridInsights";
 import { supabase } from "@/integrations/supabase/client";
 import { WEIGHT_CHANGED_EVENT } from "@/lib/bodyWeight";
 import { Button } from "@/components/ui/button";
@@ -16,7 +17,7 @@ export default function TrainingInsights({ userId }: { userId: string }) {
     setLoading(true); setError(false);
     Promise.all([loadWorkoutHistory(userId), supabase.from("body_weight_logs").select("log_date,weight_kg").eq("user_id", userId).order("log_date")]).then(([sessions, weights]) => {
       if (weights.error) throw weights.error;
-      if (!cancelled) setAnswers(insightAnswers(sessions, (weights.data || []).map(row => ({ ...row, weight_kg: Number(row.weight_kg) }))));
+      if (!cancelled) setAnswers([...insightAnswers(sessions, (weights.data || []).map(row => ({ ...row, weight_kg: Number(row.weight_kg) }))), ...hybridAnswers(sessions, new Date().toISOString().slice(0, 10))]);
     })
       .catch(() => { if (!cancelled) setError(true); }).finally(() => { if (!cancelled) setLoading(false); });
     return () => { cancelled = true; };

@@ -1,5 +1,10 @@
 # Roadmap
 
+## Hybridinsikter och asynkron sparring 16 november 2026
+- [x] Hybridöversikt för fyra UTC-veckor och försiktig jämförelse av löpning efter benpass; ingen slutsats om orsak eller återhämtning.
+- [x] Utmana ett uttryckligen delat vänpass, skapa eget pass med sparat facit och jämför avbockade resultat utan automatisk delning/notis.
+- [x] 16 regeltester och 7 kärnflödeskontroller godkända; inloggad statistik på mobil/dator, skapande från vänflödet, setregistrering, avslutad jämförelse och omladdning verifierade. Testkopior borttagna. Inga samband visas när underlaget inte räcker.
+
 ## Rädda dagsmålet 16 november 2026
 - [x] Beräkna upp till tre förslag från egen historik och verkliga svenska baslivsmedel, med återstående energi/protein och utan ändrade mål; en måltid begränsas till 600 kcal och återstående energimål.
 - [x] Välj bort ingredienser och välj måltid; spara atomiskt med ångra och bevara förslaget vid fel.

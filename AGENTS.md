@@ -1,5 +1,8 @@
 # Architecture rules
 
+- Hybrid analysis keeps measured strength and cardio units separate; 48-hour comparisons require real start timestamps and matched running distances, never imply causation or rested legs.
+- Workout sparring copies only explicitly shared accepted-friend workouts through an invoker RPC; saved reference snapshots stay separate from the user's completion, with unchanged completion persistence and no automatic publication or notifications.
+
 - Day-goal suggestions use real referenced food/history rows and the nutrition ring's unchanged calorie target; bounded portions, excluded foods and a single confirmed batch insert prevent invented nutrition, over-budget suggestions and partial meals.
 
 - Home return summaries use unified workout history and seven UTC dates; upcoming workouts preserve exact plan identities and exclude completed/skipped slots so retention never invents activity or schedules.
