@@ -11,6 +11,7 @@ import { Suspense, useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { ChevronLeft, ChevronRight, Plus, Target, Trash2, Pencil, GripVertical, ChefHat, Bookmark, MoreHorizontal, CopyPlus, Zap, BookmarkPlus, ArrowRightLeft, Copy, Sparkles, Flame, TrendingUp } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 
 import NutritionHero from "./NutritionHero";
 import { Button } from "@/components/ui/button";
@@ -234,6 +235,7 @@ export default function NutritionView({ userId, isHonorary: isHonoraryProp = fal
   const [pendingRecipe, setPendingRecipe] = useState<PickedItem | null>(null);
   const [adaptiveOn, setAdaptiveOn] = useState<boolean>(readAdaptiveEnabled);
   const [goalsOpen, setGoalsOpen] = useState(false);
+  const [toolsOpen, setToolsOpen] = useState(false);
   const [addNameOpen, setAddNameOpen] = useState(false);
   const [renameIdx, setRenameIdx] = useState<number | null>(null);
   const [editingLog, setEditingLog] = useState<MealLog | null>(null);
@@ -634,37 +636,44 @@ export default function NutritionView({ userId, isHonorary: isHonoraryProp = fal
       {loadError && <div role="alert" className="space-y-2"><p className="text-sm text-muted-foreground">Dagens kost kunde inte hämtas. Det betyder inte att dina måltider är tomma.</p><Button variant="outline" size="sm" onClick={() => void load()}>Försök igen</Button></div>}
       <div className="flex items-center justify-between">
         <button onClick={() => shiftDay(-1)} className="w-9 h-9 icon-round hover:bg-muted/60 transition-colors"><ChevronLeft className="w-5 h-5" /></button>
-        <div className="text-center">
+        <div className="min-w-0 flex-1 text-center px-1">
           <p className="font-serif font-bold text-lg first-letter:uppercase">{dateLabel}</p>
           {!isToday && <button onClick={() => setDate(new Date())} className="text-[10px] text-primary font-bold">Gå till idag</button>}
           {dateKey > toLocalDateKey(new Date()) && <p className="text-[10px] text-destructive font-semibold">Framtida dag – det du loggar här räknas inte förrän dagen kommit</p>}
         </div>
-        <button onClick={() => shiftDay(1)} className="w-9 h-9 icon-round hover:bg-muted/60 transition-colors"><ChevronRight className="w-5 h-5" /></button>
-      </div>
-
-      {/* Snabbvalen ligger precis under veckodagen, före energikortet. */}
-      <div>
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button data-tour="nutrition-add-meal" className="w-full rounded-full text-xs">
-              <MoreHorizontal className="w-3 h-3" /> Mer
+        <button onClick={() => shiftDay(1)} className="w-9 h-9 shrink-0 icon-round hover:bg-muted/60 transition-colors"><ChevronRight className="w-5 h-5" /></button>
+        <Sheet open={toolsOpen} onOpenChange={setToolsOpen}>
+          <SheetTrigger asChild>
+            <Button data-tour="nutrition-add-meal" variant="ghost" size="icon" className="shrink-0 rounded-full" aria-label="Kostmeny" title="Kostmeny">
+              <MoreHorizontal className="w-5 h-5" />
             </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="center" className="rounded-xl">
-            <DropdownMenuItem data-tour="nutrition-goals" onClick={() => setGoalsOpen(true)}><Target className="w-3.5 h-3.5 mr-2" /> Mål</DropdownMenuItem>
-            <DropdownMenuItem data-tour="nutrition-recipes" onClick={() => { setCuratedTargetMeal(null); setCuratedOpen(true); }}><ChefHat className="w-3.5 h-3.5 mr-2" /> Recept</DropdownMenuItem>
-            {isHonorary && <DropdownMenuItem onClick={() => setDayAiOpen(true)}><Sparkles className="w-3.5 h-3.5 mr-2" /> Beskriv dagen med AI</DropdownMenuItem>}
-            <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={() => setTemplatesOpen(true)}><Bookmark className="w-3.5 h-3.5 mr-2" /> Mallar</DropdownMenuItem>
-            <DropdownMenuItem onClick={() => { hapticLight(); setPastOpen(true); }}><CopyPlus className="w-3.5 h-3.5 mr-2" /> Kopiera från senaste veckan</DropdownMenuItem>
-            <DropdownMenuItem onClick={() => setAddNameOpen(true)}><Plus className="w-3.5 h-3.5 mr-2" /> Lägg till måltid</DropdownMenuItem>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem onSelect={(e) => { e.preventDefault(); const v = !adaptiveOn; setAdaptiveOn(v); setAdaptiveEnabledEverywhere(userId, v, hasGoals); }} className="flex items-center gap-2">
-              <TrendingUp className="w-3.5 h-3.5" /> <span className="flex-1">Adaptiv förbrukning</span>
-              <Switch checked={adaptiveOn} aria-label="Adaptiv förbrukning på/av" className="pointer-events-none" />
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
+          </SheetTrigger>
+          <SheetContent side="bottom" aria-describedby={undefined} className="mx-auto max-w-lg rounded-t-2xl max-h-[85dvh] overflow-y-auto pb-[calc(1rem+var(--grim-bottom-safe,env(safe-area-inset-bottom,0px)))] motion-reduce:animate-none motion-reduce:transition-none">
+            <div className="mx-auto mb-4 h-1 w-10 rounded-full bg-muted" aria-hidden="true" />
+            <SheetHeader><SheetTitle className="font-sans">Kostmeny</SheetTitle></SheetHeader>
+            <div className="mt-5 space-y-4">
+              <section className="space-y-1">
+                <h3 className="px-3 text-xs font-semibold text-muted-foreground">Mål & inställningar</h3>
+                <Button variant="ghost" data-tour="nutrition-goals" className="w-full justify-start min-h-12 gap-3" onClick={() => { setToolsOpen(false); setGoalsOpen(true); }}><Target className="w-4 h-4" /> Näringsmål</Button>
+                <div className="flex items-center gap-3 px-3 min-h-12">
+                  <TrendingUp className="w-4 h-4 shrink-0" /><label htmlFor="nutrition-adaptive-toggle" className="flex-1 text-sm font-medium">Adaptiv förbrukning</label>
+                  <Switch id="nutrition-adaptive-toggle" checked={adaptiveOn} onCheckedChange={(v) => { setAdaptiveOn(v); setAdaptiveEnabledEverywhere(userId, v, hasGoals); }} />
+                </div>
+              </section>
+              <section className="space-y-1 border-t border-border pt-4">
+                <h3 className="px-3 text-xs font-semibold text-muted-foreground">Verktyg & snabbval</h3>
+                <Button variant="ghost" className="w-full justify-start min-h-12 gap-3 whitespace-normal text-left" onClick={() => { setToolsOpen(false); hapticLight(); setPastOpen(true); }}><CopyPlus className="w-4 h-4 shrink-0" /> Kopiera från senaste veckan</Button>
+                <Button variant="ghost" className="w-full justify-start min-h-12 gap-3" onClick={() => { setToolsOpen(false); setAddNameOpen(true); }}><Plus className="w-4 h-4" /> Lägg till måltid</Button>
+                {isHonorary && <Button variant="ghost" className="w-full justify-start min-h-12 gap-3" onClick={() => { setToolsOpen(false); setDayAiOpen(true); }}><Sparkles className="w-4 h-4" /> Beskriv dagen med AI</Button>}
+              </section>
+              <section className="space-y-1 border-t border-border pt-4">
+                <h3 className="px-3 text-xs font-semibold text-muted-foreground">Bibliotek</h3>
+                <Button variant="ghost" data-tour="nutrition-recipes" className="w-full justify-start min-h-12 gap-3" onClick={() => { setToolsOpen(false); setCuratedTargetMeal(null); setCuratedOpen(true); }}><ChefHat className="w-4 h-4" /> Recept</Button>
+                <Button variant="ghost" className="w-full justify-start min-h-12 gap-3" onClick={() => { setToolsOpen(false); setTemplatesOpen(true); }}><Bookmark className="w-4 h-4" /> Måltidsmallar</Button>
+              </section>
+            </div>
+          </SheetContent>
+        </Sheet>
       </div>
       <CopyFromPastDialog open={pastOpen} onOpenChange={setPastOpen} userId={userId} dateKey={dateKey} onCopied={load} />
 
@@ -678,7 +687,7 @@ export default function NutritionView({ userId, isHonorary: isHonoraryProp = fal
               <span className="text-sm font-bold">{activeKcal.toLocaleString("sv-SE")} <span className="text-[11px] font-normal text-muted-foreground">från hälsoappen</span></span>
             </div>
           )}
-          {loaded && !hasGoals && <p className="text-[11px] text-muted-foreground text-center mt-2">Standardmål 2000 kcal, inte ett personligt beräknat behov. Du kan registrera måltider direkt utan kroppsdata. Personliga mål är valfria under <b>Mer → Mål</b>.</p>}
+          {loaded && !hasGoals && <p className="text-[11px] text-muted-foreground text-center mt-2">Standardmål 2000 kcal, inte ett personligt beräknat behov. Du kan registrera måltider direkt utan kroppsdata. Personliga mål är valfria under <b>Kostmeny → Näringsmål</b>.</p>}
         </div>
 
         {loaded && <AdaptiveTdeeCard userId={userId} currentKcal={targets.kcal} hasGoals={hasGoals} onApplied={load} enabled={adaptiveOn} />}
