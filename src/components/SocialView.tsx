@@ -735,7 +735,7 @@ const SocialView = ({ userId, isAdmin, isHonorary = false, friendActivities, unr
 
   return (
     <div
-      className={isChatTab ? "box-border flex min-h-0 flex-col gap-4 overflow-hidden overscroll-none pt-2 pb-0 touch-none" : "py-2 space-y-4"}
+      className={isChatTab ? "box-border flex min-h-0 flex-col gap-4 overflow-hidden overscroll-none pb-0 touch-none" : "pb-2 space-y-4"}
       style={isChatTab ? { height: "calc(100dvh - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px) - 10.5rem)" } : undefined}
     >
       <h2 className="sr-only">Social – vänner, meddelanden, eventgrupper och flöde</h2>
@@ -749,7 +749,7 @@ const SocialView = ({ userId, isAdmin, isHonorary = false, friendActivities, unr
         ];
         const activeIndex = Math.max(0, tabs.findIndex(t => t.key === subTab));
         return (
-          <div className="relative shrink-0 border-b border-border/60 touch-none">
+          <div className="relative shrink-0 border-b border-border/60 touch-none !mt-0">
             <div className="flex" role="tablist" aria-label="Social">
               {tabs.map(st => (
                 <Button variant="ghost" role="tab" aria-selected={subTab === st.key}

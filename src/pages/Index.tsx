@@ -1026,7 +1026,7 @@ const Index = () => {
 
       {/* Content */}
       <Suspense fallback={<TabSkeleton />}>
-      <main className="max-w-lg mx-auto px-4 py-4" style={{ paddingBottom: bottomNavOffset }}>
+      <main className={`max-w-lg mx-auto px-4 ${tab === "social" ? "pt-0" : "py-4"}`} style={{ paddingBottom: bottomNavOffset }}>
         <PageTransition tabKey={tab}>
           {tab === "home" && (
             <PullToRefresh onRefresh={() => setRefreshKeys((k) => ({ ...k, home: k.home + 1 }))}>
