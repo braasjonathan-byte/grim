@@ -403,7 +403,7 @@ const SocialView = ({ userId, isAdmin, isHonorary = false, friendActivities, unr
       const counts: Record<string, number> = {};
       (countRows ?? []).forEach((r: { group_id: string; member_count: number }) => { counts[r.group_id] = Number(r.member_count); });
       const myGroupIds: string[] = (mine ?? []).map((m: { group_id: string }) => m.group_id);
-      setGroups(groupsData.map(g => ({ ...g, member_count: counts[g.id] || 0 })) as EventGroup[]);
+      setGroups(groupsData.map(g => ({ ...g, member_count: counts[g.id] })) as EventGroup[]);
       setMyGroups(myGroupIds);
     }
     setGroupsLoading(false);
@@ -1318,7 +1318,7 @@ const SocialView = ({ userId, isAdmin, isHonorary = false, friendActivities, unr
                         <p className="text-sm font-semibold truncate">{g.event_name}</p>
                         <p className="text-[11px] text-muted-foreground">
                           {g.event_date && format(new Date(g.event_date), "d MMM yyyy", { locale: sv })}
-                          {" • "}{g.member_count || 0} {(g.member_count || 0) === 1 ? "medlem" : "medlemmar"}
+                          {g.member_count != null && <>{" • "}{g.member_count} {g.member_count === 1 ? "medlem" : "medlemmar"}</>}
                         </p>
                       </div>
                     </Button>
@@ -1367,7 +1367,7 @@ const SocialView = ({ userId, isAdmin, isHonorary = false, friendActivities, unr
                         <p className="text-sm font-semibold truncate">{g.event_name}</p>
                         <p className="text-[11px] text-muted-foreground">
                           {g.event_date && format(new Date(g.event_date), "d MMM yyyy", { locale: sv })}
-                          {" • "}{g.member_count || 0} {(g.member_count || 0) === 1 ? "medlem" : "medlemmar"}
+                          {g.member_count != null && <>{" • "}{g.member_count} {g.member_count === 1 ? "medlem" : "medlemmar"}</>}
                         </p>
                       </div>
                     </Button>

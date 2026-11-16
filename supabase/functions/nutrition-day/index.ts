@@ -127,7 +127,7 @@ Deno.serve(async (req) => {
     const currentRaw = String(form.get("current") || "").slice(0, 20000);
 
     let slots: string[] = [];
-    try { slots = (JSON.parse(slotsRaw) as unknown[]).filter((s) => typeof s === "string").slice(0, 12) as string[]; } catch { /* ignore */ }
+    try { slots = (JSON.parse(slotsRaw) as unknown[]).filter((s): s is string => typeof s === "string").map((s) => s.replace(/[^\p{L}\p{N} \-]/gu, "").trim().slice(0, 30)).filter(Boolean).slice(0, 12); } catch { /* ignore */ }
     if (!slots.length) slots = ["frukost", "lunch", "middag", "mellanmål"];
     const today = /^\d{4}-\d{2}-\d{2}$/.test(dateRaw) ? dateRaw : new Date().toISOString().slice(0, 10);
     const from = new Date(today + "T00:00:00Z"); from.setUTCDate(from.getUTCDate() - 14);

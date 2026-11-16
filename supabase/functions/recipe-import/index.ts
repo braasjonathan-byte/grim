@@ -14,6 +14,41 @@ function safeUrl(raw: unknown): URL | null {
   } catch { return null; }
 }
 
+const PRIVATE_V4 = /^(127\.|10\.|192\.168\.|169\.254\.|172\.(1[6-9]|2\d|3[01])\.|0\.|100\.(6[4-9]|[7-9]\d|1[01]\d|12[0-7])\.)/;
+async function resolvesPublic(host: string): Promise<boolean> {
+  if (/^\d+\.\d+\.\d+\.\d+$/.test(host)) return !PRIVATE_V4.test(host);
+  try {
+    const a = await Deno.resolveDns(host, "A").catch(() => [] as string[]);
+    const aaaa = await Deno.resolveDns(host, "AAAA").catch(() => [] as string[]);
+    if (!a.length && !aaaa.length) return false;
+    if (a.some((ip) => PRIVATE_V4.test(ip))) return false;
+    if (aaaa.some((ip) => /^(::1?$|f[cd]|fe80|::ffff:)/i.test(ip))) return false;
+    return true;
+  } catch { return false; }
+}
+
+/** Fetch that re-validates every redirect hop so it cannot be steered to internal hosts. */
+async function safeFetch(start: URL, signal: AbortSignal): Promise<Response | null> {
+  let current: URL | null = start;
+  for (let hop = 0; hop < 5 && current; hop++) {
+    if (!(await resolvesPublic(current.hostname))) return null;
+    const res = await fetch(current, {
+      headers: { "User-Agent": "Mozilla/5.0 (GrimRecipeImport)", Accept: "text/html" },
+      redirect: "manual",
+      signal: AbortSignal.any([signal, AbortSignal.timeout(15000)]),
+    }).catch(() => null);
+    if (!res) return null;
+    if (res.status >= 300 && res.status < 400) {
+      const loc = res.headers.get("location");
+      await res.body?.cancel();
+      current = loc ? safeUrl(new URL(loc, current).toString()) : null;
+      continue;
+    }
+    return res;
+  }
+  return null;
+}
+
 /** Prefer schema.org Recipe JSON-LD; otherwise stripped visible text. */
 function extract(html: string): string {
   const parts: string[] = [];
@@ -40,11 +75,7 @@ Deno.serve(async (req) => {
     const url = safeUrl(body.url);
     if (!url) return json({ error: "Ogiltig länk" }, 400);
 
-    const page = await fetch(url, {
-      headers: { "User-Agent": "Mozilla/5.0 (GrimRecipeImport)", Accept: "text/html" },
-      redirect: "follow",
-      signal: AbortSignal.any([req.signal, AbortSignal.timeout(15000)]),
-    }).catch(() => null);
+    const page = await safeFetch(url, req.signal);
     if (!page || !page.ok) return json({ error: "Kunde inte hämta sidan" }, 400);
     const html = (await page.text()).slice(0, 1_500_000);
     const content = extract(html);

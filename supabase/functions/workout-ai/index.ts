@@ -38,7 +38,12 @@ serve(async (req) => {
       });
     }
 
-    const { messages, currentWeek, snapshots } = await req.json();
+    const { messages: rawMessages, currentWeek, snapshots } = await req.json();
+    // Only user/assistant turns with plain text are accepted; callers cannot inject system instructions.
+    const messages = (Array.isArray(rawMessages) ? rawMessages : [])
+      .filter((m: any) => m && (m.role === "user" || m.role === "assistant") && typeof m.content === "string")
+      .slice(-30)
+      .map((m: any) => ({ role: m.role, content: m.content.slice(0, 8000) }));
 
     // Fetch user's current workout plan
     const { data: plans } = await supabase

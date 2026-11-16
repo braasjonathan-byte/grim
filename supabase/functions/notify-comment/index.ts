@@ -153,6 +153,26 @@ serve(async (req) => {
       return new Response(JSON.stringify({ sent: 0 }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
+    // Require a comment this user just wrote on the target's workout/post.
+    {
+      const since = new Date(Date.now() - 10 * 60 * 1000).toISOString();
+      const { data: wc } = await supabaseAdmin.from("workout_comments").select("id")
+        .eq("author_id", user.id).eq("target_user_id", targetUserId).gte("created_at", since).limit(1);
+      let ok = (wc?.length ?? 0) > 0;
+      if (!ok) {
+        const { data: sc } = await supabaseAdmin.from("social_post_comments").select("post_id")
+          .eq("user_id", user.id).gte("created_at", since).limit(20);
+        const postIds = (sc ?? []).map((r: { post_id: string }) => r.post_id);
+        if (postIds.length) {
+          const { data: owned } = await supabaseAdmin.from("social_posts").select("id")
+            .in("id", postIds).eq("user_id", targetUserId).limit(1);
+          ok = (owned?.length ?? 0) > 0;
+        }
+      }
+      if (!ok) {
+        return new Response(JSON.stringify({ error: "Forbidden" }), { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
+    }
     const { data: profile } = await supabaseAdmin.from("profiles").select("nickname").eq("user_id", user.id).single();
     const nickname = profile?.nickname || "En vän";
 

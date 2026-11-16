@@ -26,7 +26,7 @@ export async function compressImage(dataUrl: string, max = 1280, q = 0.8): Promi
 async function sign(rows: ProgressPhoto[]): Promise<ProgressPhoto[]> {
   if (!rows.length) return rows;
   const { data: signed } = await supabase.storage.from(PROGRESS_BUCKET)
-    .createSignedUrls(rows.map((r) => r.storage_path), 3600);
+    .createSignedUrls(rows.map((r) => r.storage_path), 300);
   const map = new Map((signed ?? []).map((s: any) => [s.path, s.signedUrl]));
   return rows.map((r) => ({ ...r, url: map.get(r.storage_path) }));
 }

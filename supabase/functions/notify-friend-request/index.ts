@@ -151,6 +151,14 @@ serve(async (req) => {
       return new Response(JSON.stringify({ error: "Missing friendId" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
+    // Require a pending friend request from this user to friendId.
+    {
+      const { data: fr } = await supabaseAdmin.from("friendships").select("id")
+        .eq("user_id", user.id).eq("friend_id", friendId).eq("status", "pending").limit(1);
+      if (!fr?.length) {
+        return new Response(JSON.stringify({ error: "Forbidden" }), { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
+    }
     const { data: profile } = await supabaseAdmin.from("profiles").select("nickname").eq("user_id", user.id).single();
     const nickname = profile?.nickname || "Någon";
 

@@ -1,3 +1,4 @@
+import { requireUserId } from "../_shared/requireUser.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
@@ -65,6 +66,10 @@ serve(async (req) => {
       });
     }
 
+    // Only signed-in users may trigger first-time key generation.
+    if (!(await requireUserId(req))) {
+      return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
     // Generate and store
     const keys = await generateVapidKeys();
     await supabaseAdmin.from("vapid_keys").insert({
@@ -72,6 +77,10 @@ serve(async (req) => {
       public_key: keys.publicKey,
       private_key: keys.privateKey,
     });
+    const { data: stored } = await supabaseAdmin.from("vapid_keys").select("public_key").eq("id", 1).maybeSingle();
+    if (stored && stored.public_key !== keys.publicKey) {
+      return new Response(JSON.stringify({ publicKey: stored.public_key }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
 
     return new Response(JSON.stringify({ publicKey: keys.publicKey }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },

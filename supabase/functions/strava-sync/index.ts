@@ -202,9 +202,14 @@ async function resolveSharedActivityId(rawInput: string): Promise<number | null>
   const direct = rawInput.match(/strava\.com\/activities\/(\d+)/);
   if (direct) return Number(direct[1]);
 
-  const shortMatch = rawInput.match(/https?:\/\/[^\s]*strava\.app\.link\/[A-Za-z0-9]+/) ||
-    rawInput.match(/https?:\/\/[^\s]*strava\.com\/[^\s]+/);
+  // Only follow links whose host is actually Strava (no caller-chosen hosts).
+  const shortMatch = rawInput.match(/https:\/\/(?:[a-z0-9-]+\.)?strava\.app\.link\/[A-Za-z0-9]+/i) ||
+    rawInput.match(/https:\/\/(?:www\.)?strava\.com\/[^\s]+/i);
   if (!shortMatch) return null;
+  try {
+    const h = new URL(shortMatch[0]).hostname.toLowerCase();
+    if (!(h === "strava.app.link" || h.endsWith(".strava.app.link") || h === "strava.com" || h === "www.strava.com")) return null;
+  } catch { return null; }
 
   try {
     const response = await fetch(shortMatch[0], {

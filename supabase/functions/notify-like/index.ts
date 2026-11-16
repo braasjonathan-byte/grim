@@ -153,6 +153,15 @@ serve(async (req) => {
       return new Response(JSON.stringify({ sent: 0 }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
+    // Require a like this user just gave on the target's workout.
+    {
+      const since = new Date(Date.now() - 10 * 60 * 1000).toISOString();
+      const { data: wl } = await supabaseAdmin.from("workout_likes").select("id")
+        .eq("user_id", user.id).eq("target_user_id", targetUserId).gte("created_at", since).limit(1);
+      if (!wl?.length) {
+        return new Response(JSON.stringify({ error: "Forbidden" }), { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
+    }
     const { data: profile } = await supabaseAdmin.from("profiles").select("nickname").eq("user_id", user.id).single();
     const nickname = profile?.nickname || "En vän";
 

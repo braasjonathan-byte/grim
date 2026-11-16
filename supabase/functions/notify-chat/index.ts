@@ -153,6 +153,23 @@ serve(async (req) => {
       return new Response(JSON.stringify({ sent: 0 }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
+    // Only notify for a real, just-sent message to this receiver; preview comes from the stored row.
+    let storedPreview: string | null = null;
+    if (selfTest) {
+      if (receiverId !== user.id) {
+        return new Response(JSON.stringify({ error: "Forbidden" }), { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
+      storedPreview = "🔔 Testnotis från inställningar";
+    } else {
+      const since = new Date(Date.now() - 2 * 60 * 1000).toISOString();
+      const { data: msg } = await supabaseAdmin.from("chat_messages").select("message")
+        .eq("sender_id", user.id).eq("receiver_id", receiverId).is("group_id", null)
+        .gte("created_at", since).order("created_at", { ascending: false }).limit(1).maybeSingle();
+      if (!msg) {
+        return new Response(JSON.stringify({ error: "No recent message" }), { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
+      storedPreview = typeof msg.message === "string" && msg.message ? msg.message : null;
+    }
     const { data: profile } = await supabaseAdmin.from("profiles").select("nickname").eq("user_id", user.id).single();
     const nickname = profile?.nickname || "En vän";
 
@@ -167,8 +184,8 @@ serve(async (req) => {
       return new Response(JSON.stringify({ error: "VAPID keys not configured" }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
-    const body = messagePreview
-      ? (messagePreview.length > 80 ? messagePreview.slice(0, 77) + "..." : messagePreview)
+    const body = storedPreview
+      ? (storedPreview.length > 80 ? storedPreview.slice(0, 77) + "..." : storedPreview)
       : "Nytt meddelande";
 
     const payload = JSON.stringify({

@@ -142,7 +142,16 @@ serve(async (req) => {
       return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
-    const { caption, visibility } = await req.json();
+    await req.json().catch(() => ({}));
+    // Caption and audience come from the post the user just created, never from the request.
+    const { data: post } = await supabaseAdmin.from("social_posts").select("caption, visibility, group_id")
+      .eq("user_id", user.id).gte("created_at", new Date(Date.now() - 10 * 60 * 1000).toISOString())
+      .order("created_at", { ascending: false }).limit(1).maybeSingle();
+    if (!post) {
+      return new Response(JSON.stringify({ error: "No recent post" }), { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
+    const caption: string | null = post.caption;
+    const visibility: string = post.group_id ? "group" : post.visibility;
 
     // Get poster's nickname
     const { data: profile } = await supabaseAdmin.from("profiles").select("nickname").eq("user_id", user.id).single();

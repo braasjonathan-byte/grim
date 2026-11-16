@@ -1,3 +1,4 @@
+import { allowedOrigin } from "../_shared/appOrigin.ts";
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { loadStravaCreds, STRAVA_SCOPE } from "../_shared/stravaConfig.ts";
@@ -60,7 +61,7 @@ serve(async (req) => {
 
     const body = await req.json().catch(() => ({}));
     const rawOrigin = typeof body.redirectOrigin === "string" ? body.redirectOrigin : req.headers.get("origin");
-    const redirectOrigin = rawOrigin && /^https?:\/\//.test(rawOrigin) ? rawOrigin : "https://grim.lovable.app";
+    const redirectOrigin = allowedOrigin(rawOrigin);
     const state = createState();
 
     const adminClient = createClient(supabaseUrl, serviceRoleKey, { auth: { persistSession: false } });

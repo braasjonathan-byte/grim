@@ -281,6 +281,13 @@
       "when": 1794817922551,
       "tag": "0039_restrict_hidden_exercises_read",
       "breakpoints": true
+    },
+    {
+      "idx": 40,
+      "version": "7",
+      "when": 1794825193639,
+      "tag": "0040_harden_security_functions_billing",
+      "breakpoints": true
     }
   ]
 }

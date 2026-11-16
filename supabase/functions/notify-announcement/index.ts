@@ -215,7 +215,7 @@ async function sendWebPush(
 
     if (!response.ok && response.status !== 201) {
       const text = await response.text();
-      console.error(`Push failed for ${subscription.endpoint}: ${response.status} ${text}`);
+      console.error(`Push failed (${new URL(subscription.endpoint).host}): ${response.status}`);
       // 404/410 = subscription gone. 403 with an invalid-JWT/VAPID body means this
       // subscription was created with a different application server key and can
       // never receive our pushes; drop it so the client re-subscribes with the

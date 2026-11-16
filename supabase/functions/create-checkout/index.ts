@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import Stripe from "https://esm.sh/stripe@18.5.0";
+import { resolveStripeCustomerId, safeAppOrigin } from "../_shared/stripeCustomer.ts";
 import { createClient } from "npm:@supabase/supabase-js@2.57.2";
 
 const corsHeaders = {
@@ -43,20 +44,17 @@ serve(async (req) => {
     });
 
     // Find existing customer: prefer stored ID, fall back to email
+    stripeCustomerId = await resolveStripeCustomerId(stripe, supabaseClient, user, stripeCustomerId, registeredEmail);
     if (!stripeCustomerId) {
-      const customers = await stripe.customers.list({ email: registeredEmail, limit: 1 });
-      if (customers.data.length > 0) {
-        stripeCustomerId = customers.data[0].id;
-        await supabaseClient
-          .from("user_emails")
-          .update({ stripe_customer_id: stripeCustomerId })
-          .eq("user_id", user.id);
-      }
+      const created = await stripe.customers.create({ email: registeredEmail, metadata: { grim_user_id: user.id } });
+      stripeCustomerId = created.id;
+      await supabaseClient.from("user_emails").update({ stripe_customer_id: stripeCustomerId }).eq("user_id", user.id);
     }
+    const origin = safeAppOrigin(req);
 
     const session = await stripe.checkout.sessions.create({
-      customer: stripeCustomerId || undefined,
-      customer_email: stripeCustomerId ? undefined : registeredEmail,
+      customer: stripeCustomerId,
+      client_reference_id: user.id,
       line_items: [
         {
           price: "price_1TBY4mHrbSIRvq07XH8LmNTT",
@@ -64,8 +62,8 @@ serve(async (req) => {
         },
       ],
       mode: "subscription",
-      success_url: `${req.headers.get("origin")}/?tab=settings`,
-      cancel_url: `${req.headers.get("origin")}/?tab=settings`,
+      success_url: `${origin}/?tab=settings`,
+      cancel_url: `${origin}/?tab=settings`,
     });
 
     // If a new customer was created via checkout, we'll link it in check-subscription later

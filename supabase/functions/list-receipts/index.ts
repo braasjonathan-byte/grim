@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import Stripe from "https://esm.sh/stripe@18.5.0";
+import { resolveStripeCustomerId, safeAppOrigin } from "../_shared/stripeCustomer.ts";
 import { createClient } from "npm:@supabase/supabase-js@2.57.2";
 
 const corsHeaders = {
@@ -34,7 +35,7 @@ serve(async (req) => {
     // Get registered email from user_emails table
     const { data: emailRow } = await supabaseClient
       .from("user_emails")
-      .select("email")
+      .select("email, stripe_customer_id")
       .eq("user_id", user.id)
       .single();
 
@@ -47,16 +48,15 @@ serve(async (req) => {
     }
 
     const stripe = new Stripe(stripeKey, { apiVersion: "2025-08-27.basil" });
-    const customers = await stripe.customers.list({ email: registeredEmail, limit: 1 });
+    const customerId = await resolveStripeCustomerId(stripe, supabaseClient, user, emailRow?.stripe_customer_id, registeredEmail);
 
-    if (customers.data.length === 0) {
+    if (!customerId) {
       return new Response(JSON.stringify({ receipts: [], email: registeredEmail }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
         status: 200,
       });
     }
 
-    const customerId = customers.data[0].id;
     const invoices = await stripe.invoices.list({
       customer: customerId,
       limit: 50,

@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import Stripe from "https://esm.sh/stripe@18.5.0";
+import { resolveStripeCustomerId, safeAppOrigin } from "../_shared/stripeCustomer.ts";
 import { createClient } from "npm:@supabase/supabase-js@2.57.2";
 
 const corsHeaders = {
@@ -40,18 +41,9 @@ serve(async (req) => {
     if (!emailRow?.email) throw new Error("No registered email found");
 
     const stripe = new Stripe(stripeKey, { apiVersion: "2025-08-27.basil" });
-    let stripeCustomerId = emailRow.stripe_customer_id;
-
+    const stripeCustomerId = await resolveStripeCustomerId(stripe, supabaseClient, user, emailRow.stripe_customer_id, emailRow.email);
     if (!stripeCustomerId) {
-      const customers = await stripe.customers.list({ email: emailRow.email, limit: 1 });
-      if (customers.data.length === 0) {
-        throw new Error("No Stripe customer found");
-      }
-      stripeCustomerId = customers.data[0].id;
-      await supabaseClient
-        .from("user_emails")
-        .update({ stripe_customer_id: stripeCustomerId })
-        .eq("user_id", user.id);
+      throw new Error("No Stripe customer found");
     }
 
     const subscriptions = await stripe.subscriptions.list({

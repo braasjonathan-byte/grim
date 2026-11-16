@@ -1,3 +1,4 @@
+import { requireUserId } from "../_shared/requireUser.ts";
 // Vägbeskrivning (sväng-för-sväng) för en genererad runda via Google Routes API.
 // Input: { points: [[lat,lng], ...], activity: "cycling" | "running" | "walking" | "hiking" }
 // Output: { steps: [{ instruction, maneuver, distanceM, end: [lat,lng] }], distanceM, durationS, polyline: [[lat,lng]] }
@@ -45,6 +46,9 @@ Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
+    if (!(await requireUserId(req))) {
+      return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     const GOOGLE_MAPS_API_KEY = Deno.env.get("GOOGLE_MAPS_API_KEY");
     if (!LOVABLE_API_KEY || !GOOGLE_MAPS_API_KEY) {

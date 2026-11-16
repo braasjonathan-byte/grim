@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import Stripe from "https://esm.sh/stripe@18.5.0";
+import { resolveStripeCustomerId, safeAppOrigin } from "../_shared/stripeCustomer.ts";
 import { createClient } from "npm:@supabase/supabase-js@2.57.2";
 
 const corsHeaders = {
@@ -69,18 +70,7 @@ serve(async (req) => {
       try {
         const stripe = new Stripe(stripeKey, { apiVersion: "2025-08-27.basil" });
 
-        // Find customer: prefer stored ID, fall back to email lookup
-        if (!stripeCustomerId && registeredEmail) {
-          const customers = await stripe.customers.list({ email: registeredEmail, limit: 1 });
-          if (customers.data.length > 0) {
-            stripeCustomerId = customers.data[0].id;
-            // Persist for future lookups
-            await supabaseClient
-              .from("user_emails")
-              .update({ stripe_customer_id: stripeCustomerId })
-              .eq("user_id", user.id);
-          }
-        }
+        stripeCustomerId = await resolveStripeCustomerId(stripe, supabaseClient, user, stripeCustomerId, registeredEmail);
 
         if (stripeCustomerId) {
           const subscriptions = await stripe.subscriptions.list({

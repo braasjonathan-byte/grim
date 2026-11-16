@@ -1,3 +1,4 @@
+import { allowedOrigin } from "../_shared/appOrigin.ts";
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { loadStravaCreds } from "../_shared/stravaConfig.ts";
@@ -49,7 +50,7 @@ serve(async (req) => {
 
     if (stateError || !stateRow) return redirectTo(fallbackOrigin, "error", "invalid_state");
 
-    const redirectOrigin = stateRow.redirect_origin || fallbackOrigin;
+    const redirectOrigin = allowedOrigin(stateRow.redirect_origin);
     await adminClient.from("strava_oauth_states").delete().eq("state", state);
 
     if (new Date(stateRow.expires_at).getTime() < Date.now()) {
