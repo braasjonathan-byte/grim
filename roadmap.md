@@ -1,5 +1,10 @@
 # Roadmap
 
+## Rädda dagsmålet 16 november 2026
+- [x] Beräkna upp till tre förslag från egen historik och verkliga svenska baslivsmedel, med återstående energi/protein och utan ändrade mål; en måltid begränsas till 600 kcal och återstående energimål.
+- [x] Välj bort ingredienser och välj måltid; spara atomiskt med ångra och bevara förslaget vid fel.
+- [x] 11 urvals-/portions-/näringstester och 7 befintliga kärnflödeskontroller godkända; inloggad mobil/dator, bortval, skickfel samt batchloggning/omladdning verifierade. Testposter borttagna.
+
 ## Hem och återkomst 16 november 2026
 - [x] Visa nästa faktiskt planerade, ej avklarade pass på Hem, även efter dagens pass; ersätter den gamla dubbla nästa-pass-texten.
 - [x] Visa en synlig sjudagarssammanfattning från gemensam passhistorik utan påhittade förbättringar.

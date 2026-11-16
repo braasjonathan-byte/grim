@@ -19,6 +19,7 @@ import FoodPickerDialog, { PickedItem } from "./FoodPickerDialog";
 import AdaptiveTdeeCard, { ADAPTIVE_CHANGED_EVENT, NUTRITION_GOALS_SAVED_EVENT, readAdaptiveEnabled, setAdaptiveEnabledEverywhere, writeAdaptiveEnabled } from "./AdaptiveTdeeCard";
 import { Switch } from "@/components/ui/switch";
 import MealSuggestions, { slotForNow } from "./MealSuggestions";
+import DayGoalSuggestions from "./DayGoalSuggestions";
 import RecipeEditor from "./RecipeEditor";
 import NutritionGoalsDialog from "./NutritionGoalsDialog";
 import MealNameDialog from "./MealNameDialog";
@@ -724,6 +725,7 @@ export default function NutritionView({ userId, isHonorary: isHonoraryProp = fal
       </div>
 
       {/* Upprepade måltider: ett tryck från egen historik (MFP/Lifesum-stil), under dagens måltider. */}
+      {loaded && !loadError && <DayGoalSuggestions key={dateKey} userId={userId} dateKey={dateKey} slots={allSlots} hasGoals={hasGoals} onSaved={() => void load()} remaining={{ kcal: targets.kcal - totals.kcal, protein_g: targets.protein_g - totals.protein, fat_g: Math.max(0, targets.fat_g - totals.fat), carbs_g: Math.max(0, targets.carbs_g - totals.carbs) }} />}
       {loaded && (() => {
         const want = slotForNow();
         const quickSlot = allSlots.find((m) => m.toLowerCase() === want) || allSlots[0] || want;

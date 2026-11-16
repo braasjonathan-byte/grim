@@ -1,5 +1,7 @@
 # Architecture rules
 
+- Day-goal suggestions use real referenced food/history rows and the nutrition ring's unchanged calorie target; bounded portions, excluded foods and a single confirmed batch insert prevent invented nutrition, over-budget suggestions and partial meals.
+
 - Home return summaries use unified workout history and seven UTC dates; upcoming workouts preserve exact plan identities and exclude completed/skipped slots so retention never invents activity or schedules.
 
 - Direct and group conversations share cursor-paged newest-first history and confirmed writes; preserve user-scoped drafts on failure and deduplicate saved/realtime rows to prevent loss and duplicate messages.
