@@ -685,7 +685,6 @@ const WorkoutStats = ({ userId }: WorkoutStatsProps) => {
         </div>
       )}
 
-      <TrainingInsights userId={userId} />
       {statsError && <div role="alert" className="space-y-2"><p className="text-sm text-muted-foreground">Statistiken kunde inte hämtas. Det betyder inte att dina pass saknas.</p><Button variant="outline" size="sm" onClick={() => setRetry(n => n + 1)}>Försök igen</Button></div>}
       {show("nutrition") && <NutritionTrendCard userId={userId} />}
       {show("calorieIntake") && <CalorieIntakeChart userId={userId} />}
@@ -896,6 +895,8 @@ const WorkoutStats = ({ userId }: WorkoutStatsProps) => {
         </DialogContent>
       </Dialog>
       </>}
+
+      <TrainingInsights userId={userId} />
     </div>);
 
 };
