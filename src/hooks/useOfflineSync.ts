@@ -25,6 +25,11 @@ function getQueue(): PendingUpsert[] {
   }
 }
 
+/** En köad rad tillhör en användare om dess user_id matchar. */
+export function belongsTo(item: { data: Record<string, unknown> }, userId: string): boolean {
+  return item.data?.user_id === userId;
+}
+
 const QUEUE_EVENT = "grim-offline-queue-changed";
 
 function saveQueue(queue: PendingUpsert[]) {
@@ -167,12 +172,18 @@ async function flushQueue() {
 }
 
 async function flushQueueInner(queue: PendingUpsert[]) {
+  // Spela bara upp rader som tillhör den inloggade användaren; andra kontons
+  // köade rader ligger kvar tills det kontot loggar in igen.
+  const { data: sessionData } = await supabase.auth.getSession();
+  const currentUserId = sessionData.session?.user?.id;
+  if (!currentUserId) return;
 
   const now = Date.now();
   const remaining: PendingUpsert[] = [];
   let replayedWorkoutRows = 0;
 
   for (const item of queue) {
+    if (!belongsTo(item, currentUserId)) { remaining.push(item); continue; }
     if (!item.timestamp || now - item.timestamp > maxAgeFor(item.table)) {
       // Too old to trust — dropping is safer than overwriting newer data.
       console.warn("[Grim][offline-queue] discarding stale queued write", item.table);

@@ -100,6 +100,9 @@ interface SortableMealProps {
   onRemoveLog: (id: string) => void;
   onEditLog: (l: MealLog) => void;
   onCopyYesterday?: () => void;
+  /** Antal livsmedel i samma måltid igår; visar en direktknapp när måltiden är tom. */
+  yesterdayCount?: number;
+  onSameAsYesterday?: () => void;
   onQuickLog: () => void;
   onSaveTemplate?: () => void;
   budget?: number;
@@ -107,7 +110,7 @@ interface SortableMealProps {
   onFeeling: (k: string | null) => void;
 }
 
-function SortableMeal({ meal, isCustom, logs, mealKcal, onAdd, onRename, onDelete, onRemoveLog, onEditLog, onCopyYesterday, onQuickLog, onSaveTemplate, budget, feeling, onFeeling }: SortableMealProps) {
+function SortableMeal({ meal, isCustom, logs, mealKcal, onAdd, onRename, onDelete, onRemoveLog, onEditLog, onCopyYesterday, onQuickLog, onSaveTemplate, budget, feeling, onFeeling, yesterdayCount, onSameAsYesterday }: SortableMealProps) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: meal, disabled: !isCustom });
   const style = {
     transform: CSS.Transform.toString(transform),
@@ -176,6 +179,13 @@ function SortableMeal({ meal, isCustom, logs, mealKcal, onAdd, onRename, onDelet
           </DropdownMenu>
         </div>
       </div>
+      {logs.length === 0 && !!yesterdayCount && onSameAsYesterday && (
+        <div className="px-3 py-2">
+          <Button variant="outline" onClick={onSameAsYesterday} className="w-full h-11 text-sm" aria-label={`Samma ${meal} som igår`}>
+            <Copy className="w-4 h-4" /> Samma som igår ({yesterdayCount} livsmedel)
+          </Button>
+        </div>
+      )}
       {logs.length > 0 && (
         <div className="px-3 pt-2 flex items-center justify-between gap-2">
           <div className="flex -space-x-1.5 overflow-hidden pt-0.5">
@@ -487,14 +497,15 @@ export default function NutritionView({ userId, isHonorary: isHonoraryProp = fal
   }, [logs]);
 
   /** Copy yesterday's logged items (optionally only one meal) to the shown day. */
-  async function copyFromYesterday(meal?: string) {
-    await exclusive(`copy:${dateKey}:${meal ?? "*"}`, () => copyFromYesterdayInner(meal));
+  async function copyFromYesterday(meal?: string, skipConfirm = false) {
+    await exclusive(`copy:${dateKey}:${meal ?? "*"}`, () => copyFromYesterdayInner(meal, skipConfirm));
   }
-  async function copyFromYesterdayInner(meal?: string) {
+  async function copyFromYesterdayInner(meal?: string, skipConfirm = false) {
     const rows = yesterdayLogs.filter((r) => !meal || r.meal_type === meal);
     if (rows.length === 0) { toast({ title: meal ? `Inget loggat i ${meal} igår` : "Inget loggat igår" }); return; }
     const label = meal ? `${meal} (${rows.length} livsmedel)` : `alla ${rows.length} livsmedel`;
-    if (!window.confirm(`Kopiera ${label} från igår?`)) return;
+    // Direktknappen hoppar över bekräftelsen – ångra-notisen räcker.
+    if (!skipConfirm && !window.confirm(`Kopiera ${label} från igår?`)) return;
     const insert = rows.map(({ id, created_at, ...r }: any) => ({ ...r, log_date: dateKey }));
     const { data, error } = await supabase.from("meal_logs").insert(insert).select("id");
     if (error) { toast({ title: "Kunde inte kopiera", description: error.message, variant: "destructive" }); return; }
@@ -699,6 +710,8 @@ export default function NutritionView({ userId, isHonorary: isHonoraryProp = fal
                     feeling={feelings[meal]}
                     onFeeling={(k) => setFeeling(meal, k)}
                     onCopyYesterday={() => { hapticLight(); setPastOpen(true); }}
+                    yesterdayCount={yesterdayLogs.filter((r) => r.meal_type === meal).length}
+                    onSameAsYesterday={() => { hapticLight(); copyFromYesterday(meal, true); }}
                   />
                 );
               })}
