@@ -78,7 +78,7 @@ describe("buildHealthExport", () => {
     expect(out.endTime).toBe("2026-10-20T18:00:00.000Z");
     expect(out.exerciseType).toBe("strength");
     expect(out.title).toBe("Ben");
-    expect(out.version).toBe(Date.parse("2026-10-20T18:00:00.000Z"));
+    expect(out.version).toBeGreaterThan(Date.parse("2026-10-20T18:00:00.000Z"));
   });
 
   it("räknar längd från planens minuter och tar med distans", () => {
@@ -109,9 +109,63 @@ describe("buildHealthExport", () => {
 });
 
 describe("minutesFromDetails", () => {
+  it.each(["66.5", "66,5"])("tolkar %s min som 66,5 minuter, inte fem", (minutes) => {
+    expect(minutesFromDetails(`Löpning — ${minutes} min, 6:39/km, 10 km`)).toBe(66.5);
+  });
   it("summerar minuter och saknar värde annars", () => {
     expect(minutesFromDetails("Uppvärmning 10 min; Löpning 30 min")).toBe(40);
     expect(minutesFromDetails("Knäböj 3x8")).toBeNull();
+  });
+});
+
+describe("loggad kondition i Health Connect", () => {
+  const plan = { week: 0, day: "2026-10-20", details: "Löpning — 30 min" };
+  const completion = base({ logged_weights: { __cond__Löpning: JSON.stringify({ time: "66.5", dist: "10" }) } });
+
+  it("exporterar 66,5 minuter och 10 000 meter från loggen före planvärden", () => {
+    const out = buildHealthExport(completion, plan, profile);
+    expect(out).not.toBeNull();
+    if (!out) return;
+    expect(Date.parse(out.endTime) - Date.parse(out.startTime)).toBe(66.5 * 60000);
+    expect(out.distanceMeters).toBe(10000);
+  });
+
+  it("korrigerar tidigare femminutersexport och begär ersättning utan ändrat pass", () => {
+    const prev = { version: Date.parse(completion.updated_at), start: "2026-10-20T17:55:00.000Z", end: completion.updated_at };
+    const out = buildHealthExport(completion, plan, profile, prev);
+    expect(out).not.toBeNull();
+    if (!out) return;
+    expect(out.endTime).toBe(prev.end);
+    expect(out.startTime).toBe("2026-10-20T16:53:30.000Z");
+    expect(out.distanceMeters).toBe(10000);
+    expect(planHealthWrites([out], { [out.clientRecordId]: prev }, 0).upserts).toEqual([out]);
+    const saved = { version: out.version, start: out.startTime, end: out.endTime };
+    const next = buildHealthExport(completion, plan, profile, saved);
+    expect(next).toEqual(out);
+    expect(planHealthWrites([out], { [out.clientRecordId]: saved }, 0).upserts).toEqual([]);
+  });
+
+  it("summerar konditionsrader utan att dubblera övergripande distans", () => {
+    const out = buildHealthExport(base({ logged_distance_km: 99, logged_weights: {
+      __cond__Löpning: { time: "66,5", dist: "10" },
+      __cond__Cykling: JSON.stringify({ time: "30", dist: "12,5" }),
+      __cond__trasig: "{",
+    } }), plan, profile);
+    expect(out).not.toBeNull();
+    if (!out) return;
+    expect(out.distanceMeters).toBe(22500);
+    expect(Date.parse(out.endTime) - Date.parse(out.startTime)).toBe(96.5 * 60000);
+  });
+
+  it("behåller uppmätt helpasstid för blandad styrka och kondition", () => {
+    const out = buildHealthExport(base({ logged_weights: {
+      __first_set_at__: "2026-10-20T17:00:00.000Z",
+      __sets__Knäböj: "1",
+      __setdata__Knäböj: JSON.stringify([{ reps: "8", kg: "50" }]),
+      __cond__Löpning: JSON.stringify({ time: "20", dist: "3" }),
+    } }), plan, profile);
+    expect(out?.startTime).toBe("2026-10-20T17:00:00.000Z");
+    expect(out?.distanceMeters).toBe(3000);
   });
 });
 

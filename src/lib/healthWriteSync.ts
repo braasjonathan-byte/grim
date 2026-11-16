@@ -16,6 +16,8 @@
 import { supabase } from "@/integrations/supabase/client";
 import { estimateCalories } from "@/lib/workoutCalories";
 import { isCompletedWorkout } from "@/lib/completionCounting";
+import { allCheckedSets } from "@/lib/checkedSets";
+import { validateNumber } from "@/lib/inputValidation";
 import {
   checkHealthWriteAccess,
   classifyNativeHealthError,
@@ -33,6 +35,8 @@ import {
 export const WRITE_WINDOW_DAYS = 30;
 const DEFAULT_MINUTES = 45;
 const MAX_MINUTES = 6 * 60;
+// A new export format must replace records even when the workout is unchanged.
+const EXPORT_REVISION = 2;
 const STORE_KEY = "grim_health_written_v1";
 const ENABLED_KEY = "grim_health_write_enabled";
 
@@ -97,8 +101,30 @@ export function grimExerciseType(text: string): string {
 /** Passlängd i minuter från "NN min"-rader i planen, annars null. */
 export function minutesFromDetails(details: string): number | null {
   let sum = 0;
-  for (const m of (details || "").matchAll(/(\d{1,3})\s*min\b/gi)) sum += Number(m[1]);
+  for (const m of (details || "").matchAll(/(?<![\d.,-])(\d+(?:[.,]\d+)?)\s*min\b/gi)) {
+    sum += validateNumber(m[1], "cardioTimeMin").value ?? 0;
+  }
   return sum > 0 ? Math.min(sum, MAX_MINUTES) : null;
+}
+
+/** Read stored minutes/km, not the planned values or formatted H:M:S labels. */
+function loggedCardioTotals(weights: Record<string, unknown>) {
+  let minutes = 0;
+  let km = 0;
+  for (const [key, raw] of Object.entries(weights)) {
+    if (!key.startsWith("__cond__")) continue;
+    try {
+      const data: unknown = typeof raw === "string" ? JSON.parse(raw) : raw;
+      if (!data || typeof data !== "object" || Array.isArray(data)) continue;
+      const entry = data as Record<string, unknown>;
+      minutes += validateNumber(String(entry.time ?? ""), "cardioTimeMin").value ?? 0;
+      km += validateNumber(String(entry.dist ?? ""), "cardioDistanceKm").value ?? 0;
+    } catch { /* Ignore malformed legacy entries. */ }
+  }
+  return {
+    minutes: validateNumber(minutes || "", "cardioTimeMin").value,
+    km: validateNumber(km || "", "cardioDistanceKm").value,
+  };
 }
 
 export const clientRecordIdFor = (completionId: string) => `grim-${completionId}`;
@@ -114,14 +140,21 @@ export function buildHealthExport(
   if (!Number.isFinite(end.getTime())) return null;
   const details = plan?.details || "";
   const lw = (c.logged_weights || {}) as Record<string, unknown>;
+  const cardio = loggedCardioTotals(lw);
+  const hasStrength = [...allCheckedSets(lw).values()].some((sets) => sets.length > 0);
+  const cardioMinutes = !hasStrength ? cardio.minutes : null;
 
   let startIso: string;
   let endIso: string;
   const firstSet = typeof lw.__first_set_at__ === "string" ? new Date(lw.__first_set_at__) : null;
   if (previous) {
-    // Behåll tiderna från första skrivningen – redigering ska inte flytta passet.
-    startIso = previous.start;
+    // Keep the original end anchor; correct duration without moving the workout day.
+    const minutes = cardioMinutes ?? (!hasStrength && !firstSet ? minutesFromDetails(details) : null);
+    startIso = minutes ? new Date(Date.parse(previous.end) - minutes * 60000).toISOString() : previous.start;
     endIso = previous.end;
+  } else if (cardioMinutes) {
+    startIso = new Date(end.getTime() - cardioMinutes * 60000).toISOString();
+    endIso = end.toISOString();
   } else if (firstSet && Number.isFinite(firstSet.getTime()) && firstSet < end && end.getTime() - firstSet.getTime() <= MAX_MINUTES * 60000) {
     startIso = firstSet.toISOString();
     endIso = end.toISOString();
@@ -133,7 +166,8 @@ export function buildHealthExport(
 
   const weight = Number(profile?.weight_kg) || 75;
   let kcal = estimateCalories(details, lw as never, c.logged_pulse ?? null, weight, profile?.gender ?? null, profile?.age ?? null);
-  const km = Number(c.logged_distance_km) || 0;
+  // The top-level column can be empty or a cached total: never add it twice.
+  const km = cardio.km ?? validateNumber(c.logged_distance_km, "cardioDistanceKm").value ?? 0;
   if (kcal <= 0 && km > 0) {
     const f = /cykl|cykel|bike/i.test(details) ? 0.3 : /sim|swim/i.test(details) ? 2.5 : /promenad|gång|walk/i.test(details) ? 0.6 : 1.0;
     kcal = km * weight * f;
@@ -142,7 +176,7 @@ export function buildHealthExport(
   const title = (plan?.session_name || details.split(/[;\n]/)[0] || "Grim-pass").trim().slice(0, 100);
   return {
     clientRecordId: clientRecordIdFor(c.id),
-    version: Math.max(1, end.getTime()),
+    version: Math.max(1, end.getTime()) * 10 + EXPORT_REVISION,
     startTime: startIso,
     endTime: endIso,
     exerciseType: grimExerciseType(`${plan?.session_name ?? ""} ${details}`),

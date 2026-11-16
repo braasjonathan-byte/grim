@@ -1,5 +1,9 @@
 # Roadmap
 
+## Health Connect-export 16 november 2026
+- [x] Rätta decimalminuter, loggad konditionstid/distans och omskrivning av tidigare felaktiga exporter; 61 Health Connect-tester godkända och bygget grönt.
+- [ ] Bekräfta visningen i Samsung Health på fysisk Android-telefon efter uppdaterad app och synk; kräver användarens telefon.
+
 ## Hybridinsikter och asynkron sparring 16 november 2026
 - [x] Hybridöversikt för fyra UTC-veckor och försiktig jämförelse av löpning efter benpass; ingen slutsats om orsak eller återhämtning.
 - [x] Utmana ett uttryckligen delat vänpass, skapa eget pass med sparat facit och jämför avbockade resultat utan automatisk delning/notis.

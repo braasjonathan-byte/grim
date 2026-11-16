@@ -1,4 +1,5 @@
 # Architecture rules
+- Health Connect exports prioritize stored cardio minutes/km for cardio-only duration and distance; revisioned client versions repair unchanged legacy exports while preserving the original end anchor and mixed-workout elapsed time.
 
 - Social entry uses the shared initial-tab resolver rather than remembered tabs; explicit friend and notification destinations remain intact.
 
