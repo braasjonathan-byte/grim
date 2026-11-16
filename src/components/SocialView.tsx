@@ -1128,10 +1128,11 @@ const SocialView = ({ userId, isAdmin, isHonorary = false, friendActivities, unr
                         </li>
                       ))}
                     </ul>
-                    {parsed.chips.length > 0 && (
+                    {(parsed.chips.length > 0 || parsed.cardioStats.length > 0) && (
                       <div className="mt-3 border-t border-border/50 pt-3 space-y-2">
                         <p className="text-[10px] font-bold uppercase tracking-wide text-muted-foreground">Summering av passet</p>
                         <div className="flex flex-wrap gap-x-4 gap-y-2">
+                          {parsed.cardioStats.length > 0 && <span className="inline-flex items-center gap-1.5 text-xs"><KindIcon className="h-3.5 w-3.5 text-muted-foreground" />{parsed.kind === "running" ? "Löpning" : parsed.kind === "cycling" ? "Cykling" : parsed.kind === "swimming" ? "Simning" : "Kondition"}</span>}
                           {parsed.chips.map((stat, i) => <span key={i} className="inline-flex items-center gap-1.5 text-xs"><stat.icon className="h-3.5 w-3.5 text-muted-foreground" />{stat.label}{stat.icon === Weight ? " volym" : ""}</span>)}
                         </div>
                       </div>
