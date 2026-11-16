@@ -144,7 +144,7 @@ const GroupChatConversation = ({ userId, groupId, groupName, onBack, onLeft }: G
   const groupedByDate: { date: string; msgs: Msg[] }[] = [];
   let last = "";
   for (const m of messages) {
-    const d = new Date(m.created_at).toLocaleDateString("sv-SE", { timeZone: "UTC" });
+    const d = new Date(m.created_at).toLocaleDateString("sv-SE");
     if (d !== last) {
       groupedByDate.push({ date: d, msgs: [m] });
       last = d;

@@ -248,7 +248,7 @@ const ChatConversation = ({ userId, friend, onBack, onOpenProfile }: ChatConvers
   const groupedMessages: { date: string; msgs: ChatMessage[] }[] = [];
   let lastDate = "";
   for (const msg of messages) {
-    const d = new Date(msg.created_at).toLocaleDateString("sv-SE", { timeZone: "UTC" });
+    const d = new Date(msg.created_at).toLocaleDateString("sv-SE");
     if (d !== lastDate) {
       groupedMessages.push({ date: d, msgs: [msg] });
       lastDate = d;
