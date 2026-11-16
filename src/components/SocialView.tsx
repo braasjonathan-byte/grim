@@ -100,18 +100,12 @@ const resolveWorkoutPostDate = (post: SocialPost, planStartDate?: string | null)
   return null;
 };
 
+import { initialSocialTab } from "@/lib/socialNavigation";
+
 type SubTab = "feed" | "friends" | "chat" | "groups";
 
 const SocialView = ({ userId, isAdmin, isHonorary = false, friendActivities, unreadChats = 0, onClearActivitiesForFriend, initialFriendId }: SocialViewProps) => {
-  const [subTab, setSubTabState] = useState<SubTab>(() => {
-    if (initialFriendId) return "friends";
-    const saved = localStorage.getItem("grim_social_subtab");
-    return (saved === "feed" || saved === "friends" || saved === "chat" || saved === "groups") ? saved : "friends";
-  });
-  const setSubTab = (t: SubTab) => {
-    setSubTabState(t);
-    try { localStorage.setItem("grim_social_subtab", t); } catch {}
-  };
+  const [subTab, setSubTab] = useState<SubTab>(() => initialSocialTab(initialFriendId));
   const [posts, setPosts] = useState<SocialPost[]>([]);
   const [feedLoading, setFeedLoading] = useState(true);
   const [groups, setGroups] = useState<EventGroup[]>([]);
@@ -748,10 +742,10 @@ const SocialView = ({ userId, isAdmin, isHonorary = false, friendActivities, unr
       {/* Sub-tab navigation */}
       {(() => {
         const tabs = [
+          { key: "feed" as SubTab, label: "Flöde", icon: Globe },
           { key: "friends" as SubTab, label: "Vänner", icon: Users },
           { key: "chat" as SubTab, label: "Meddelanden", icon: MessageCircle, badge: unreadChats },
           { key: "groups" as SubTab, label: "Eventgrupper", icon: UsersRound },
-          { key: "feed" as SubTab, label: "Flöde", icon: Globe },
         ];
         const activeIndex = Math.max(0, tabs.findIndex(t => t.key === subTab));
         return (
