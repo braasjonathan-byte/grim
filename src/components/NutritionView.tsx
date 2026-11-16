@@ -7,7 +7,7 @@ import { hapticLight } from "@/lib/haptics";
 import { loadWorkoutBurned } from "@/lib/workoutBurned";
 import { loadStoredHealthDays } from "@/lib/healthSync";
 import { firstClick, exclusive } from "@/lib/clickGuard";
-import { useEffect, useMemo, useState } from "react";
+import { Suspense, useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { ChevronLeft, ChevronRight, Plus, Target, Trash2, Pencil, GripVertical, ChefHat, Bookmark, MoreHorizontal, CopyPlus, Zap, BookmarkPlus, ArrowRightLeft, Copy, Sparkles, Flame, TrendingUp } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
@@ -25,7 +25,9 @@ import MealNameDialog from "./MealNameDialog";
 import CuratedRecipesDialog from "./CuratedRecipesDialog";
 import MealTemplatesDialog from "./MealTemplatesDialog";
 import WaterTracker from "./WaterTracker";
-import NutritionInsights from "./NutritionInsights";
+import { lazyRetry } from "@/lib/lazyRetry";
+// Diagrambiblioteket laddas först när insikterna visas.
+const NutritionInsights = lazyRetry(() => import("./NutritionInsights"));
 import DayFoodDialog from "./DayFoodDialog";
 import CopyFromPastDialog from "./CopyFromPastDialog";
 import FastingWidget from "./FastingWidget";
@@ -776,7 +778,7 @@ export default function NutritionView({ userId, isHonorary: isHonoraryProp = fal
 
       <WaterTracker userId={userId} dateKey={dateKey} goalMl={waterGoal} />
 
-      <NutritionInsights userId={userId} dateKey={dateKey} targets={targets} refreshKey={logs.length + Math.round(totals.kcal)} />
+      <Suspense fallback={null}><NutritionInsights userId={userId} dateKey={dateKey} targets={targets} refreshKey={logs.length + Math.round(totals.kcal)} /></Suspense>
 
       <FoodPickerDialog
         open={!!picker}

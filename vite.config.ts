@@ -45,12 +45,8 @@ export default defineConfig(({ mode }) => ({
         // separat och inte följer med i Index/WorkoutView-chunkarna.
         manualChunks(id: string) {
           if (!id.includes("node_modules")) return undefined;
-          if (/[\\/]node_modules[\\/](recharts|d3-[^\\/]+|victory-vendor)[\\/]/.test(id)) return "vendor-recharts";
-          if (/[\\/]node_modules[\\/](leaflet|react-leaflet|@react-leaflet)[\\/]/.test(id)) return "vendor-leaflet";
           if (/[\\/]node_modules[\\/]@capacitor[\\/]/.test(id)) return "vendor-capacitor";
           if (/[\\/]node_modules[\\/]date-fns[\\/]/.test(id)) return "vendor-date-fns";
-          if (/[\\/]node_modules[\\/]@dnd-kit[\\/]/.test(id)) return "vendor-dnd-kit";
-          if (/[\\/]node_modules[\\/]qrcode\.react[\\/]/.test(id)) return "vendor-qrcode";
           return undefined;
         },
       },
