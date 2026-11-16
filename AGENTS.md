@@ -1,5 +1,7 @@
 # Architecture rules
 
+- Home return summaries use unified workout history and seven UTC dates; upcoming workouts preserve exact plan identities and exclude completed/skipped slots so retention never invents activity or schedules.
+
 - Direct and group conversations share cursor-paged newest-first history and confirmed writes; preserve user-scoped drafts on failure and deduplicate saved/realtime rows to prevent loss and duplicate messages.
 - Social person navigation reuses FriendsView profile/training and existing message/challenge flows; destination-first sharing and settings intents avoid duplicate editors and publication paths.
 - Social Radix dialogs use the shared social-sheet positioning override; keep bottom alignment consistent without changing unrelated app dialogs.

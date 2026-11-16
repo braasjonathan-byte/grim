@@ -48,6 +48,8 @@ import HealthWorkoutPrompt from "@/components/HealthWorkoutPrompt";
 import HomeTrainingStats from "@/components/HomeTrainingStats";
 import HomeHealthTrends from "@/components/HomeHealthTrends";
 import WeeklySummaryCard from "@/components/WeeklySummaryCard";
+import HomeReturnSummary from "@/components/HomeReturnSummary";
+import { nextPlannedWorkout } from "@/lib/homeReturn";
 import DailyRecipeCard from "@/components/DailyRecipeCard";
 import { getCardioModes, getStoredCardioMode } from "@/lib/cardioUnits";
 import { computeWeekProgress } from "@/lib/homeDashboard";
@@ -406,28 +408,7 @@ const HomeView = ({ userId, onNavigate, isHonorary = false }: HomeViewProps) => 
   // «Vila» utan övningar är en vilodag – inte ett pass som saknar övningar.
   const todayKind = classifyToday(todaysPlans);
 
-  const DAY_NAMES_FULL: Record<string, string> = {
-    mån: "Måndag", tis: "Tisdag", ons: "Onsdag", tors: "Torsdag", fre: "Fredag", lör: "Lördag", sön: "Söndag",
-  };
-
-  const nextSession = useMemo(() => {
-    for (let i = 1; i <= 8; i++) {
-      const idx = (todayIdx + i) % 7;
-      const abbr = DAYS[idx];
-      const wrapped = todayIdx + i >= 7;
-      const weekToCheck = wrapped ? currentWeek + 1 : currentWeek;
-      const match = plans.find(
-        (p) => p.week === weekToCheck && normalizeDay(p.day) === normalizeDay(abbr) && hasContent(p.details),
-      );
-      if (match) {
-        return {
-          dayLabel: DAY_NAMES_FULL[normalizeDay(abbr)] ?? abbr,
-          name: match.session_name?.trim() || "Pass",
-        };
-      }
-    }
-    return null;
-  }, [plans, currentWeek, todayIdx]);
+  const upcomingWorkout = useMemo(() => nextPlannedWorkout(plans, completions, planStartDate, now.toISOString().slice(0, 10)), [plans, completions, planStartDate, todayKey]);
 
   const weekPlanned = useMemo(() => {
     const dayKeys = new Set(
@@ -602,11 +583,6 @@ const HomeView = ({ userId, onNavigate, isHonorary = false }: HomeViewProps) => 
                   Vilodag idag. Återhämtning är en del av träningen – musklerna bygger upp sig nu.
                 </p>
                 <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
-                  {nextSession && (
-                    <p className="text-xs text-muted-foreground">
-                      Nästa pass: <span className="font-semibold text-foreground">{nextSession.dayLabel} – {nextSession.name}</span>
-                    </p>
-                  )}
                   <button type="button" onClick={() => onNavigate("workout")} className="text-xs font-semibold text-primary underline-offset-2 hover:underline">
                     Träna ändå
                   </button>
@@ -633,12 +609,6 @@ const HomeView = ({ userId, onNavigate, isHonorary = false }: HomeViewProps) => 
                   </ul>
                 )}
 
-                {todayDone && nextSession && (
-                  <p className="text-xs text-muted-foreground">
-                    Nästa pass: <span className="font-semibold text-foreground">{nextSession.dayLabel} – {nextSession.name}</span>
-                  </p>
-                )}
-
                 <Button className="w-full" variant={todayDone ? "outline" : "default"} onClick={() => onNavigate("workout")}>
                   {todayDone ? "Visa passet" : "Starta passet"}
                   <ChevronRight className="w-4 h-4 ml-1" />
@@ -648,6 +618,23 @@ const HomeView = ({ userId, onNavigate, isHonorary = false }: HomeViewProps) => 
           </>
         )}
       </section>
+
+      {upcomingWorkout && (todayDone || todayKind === "rest" || upcomingWorkout.date !== now.toISOString().slice(0, 10)) && (
+        <section className="border-b border-border py-4 space-y-3" aria-label="Nästa planerade pass">
+          <div className="flex items-center gap-2">
+            <Dumbbell className="h-4 w-4 text-primary" />
+            <h2 className="text-sm font-semibold">Nästa planerade pass</h2>
+            <span className="ml-auto text-xs text-muted-foreground">{upcomingWorkout.date}</span>
+          </div>
+          <p className="font-semibold break-words">{upcomingWorkout.session_name?.trim() || "Pass"}</p>
+          <ul className="space-y-1 text-sm text-muted-foreground">
+            {summarizeDetails(upcomingWorkout.details).map(fixCardioUnitSuffix).map((line, i) => <li key={i} className="break-words">{line}</li>)}
+          </ul>
+          <Button variant="outline" className="w-full" onClick={() => onNavigate("workout")}>Visa träningsplanen<ChevronRight className="h-4 w-4" /></Button>
+        </section>
+      )}
+
+      <HomeReturnSummary userId={userId} today={now.toISOString().slice(0, 10)} onOpenStats={() => onNavigate("stats")} />
 
       {/* 3. Dagens kost: kalorier och protein */}
       {nutritionOn && nutritionToday && (

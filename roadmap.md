@@ -1,5 +1,10 @@
 # Roadmap
 
+## Hem och återkomst 16 november 2026
+- [x] Visa nästa faktiskt planerade, ej avklarade pass på Hem, även efter dagens pass; ersätter den gamla dubbla nästa-pass-texten.
+- [x] Visa en synlig sjudagarssammanfattning från gemensam passhistorik utan påhittade förbättringar.
+- [x] 14 datum-/urvals-/jämförelsetester godkända; inloggad mobil/dator visar sparat testpass, nästa pass och fungerande navigation. Tillfällig testdata borttagen.
+
 ## Träningsprestanda och databas 16 november 2026
 - [x] Isolera passvyns sparning och synkstatus utan ändrad registreringslogik; befintliga separata setrader och vilotimer behålls. Stabil kontext hindrar sparindikatorn från att rendera om hela passvyn.
 - [x] Undersök startkontroll och passhistorik; två partiella historikindex används i verifierad frågeplan (31 → 6 bufferträffar). Startkontrollen har redan relevanta index och lämnades oförändrad; inga historiska data kapas. HTTP-mätningen varierar även för oförändrad startkontroll och bevisar inte förbättrad laddtid.
