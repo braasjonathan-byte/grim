@@ -29,3 +29,4 @@
 - Never hand-edit the Android `versionCode`/`versionName`; `scripts/bump-android-version.cjs` derives them from the GitHub run number so every build is strictly higher than the last uploaded build.
 - `supabase/functions/mcp/index.ts` is owned (generator banner removed): the mcp-js bundler erases TS annotations and breaks `deno check`, so edit the bundle directly instead of regenerating it; keep the MCP codegen plugin out of Vite because it refuses to overwrite owned files and blocks builds.
 - Cast binary web-push payloads at the fetch site (`body: body as unknown as BodyInit`); Deno's fetch types reject `Uint8Array<ArrayBufferLike>` from the encryption helpers.
+- Browser flow checks live in `e2e/core_flows.py` (Playwright, signed-in session, run with `python3 e2e/core_flows.py`); they use uniquely named test data and always restore it, because they run against real accounts.
