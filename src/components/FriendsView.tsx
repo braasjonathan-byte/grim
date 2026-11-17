@@ -353,6 +353,8 @@ const FriendsView = ({ userId, isAdmin = false, friendActivities = [], onClearAc
 
 
   const searchSeq = useRef(0);
+  const friendFilter = searchQuery.trim().toLowerCase();
+  const visibleFriends = friendFilter ? friends.filter((f) => (f.profile.nickname || "").toLowerCase().includes(friendFilter)) : friends;
   const searchUsers = async () => {
     if (searchQuery.trim().length < 2) return;
     const seq = ++searchSeq.current;
@@ -1436,10 +1438,10 @@ const FriendsView = ({ userId, isAdmin = false, friendActivities = [], onClearAc
 
         {searching && <p role="status" className="text-sm text-muted-foreground">Söker…</p>}
         {searchError && <div role="alert"><p className="text-sm text-muted-foreground">Sökningen misslyckades.</p><Button variant="outline" onClick={() => void searchUsers()}>Försök igen</Button></div>}
-        {searched && !searching && !searchError && searchResults.length === 0 && <p className="text-sm text-muted-foreground">Ingen användare hittades.</p>}
-        {!searchError && searchResults.length > 0 && (
+        {searched && !searching && !searchError && searchResults.length === 0 && visibleFriends.length === 0 && <p className="text-sm text-muted-foreground">Ingen användare hittades.</p>}
+        {!searchError && searchResults.filter((r) => !isAlreadyFriend(r.user_id)).length > 0 && (
           <div className="bg-card border border-border rounded-lg divide-y divide-border animate-fade-in">
-            {searchResults.map((profile) => (
+            {searchResults.filter((r) => !isAlreadyFriend(r.user_id)).map((profile) => (
               <div key={profile.user_id} className="flex items-center justify-between p-3">
                 <span className="font-semibold text-sm">{profile.nickname}</span>
                 {isAlreadyFriend(profile.user_id) ? (
@@ -1461,7 +1463,7 @@ const FriendsView = ({ userId, isAdmin = false, friendActivities = [], onClearAc
       {/* Friends list */}
       <div className="space-y-1.5">
         <h3 className="text-sm font-semibold text-muted-foreground">
-          Dina vänner ({friends.length})
+          Dina vänner ({friendFilter ? `${visibleFriends.length} av ${friends.length}` : friends.length})
         </h3>
         {listLoading ? <p role="status" className="text-sm text-muted-foreground">Laddar vänner…</p> : listError ? null : friends.length === 0 ? (
           <EmptyState fill
@@ -1475,7 +1477,8 @@ const FriendsView = ({ userId, isAdmin = false, friendActivities = [], onClearAc
         ) : (
           <div className="relative">
             <div className="rounded-2xl bg-card shadow-soft overflow-hidden divide-y divide-border/50">
-              {friends.map((friend) => {
+              {friendFilter && visibleFriends.length === 0 && <p className="p-3.5 text-sm text-muted-foreground">Ingen av dina vänner matchar sökningen.</p>}
+              {visibleFriends.map((friend) => {
                 const recentCount = friendActivities.filter(a => a.nickname === friend.profile.nickname).length;
                 const initial = friend.profile.nickname[0]?.toUpperCase() || "?";
                 const hue = (initial.charCodeAt(0) * 37) % 360;
