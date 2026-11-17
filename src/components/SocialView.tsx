@@ -321,7 +321,7 @@ const SocialView = ({ userId, isAdmin, isHonorary = false, friendActivities, unr
     if (postsData) {
       setPosts(postsData as SocialPost[]);
       // Load nicknames
-      const userIds = [...new Set(postsData.map(p => p.user_id))];
+      const userIds = [...new Set([userId, ...postsData.map(p => p.user_id)])];
       if (userIds.length > 0) {
         const [{ data: nicks }, { data: profilesData }] = await Promise.all([
           supabase.rpc("get_suggestion_nicknames", { user_ids: userIds }),
@@ -330,7 +330,7 @@ const SocialView = ({ userId, isAdmin, isHonorary = false, friendActivities, unr
         if (nicks) {
           const map: Record<string, string> = {};
           nicks.forEach((n: { user_id: string; nickname: string }) => { map[n.user_id] = n.nickname; });
-          setNicknames(map);
+          setNicknames(prev => ({ ...prev, ...map }));
         }
         if (profilesData) {
           const aMap: Record<string, string | null> = {};
@@ -339,7 +339,7 @@ const SocialView = ({ userId, isAdmin, isHonorary = false, friendActivities, unr
             aMap[p.user_id] = p.avatar_url;
             startMap[p.user_id] = p.plan_start_date;
           });
-          setAvatarUrls(aMap);
+          setAvatarUrls(prev => ({ ...prev, ...aMap }));
           setPlanStartDates(startMap);
         }
       }
@@ -368,6 +368,25 @@ const SocialView = ({ userId, isAdmin, isHonorary = false, friendActivities, unr
           setLikes(countMap);
           setLikeUsers(userMap);
           setMyLikes(mySet);
+          // Reactors need profiles too, even when they have no posts in this feed.
+          const reactorIds = [...new Set(likesData.map(l => l.user_id))]
+            .filter(id => !userIds.includes(id));
+          if (reactorIds.length > 0) {
+            const [{ data: reactorNames }, { data: reactorProfiles }] = await Promise.all([
+              supabase.rpc("get_suggestion_nicknames", { user_ids: reactorIds }),
+              supabase.from("profiles").select("user_id, avatar_url").in("user_id", reactorIds),
+            ]);
+            if (reactorNames) setNicknames(prev => {
+              const next = { ...prev };
+              reactorNames.forEach(n => { next[n.user_id] = n.nickname; });
+              return next;
+            });
+            if (reactorProfiles) setAvatarUrls(prev => {
+              const next = { ...prev };
+              reactorProfiles.forEach(p => { next[p.user_id] = p.avatar_url; });
+              return next;
+            });
+          }
         }
         if (imgData) {
           const imgMap: Record<string, { image_url: string; caption: string | null }[]> = {};

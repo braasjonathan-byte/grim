@@ -1,5 +1,9 @@
 # Roadmap
 
+## Eldreaktion och Test2 17 november 2026
+- [x] Hämta namn och profilbilder även för personer som eldar utan egna inlägg i flödet.
+- [x] Grims bildinlägg visar Test2 utan frågetecken även efter omladdning; 10 befintliga Social-tester godkända. Denna kontroll var endast läsning; tidigare tests ursprung kan inte bekräftas från tillgänglig historik.
+
 ## Tacx via Health Connect 17 november 2026
 - [x] Upptäckt flyttad från Hem till inloggad app; återkomst och synlig efterkontroll använder passbehörighet, avvisningar är användarspecifika.
 - [x] Bekräftad import från båda ingångarna erbjuder delning och respekterar Alltid; sparfel bevarar granskningen och HC-identiteter återanvänder befintliga inlägg.
