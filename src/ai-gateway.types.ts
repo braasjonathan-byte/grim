@@ -1,0 +1,1 @@
+import type {} from "../supabase/functions/nutrition-ai-scan/generated/models";

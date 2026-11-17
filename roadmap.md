@@ -1,5 +1,11 @@
 # Roadmap
 
+## Matskanning 17 november 2026
+- [x] Separata komponenter, säker livsmedelsmatchning och justerbara gram/bortval; källor och uppskattningar visas per rad.
+- [x] Kamera/galleri direkt från måltiden; bevara granskningen vid sparfel och spara valda rader i en batch med ångra.
+- [x] 6 tester godkända och inloggat verkligt matfoto verifierat på mobil: 9 identifierade komponenter, 2 valda rader, 80,5 g, sparfel med bevarade val och korrekt resultat efter omladdning. Datorns kamera/gallerival verifierat. Befintlig åtkomstkontroll oförändrad och testposter borttagna.
+- [ ] Kontrollera fysisk Android-kamera och galleri; kräver användarens telefon.
+
 ## Health Connect-export 16 november 2026
 - [x] Rätta decimalminuter, loggad konditionstid/distans och omskrivning av tidigare felaktiga exporter; 61 Health Connect-tester godkända och bygget grönt.
 - [ ] Bekräfta visningen i Samsung Health på fysisk Android-telefon efter uppdaterad app och synk; kräver användarens telefon.

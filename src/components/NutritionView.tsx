@@ -9,7 +9,7 @@ import { loadStoredHealthDays } from "@/lib/healthSync";
 import { firstClick, exclusive } from "@/lib/clickGuard";
 import { Suspense, useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { ChevronLeft, ChevronRight, Plus, Target, Trash2, Pencil, GripVertical, ChefHat, Bookmark, MoreHorizontal, CopyPlus, Zap, BookmarkPlus, ArrowRightLeft, Copy, Sparkles, Flame, TrendingUp } from "lucide-react";
+import { ChevronLeft, ChevronRight, Plus, Target, Trash2, Pencil, GripVertical, ChefHat, Bookmark, MoreHorizontal, CopyPlus, Zap, BookmarkPlus, ArrowRightLeft, Copy, Sparkles, Flame, TrendingUp, Camera } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 
@@ -17,6 +17,7 @@ import NutritionHero from "./NutritionHero";
 import { Button } from "@/components/ui/button";
 import { syncWidgetNutrition, syncWidgetWeek } from "@/lib/nutritionWidget";
 import FoodPickerDialog, { PickedItem } from "./FoodPickerDialog";
+import AIFoodScanDialog from "./AIFoodScanDialog";
 import AdaptiveTdeeCard, { ADAPTIVE_CHANGED_EVENT, NUTRITION_GOALS_SAVED_EVENT, readAdaptiveEnabled, setAdaptiveEnabledEverywhere, writeAdaptiveEnabled } from "./AdaptiveTdeeCard";
 import { Switch } from "@/components/ui/switch";
 import MealSuggestions, { slotForNow } from "./MealSuggestions";
@@ -97,6 +98,7 @@ interface SortableMealProps {
   logs: MealLog[];
   mealKcal: number;
   onAdd: () => void;
+  onScan?: () => void;
   onRename: () => void;
   onDelete: () => void;
   onRemoveLog: (id: string) => void;
@@ -112,7 +114,7 @@ interface SortableMealProps {
   onFeeling: (k: string | null) => void;
 }
 
-function SortableMeal({ meal, isCustom, logs, mealKcal, onAdd, onRename, onDelete, onRemoveLog, onEditLog, onCopyYesterday, onQuickLog, onSaveTemplate, budget, feeling, onFeeling, yesterdayCount, onSameAsYesterday }: SortableMealProps) {
+function SortableMeal({ meal, isCustom, logs, mealKcal, onAdd, onScan, onRename, onDelete, onRemoveLog, onEditLog, onCopyYesterday, onQuickLog, onSaveTemplate, budget, feeling, onFeeling, yesterdayCount, onSameAsYesterday }: SortableMealProps) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: meal, disabled: !isCustom });
   const style = {
     transform: CSS.Transform.toString(transform),
@@ -136,6 +138,7 @@ function SortableMeal({ meal, isCustom, logs, mealKcal, onAdd, onRename, onDelet
           </p>
         </div>
         <div className="flex items-center gap-1.5">
+          {onScan && <Button variant="outline" size="icon" className="w-11 h-11 icon-round shrink-0" onClick={onScan} aria-label={`Skanna mat till ${meal}`} title={`Skanna mat till ${meal}`}><Camera className="w-4 h-4" /></Button>}
           <Button variant="secondary" size="icon" onClick={onAdd} className="w-11 h-11 icon-round shrink-0" aria-label={`Lägg till i ${meal}`} title={`Lägg till i ${meal}`}>
             <Plus className="w-4 h-4" />
           </Button>
@@ -227,6 +230,7 @@ export default function NutritionView({ userId, isHonorary: isHonoraryProp = fal
   const [microTargets, setMicroTargets] = useState<Micros>({});
   const [slots, setSlots] = useState<string[]>(DEFAULT_SLOTS);
   const [picker, setPicker] = useState<string | null>(null);
+  const [scanMeal, setScanMeal] = useState<{ meal: string; date: string } | null>(null);
   const [recipeOpen, setRecipeOpen] = useState(false);
   const [editingRecipeId, setEditingRecipeId] = useState<string | null>(null);
   const [templateRecipe, setTemplateRecipe] = useState<import("@/data/curatedRecipes").CuratedRecipe | null>(null);
@@ -710,6 +714,7 @@ export default function NutritionView({ userId, isHonorary: isHonoraryProp = fal
                     logs={ml}
                     mealKcal={mealKcal}
                     onAdd={() => { hapticLight(); setPicker(meal); }}
+                    onScan={isHonorary ? () => setScanMeal({ meal, date: dateKey }) : undefined}
                     onRename={() => setRenameIdx(idx)}
                     onDelete={() => deleteSlot(idx)}
                     onRemoveLog={removeLog}
@@ -808,6 +813,32 @@ export default function NutritionView({ userId, isHonorary: isHonoraryProp = fal
 
       <Suspense fallback={null}><NutritionInsights userId={userId} dateKey={dateKey} targets={targets} refreshKey={logs.length + Math.round(totals.kcal)} /></Suspense>
 
+      <AIFoodScanDialog
+        open={!!scanMeal}
+        meal={scanMeal?.meal}
+        onOpenChange={value => { if (!value) setScanMeal(null); }}
+        onPickMany={async (items, sources) => {
+          if (!scanMeal) throw new Error("Välj måltid igen.");
+          const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+          if (!items.length || items.some(item => !isPlausibleMealLog(item))) throw new Error("Kontrollera mängderna före loggning.");
+          const { data, error } = await supabase.from("meal_logs").insert(items.map((item, index) => ({
+            user_id: userId, log_date: scanMeal.date, meal_type: scanMeal.meal, item_name: item.name,
+            amount: item.amount, unit: item.unit, kcal: item.kcal, protein_g: item.protein_g,
+            fat_g: item.fat_g, carbs_g: item.carbs_g, fiber_g: item.fiber_g ?? 0,
+            food_id: item.source === "food" && uuid.test(item.id) ? item.id : null,
+            custom_food_id: item.source === "custom_food" && uuid.test(item.id) ? item.id : null,
+            nutrition_source: sources[index] === "label" ? "ai" : sources[index],
+          }))).select("id");
+          if (error || !data?.length) throw new Error("Måltiden kunde inte sparas. Dina val finns kvar; försök igen.");
+          const ids = data.map(row => row.id);
+          void load();
+          showUndoToast(`Loggade ${items.length} livsmedel i ${scanMeal.meal}`, async () => {
+            const removed = await supabase.from("meal_logs").delete().eq("user_id", userId).in("id", ids);
+            if (removed.error) throw removed.error;
+            void load();
+          });
+        }}
+      />
       <FoodPickerDialog
         open={!!picker}
         onOpenChange={(v) => !v && setPicker(null)}
