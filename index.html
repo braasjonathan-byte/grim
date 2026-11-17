@@ -72,9 +72,12 @@
   <body>
     <div id="root">
       <div id="initial-splash" style="display:flex;align-items:center;justify-content:center;min-height:100vh;background:#ffffff">
-        <div style="text-align:center">
-          <div id="initial-spinner" style="width:60px;height:60px;border:3px solid rgba(0,0,0,0.15);border-top-color:#000;border-radius:50%;margin:0 auto;animation:s .8s linear infinite"></div>
-          <style>@keyframes s{to{transform:rotate(360deg)}}</style>
+        <div style="width:min(320px,80vw);text-align:center">
+          <img src="/grim-logo.webp" alt="Grim" width="112" height="112" style="display:block;margin:0 auto 28px;width:112px;height:auto;animation:gp 1.4s ease-in-out infinite" />
+          <div class="sk" style="height:14px;width:70%;margin:0 auto 12px"></div>
+          <div class="sk" style="height:72px;width:100%;margin-bottom:12px;border-radius:16px"></div>
+          <div class="sk" style="height:14px;width:50%;margin:0 auto"></div>
+          <style>@keyframes gp{0%,100%{opacity:1}50%{opacity:.6}}@keyframes sh{0%,100%{opacity:.5}50%{opacity:1}}.sk{border-radius:8px;background:rgba(0,0,0,0.08);animation:sh 1.4s ease-in-out infinite}.dark-splash .sk{background:rgba(255,255,255,0.1)}@media (prefers-reduced-motion:reduce){.sk,#initial-splash img{animation:none}}</style>
         </div>
       </div>
     </div>
@@ -88,7 +91,7 @@
           var fg = dark ? "#ffffff" : "#000000";
           var splash = document.getElementById("initial-splash");
           var spinner = document.getElementById("initial-spinner");
-          if (splash) splash.style.background = bg;
+          if (splash) { splash.style.background = bg; if (dark) splash.classList.add("dark-splash"); }
           if (spinner) {
             spinner.style.borderColor = dark ? "rgba(255,255,255,0.15)" : "rgba(0,0,0,0.15)";
             spinner.style.borderTopColor = fg;
