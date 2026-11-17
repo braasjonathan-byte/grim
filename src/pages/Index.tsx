@@ -32,7 +32,6 @@ import NewsPopup from "@/components/admin/NewsPopup";
 import OnboardingTutorial from "@/components/OnboardingTutorial";
 import TourPrompt from "@/components/TourPrompt";
 import { getModules, MODULES_EVENT } from "@/lib/modules";
-import PageTransition from "@/components/PageTransition";
 import PullToRefresh from "@/components/PullToRefresh";
 import { hapticLight } from "@/lib/haptics";
 import { ensureUnlocked } from "@/lib/biometric";
@@ -166,6 +165,23 @@ const Index = () => {
     if (saved === "friends" || saved === "chat") return "social";
     return saved === "home" || saved === "workout" || saved === "social" || saved === "calc" || saved === "stats" || saved === "nutrition" ? saved as Tab : "home";
   });
+  // Keep visited tabs mounted (hidden) so switching back is instant.
+  // Social remounts on purpose so it always opens on Flöde.
+  const [visitedTabs, setVisitedTabs] = useState<Set<Tab>>(() => new Set([tab]));
+  useEffect(() => {
+    setVisitedTabs((prev) => (prev.has(tab) ? prev : new Set(prev).add(tab)));
+  }, [tab]);
+  // Preload every tab's code once the app is idle so the first visit doesn't wait.
+  useEffect(() => {
+    const preload = () => {
+      import("@/components/HomeView"); import("@/components/WorkoutView");
+      import("@/components/NutritionView"); import("@/components/SocialView");
+      import("@/components/WorkoutStats"); import("@/components/ToolsTab");
+    };
+    const w = window as Window & { requestIdleCallback?: (cb: () => void) => number };
+    if (w.requestIdleCallback) w.requestIdleCallback(preload); else setTimeout(preload, 1500);
+  }, []);
+  const keep = (t: Tab) => tab === t || visitedTabs.has(t);
 
   // Bottom nav press animation
   const [bouncingTab, setBouncingTab] = useState<string | null>(null);
@@ -1027,16 +1043,16 @@ const Index = () => {
       {/* Content */}
       <Suspense fallback={<TabSkeleton />}>
       <main className={`max-w-lg mx-auto px-4 ${tab === "social" ? "pt-0" : "py-4"}`} style={{ paddingBottom: bottomNavOffset }}>
-        <PageTransition tabKey={tab}>
-          {tab === "home" && (
+        <>
+          {keep("home") && (<div hidden={tab !== "home"} className={tab === "home" ? "tab-transition-in" : undefined}>
             <PullToRefresh onRefresh={() => setRefreshKeys((k) => ({ ...k, home: k.home + 1 }))}>
               <HomeView key={`home-${refreshKeys.home}`} userId={user.id} isHonorary={isHonorary} onNavigate={(t) => setTab(t as Tab)} />
             </PullToRefresh>
-          )}
-          {tab === "workout" && <>
+          </div>)}
+          {keep("workout") && <div hidden={tab !== "workout"} className={tab === "workout" ? "tab-transition-in" : undefined}>
             <OnboardingTutorial />
             <WorkoutView key={adminViewUserId || user.id} userId={adminViewUserId || user.id} isAdmin={userRole === "admin"} isHonorary={isHonorary} onBack={adminViewUserId ? () => { setAdminViewUserId(null); setTab("calc"); } : undefined} />
-          </>}
+          </div>}
           {tab === "social" &&
             <PullToRefresh onRefresh={() => setRefreshKeys((k) => ({ ...k, social: k.social + 1 }))}>
             <SocialView
@@ -1088,11 +1104,11 @@ const Index = () => {
             )
           )}
 
-          {tab === "nutrition" && <NutritionView userId={user.id} isHonorary={isHonorary} />}
+          {keep("nutrition") && <div hidden={tab !== "nutrition"} className={tab === "nutrition" ? "tab-transition-in" : undefined}><NutritionView userId={user.id} isHonorary={isHonorary} /></div>}
           {tab === "calc" &&
             <ToolsTab userId={user.id} isAdmin={userRole === "admin"} isHonorary={isHonorary} userRole={userRole} onLogout={handleLogout} onViewUserPlan={(targetUserId) => { setAdminViewUserId(targetUserId); setTab("workout"); }} onStartPlan={() => { setTab("workout"); localStorage.setItem("grim_start_plan_from_settings", "1"); }} />
           }
-        </PageTransition>
+        </>
       </main>
       </Suspense>
 
