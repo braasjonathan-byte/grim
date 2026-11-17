@@ -4,6 +4,7 @@ import { ComposedChart, Line, ReferenceLine, XAxis, YAxis, CartesianGrid, Toolti
 import { Scale, LineChart, List } from "lucide-react";
 import { useStatsSettings, WEIGHT_RANGES, weightRangeFrom } from "@/lib/statsSettings";
 import { WEIGHT_CHANGED_EVENT } from "@/lib/bodyWeight";
+import { rollingAverage7 } from "@/lib/weightTrend";
 
 const parseKey = (k: string) => { const [y, m, d] = k.split("-").map(Number); return new Date(y, m - 1, d); };
 const addDays = (d: Date, n: number) => { const x = new Date(d); x.setDate(x.getDate() + n); return x; };
@@ -11,12 +12,13 @@ const addDays = (d: Date, n: number) => { const x = new Date(d); x.setDate(x.get
 /** Linjefärgerna i grafen – legenden ritas från samma värden så att de alltid stämmer. */
 export const WEIGHT_LINES = {
   weight: { label: "Dina vägningar", color: "hsl(var(--primary))", dash: undefined as string | undefined },
+  trend: { label: "Trend (7-dagars snitt)", color: "hsl(var(--warning))", dash: "2 3" },
   projected: { label: "Prognos mot målvikten", color: "hsl(var(--muted-foreground))", dash: "5 4" },
   goal: { label: "Målvikt", color: "hsl(var(--success))", dash: "4 4" },
 } as const;
 
-function WeightLegend({ showGoal, showProjection }: { showGoal: boolean; showProjection: boolean }) {
-  const items = [WEIGHT_LINES.weight, ...(showProjection ? [WEIGHT_LINES.projected] : []), ...(showGoal ? [WEIGHT_LINES.goal] : [])];
+function WeightLegend({ showGoal, showProjection, showTrend }: { showGoal: boolean; showProjection: boolean; showTrend: boolean }) {
+  const items = [WEIGHT_LINES.weight, ...(showTrend ? [WEIGHT_LINES.trend] : []), ...(showProjection ? [WEIGHT_LINES.projected] : []), ...(showGoal ? [WEIGHT_LINES.goal] : [])];
   return (
     <div className="space-y-1">
       <ul className="flex flex-wrap gap-x-3 gap-y-1 text-[11px] text-muted-foreground" aria-label="Förklaring">
@@ -70,9 +72,10 @@ export default function BodyWeightChart({ userId }: { userId: string }) {
   }, [weights]);
 
   const chart = useMemo(() => {
-    const pts: { label: string; weight: number | null; projected: number | null }[] = weights.map((w) => ({
+    const trend = rollingAverage7(weights);
+    const pts: { label: string; weight: number | null; trend: number | null; projected: number | null }[] = weights.map((w, i) => ({
       label: parseKey(w.log_date).toLocaleDateString("sv-SE", { day: "numeric", month: "numeric" }),
-      weight: w.weight_kg, projected: null,
+      weight: w.weight_kg, trend: trend[i], projected: null,
     }));
     if (goalWeight == null || weights.length === 0) return { pts, eta: null as Date | null };
     const last = weights[weights.length - 1];
@@ -86,7 +89,7 @@ export default function BodyWeightChart({ userId }: { userId: string }) {
       const steps = Math.min(12, Math.max(1, Math.ceil(weeks)));
       for (let i = 1; i <= steps; i++) {
         const d = addDays(lastDate, Math.round((weeks * 7 * i) / steps));
-        pts.push({ label: d.toLocaleDateString("sv-SE", { day: "numeric", month: "numeric" }), weight: null, projected: +(last.weight_kg + (diff * i) / steps).toFixed(1) });
+        pts.push({ label: d.toLocaleDateString("sv-SE", { day: "numeric", month: "numeric" }), weight: null, trend: null, projected: +(last.weight_kg + (diff * i) / steps).toFixed(1) });
       }
     }
     return { pts, eta };
@@ -137,16 +140,17 @@ export default function BodyWeightChart({ userId }: { userId: string }) {
                 <YAxis tick={{ fontSize: 9 }} stroke="hsl(var(--muted-foreground))"
                   domain={[(min: number) => Math.floor(Math.min(min, goalWeight ?? min) - 1), (max: number) => Math.ceil(Math.max(max, goalWeight ?? max) + 1)]} />
                 <Tooltip contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: 12, fontSize: 12 }}
-                  formatter={(v: number, n: string) => [`${String(v).replace(".", ",")} kg`, n === "weight" ? "Vikt" : "Prognos"]} />
+                  formatter={(v: number, n: string) => [`${String(v).replace(".", ",")} kg`, n === "weight" ? "Vikt" : n === "trend" ? "Trend" : "Prognos"]} />
                 {goalWeight != null &&
                   <ReferenceLine y={goalWeight} stroke={WEIGHT_LINES.goal.color} strokeDasharray={WEIGHT_LINES.goal.dash}
                     label={{ value: "Mål", fontSize: 10, fill: "hsl(var(--success))", position: "insideTopRight" }} />}
                 <Line dataKey="weight" stroke={WEIGHT_LINES.weight.color} strokeWidth={2} dot={{ r: 2 }} connectNulls />
+                <Line dataKey="trend" stroke={WEIGHT_LINES.trend.color} strokeWidth={2.5} strokeDasharray={WEIGHT_LINES.trend.dash} dot={false} connectNulls />
                 <Line dataKey="projected" stroke={WEIGHT_LINES.projected.color} strokeWidth={2} strokeDasharray={WEIGHT_LINES.projected.dash} dot={false} connectNulls />
               </ComposedChart>
             </ResponsiveContainer>
           </div>
-          <WeightLegend showGoal={goalWeight != null} showProjection={chart.pts.some((p) => p.weight == null && p.projected != null)} />
+          <WeightLegend showGoal={goalWeight != null} showProjection={chart.pts.some((p) => p.weight == null && p.projected != null)} showTrend={chart.pts.some((p) => p.trend != null)} />
         </>
       ) : (
         <div className="rounded-xl border border-border/40 overflow-hidden">

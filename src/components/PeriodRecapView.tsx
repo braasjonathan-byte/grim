@@ -2,7 +2,34 @@ import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { ArrowLeft, ChevronLeft, ChevronRight, Flame, Share2, Sparkles, Trophy, Weight, Route, Clock, CalendarDays } from "lucide-react";
 import { computePeriodStats, toTons, type PeriodCompletionRow } from "@/lib/periodStats";
+import { buildRecapCardSvg, svgToPngBlob } from "@/lib/buildRecapCardSvg";
+import grimIcon from "@/assets/grim-icon.webp";
 import { toast } from "sonner";
+
+/** ISO-veckonummer för ett datum (måndag = veckans första dag). */
+const isoWeek = (d: Date) => {
+  const date = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
+  const dayNum = (date.getUTCDay() + 6) % 7;
+  date.setUTCDate(date.getUTCDate() - dayNum + 3);
+  const firstThursday = new Date(Date.UTC(date.getUTCFullYear(), 0, 4));
+  firstThursday.setUTCDate(firstThursday.getUTCDate() - ((firstThursday.getUTCDay() + 6) % 7) + 3);
+  return 1 + Math.round((date.getTime() - firstThursday.getTime()) / (7 * 864e5));
+};
+
+const loadImageAsBase64 = (src: string): Promise<string> =>
+  new Promise((resolve, reject) => {
+    const img = new Image();
+    img.crossOrigin = "anonymous";
+    img.onload = () => {
+      const c = document.createElement("canvas");
+      c.width = img.naturalWidth;
+      c.height = img.naturalHeight;
+      c.getContext("2d")!.drawImage(img, 0, 0);
+      resolve(c.toDataURL("image/png"));
+    };
+    img.onerror = reject;
+    img.src = src;
+  });
 
 const MONTHS = ["Januari", "Februari", "Mars", "April", "Maj", "Juni", "Juli", "Augusti", "September", "Oktober", "November", "December"];
 const WEEKDAYS = ["söndagar", "måndagar", "tisdagar", "onsdagar", "torsdagar", "fredagar", "lördagar"];
@@ -32,10 +59,19 @@ export default function PeriodRecapView({ userId, onClose }: Props) {
   const [rows, setRows] = useState<PeriodCompletionRow[]>([]);
   const [planDetails, setPlanDetails] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
-  const [scope, setScope] = useState<"month" | "year">("month");
+  const [scope, setScope] = useState<"week" | "month" | "year">("week");
   const now = new Date();
   const [year, setYear] = useState(now.getFullYear());
   const [month, setMonth] = useState(now.getMonth());
+  const [weekAnchor, setWeekAnchor] = useState(() => new Date());
+  const [nickname, setNickname] = useState("");
+  const [logoBase64, setLogoBase64] = useState("");
+
+  useEffect(() => {
+    loadImageAsBase64(grimIcon).then(setLogoBase64).catch(() => setLogoBase64(""));
+    supabase.from("profiles").select("nickname").eq("user_id", userId).maybeSingle()
+      .then(({ data }) => setNickname(data?.nickname || ""));
+  }, [userId]);
 
   useEffect(() => {
     let cancelled = false;
@@ -61,6 +97,15 @@ export default function PeriodRecapView({ userId, onClose }: Props) {
   }, [userId]);
 
   const range = useMemo(() => {
+    if (scope === "week") {
+      const dow = (weekAnchor.getDay() + 6) % 7; // måndag = 0
+      const from = new Date(weekAnchor.getFullYear(), weekAnchor.getMonth(), weekAnchor.getDate() - dow);
+      const to = new Date(from.getFullYear(), from.getMonth(), from.getDate() + 6);
+      const prevFrom = new Date(from.getFullYear(), from.getMonth(), from.getDate() - 7);
+      const prevTo = new Date(to.getFullYear(), to.getMonth(), to.getDate() - 7);
+      const short = (d: Date) => `${d.getDate()} ${MONTHS[d.getMonth()].slice(0, 3).toLowerCase()}`;
+      return { from, to, prevFrom, prevTo, label: `v. ${isoWeek(from)} · ${short(from)}–${short(to)}` };
+    }
     if (scope === "year") {
       return {
         from: new Date(year, 0, 1),
@@ -78,7 +123,7 @@ export default function PeriodRecapView({ userId, onClose }: Props) {
       prevTo: new Date(prev.getFullYear(), prev.getMonth() + 1, 0),
       label: `${MONTHS[month]} ${year}`,
     };
-  }, [scope, year, month]);
+  }, [scope, year, month, weekAnchor]);
 
   const stats = useMemo(
     () => computePeriodStats(rows, range.from, range.to, planDetails),
@@ -90,6 +135,7 @@ export default function PeriodRecapView({ userId, onClose }: Props) {
   );
 
   const step = (dir: -1 | 1) => {
+    if (scope === "week") { setWeekAnchor((d) => new Date(d.getFullYear(), d.getMonth(), d.getDate() + dir * 7)); return; }
     if (scope === "year") { setYear((y) => y + dir); return; }
     const next = new Date(year, month + dir, 1);
     setYear(next.getFullYear());
@@ -101,9 +147,11 @@ export default function PeriodRecapView({ userId, onClose }: Props) {
     return Math.round(((current - previous) / previous) * 100);
   };
 
+  const scopeTitle = scope === "year" ? "Min årskrönika" : scope === "week" ? "Min vecka" : "Min månad";
+
   const shareText = () => {
     const lines = [
-      `Min ${scope === "year" ? "årskrönika" : "månad"} i Grim – ${range.label}`,
+      `${scopeTitle} i Grim – ${range.label}`,
       `${stats.passCount} pass`,
       stats.volumeKg > 0 ? `${fmt(toTons(stats.volumeKg), 1)} ton lyft` : "",
       stats.distanceKm > 0 ? `${fmt(stats.distanceKm, 1)} km` : "",
@@ -115,12 +163,37 @@ export default function PeriodRecapView({ userId, onClose }: Props) {
   const share = async () => {
     const text = shareText();
     try {
+      const svg = buildRecapCardSvg({
+        title: scopeTitle,
+        periodLabel: range.label,
+        nickname: nickname || "grim",
+        stats: [
+          { label: "Pass", value: String(stats.passCount) },
+          ...(stats.volumeKg > 0 ? [{ label: "Lyft totalt", value: `${fmt(toTons(stats.volumeKg), 1)} ton` }] : []),
+          ...(stats.distanceKm > 0 ? [{ label: "Distans", value: `${fmt(stats.distanceKm, 1)} km` }] : []),
+          ...(stats.minutes > 0 ? [{ label: "Konditionstid", value: `${Math.round(stats.minutes)} min` }] : []),
+        ].slice(0, 4),
+        highlights: [
+          `${stats.activeDays} träningsdagar · ${stats.sets} set`,
+          stats.bestStreak > 1 ? `Längsta svit: ${stats.bestStreak} dagar i rad` : "",
+          stats.favoriteWeekday !== null ? `Tränar helst på ${WEEKDAYS[stats.favoriteWeekday]}` : "",
+          stats.topExercises[0] ? `Mest tränade: ${stats.topExercises[0].name}` : "",
+        ].filter(Boolean),
+        logoBase64,
+        variant: "primary",
+      });
+      const blob = await svgToPngBlob(svg);
+      const file = blob ? new File([blob], "grim-sammanfattning.png", { type: "image/png" }) : null;
+      if (file && navigator.canShare?.({ files: [file] })) {
+        await navigator.share({ title: scopeTitle, text, files: [file] });
+        return;
+      }
       if (navigator.share) {
         await navigator.share({ text });
-      } else {
-        await navigator.clipboard.writeText(text);
-        toast.success("Sammanfattningen kopierad");
+        return;
       }
+      await navigator.clipboard.writeText(text);
+      toast.success("Sammanfattningen kopierad");
     } catch {
       /* användaren avbröt */
     }
@@ -165,7 +238,7 @@ export default function PeriodRecapView({ userId, onClose }: Props) {
       </div>
 
       <div className="relative inline-flex rounded-full bg-muted/40 p-1">
-        {(["month", "year"] as const).map((s) => (
+        {(["week", "month", "year"] as const).map((s) => (
           <button
             key={s}
             onClick={() => setScope(s)}
@@ -173,7 +246,7 @@ export default function PeriodRecapView({ userId, onClose }: Props) {
               scope === s ? "bg-card text-foreground" : "text-muted-foreground"
             }`}
           >
-            {s === "month" ? "Månad" : "År"}
+            {s === "week" ? "Vecka" : s === "month" ? "Månad" : "År"}
           </button>
         ))}
       </div>
