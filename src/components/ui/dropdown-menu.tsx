@@ -6,7 +6,35 @@ import { cn } from "@/lib/utils";
 
 const DropdownMenu = DropdownMenuPrimitive.Root;
 
-const DropdownMenuTrigger = DropdownMenuPrimitive.Trigger;
+// Touch: open on tap (click), not on finger-down. Radix opens on pointerdown,
+// which fires before the browser knows the touch is a scroll — so a scroll
+// starting on the trigger would open the menu. We cancel touch pointerdown and
+// open via Radix's keyboard path on click instead; a scroll cancels the click.
+const DropdownMenuTrigger = React.forwardRef<
+  React.ElementRef<typeof DropdownMenuPrimitive.Trigger>,
+  React.ComponentPropsWithoutRef<typeof DropdownMenuPrimitive.Trigger>
+>(({ onPointerDown, onClick, ...props }, ref) => {
+  const lastPointerType = React.useRef("");
+  return (
+    <DropdownMenuPrimitive.Trigger
+      ref={ref}
+      onPointerDown={(event) => {
+        lastPointerType.current = event.pointerType;
+        onPointerDown?.(event);
+        if (event.pointerType === "touch") event.preventDefault();
+      }}
+      onClick={(event) => {
+        onClick?.(event);
+        if (lastPointerType.current === "touch") {
+          event.currentTarget.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true }));
+        }
+        lastPointerType.current = "";
+      }}
+      {...props}
+    />
+  );
+});
+DropdownMenuTrigger.displayName = DropdownMenuPrimitive.Trigger.displayName;
 
 const DropdownMenuGroup = DropdownMenuPrimitive.Group;
 
