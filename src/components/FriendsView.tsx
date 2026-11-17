@@ -352,8 +352,10 @@ const FriendsView = ({ userId, isAdmin = false, friendActivities = [], onClearAc
   }, [initialFriendId, friends]);
 
 
+  const searchSeq = useRef(0);
   const searchUsers = async () => {
     if (searchQuery.trim().length < 2) return;
+    const seq = ++searchSeq.current;
     setSearching(true); setSearchError(false); setSearched(true);
 
     const { data, error } = await supabase
@@ -362,10 +364,18 @@ const FriendsView = ({ userId, isAdmin = false, friendActivities = [], onClearAc
         requesting_user_id: userId,
       });
 
+    if (seq !== searchSeq.current) return;
     setSearchError(!!error);
     if (!error) setSearchResults((data || []).map((d: any) => ({ ...d, avatar_url: null })));
     setSearching(false);
   };
+
+  useEffect(() => {
+    if (searchQuery.trim().length < 2) { searchSeq.current++; setSearchResults([]); setSearched(false); setSearching(false); return; }
+    const t = setTimeout(() => { void searchUsers(); }, 300);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchQuery]);
 
   const sendRequest = async (friendId: string) => {
     if (requestBusy) return;
