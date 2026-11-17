@@ -53,7 +53,7 @@ function StrengthSetRowV2(p: StrengthSetRowV2Props) {
   return (
     <div>
       <SwipeableSetRow done={p.done} isPR={p.isPR && p.setType !== "w"} celebrationKey={p.celebrationKey} onToggle={p.onToggle}>
-        <div className={`flex flex-wrap items-center gap-1.5 py-1 rounded px-1 ${p.done ? "bg-success/5" : ""} ${p.setType === "w" ? "bg-warning/5" : ""}`}>
+        <div className={`flex items-center gap-1.5 py-1 rounded px-1 ${p.done ? "bg-success/5" : ""} ${p.setType === "w" ? "bg-warning/5" : ""}`}>
           <Button variant="ghost"
             type="button"
             onClick={(e) => { e.stopPropagation(); p.onCycleType(); }}
@@ -63,7 +63,7 @@ function StrengthSetRowV2(p: StrengthSetRowV2Props) {
           >
             {p.label}
           </Button>
-          <AutoSaveInput aria-label="Repetitioner eller tid" rule={p.repsRule} type="number" inputMode="numeric" initialValue={p.repsInitial} placeholder={p.repsPlaceholder} onSave={p.onSaveReps} className={`w-16 ${inputCls}`} />
+          <AutoSaveInput aria-label="Repetitioner eller tid" rule={p.repsRule} type="number" inputMode="numeric" initialValue={p.repsInitial} placeholder={p.repsPlaceholder} onSave={p.onSaveReps} className={`w-16 flex-1 min-w-[3.25rem] ${inputCls}`} />
           {p.showKg && (
             <>
               {p.bwToggle && (
@@ -77,21 +77,21 @@ function StrengthSetRowV2(p: StrengthSetRowV2Props) {
                   {p.bwToggle.mode === "add" ? "+" : "−"}
                 </button>
               )}
-              <AutoSaveInput aria-label="Vikt i kg" rule="setKg" confirmValue={p.confirmKg} type="number" inputMode="decimal" initialValue={p.kgInitial} onSave={p.onSaveKg} placeholder={p.kgPlaceholder || "—"} className={`w-20 ${inputCls}`} />
+              <AutoSaveInput aria-label="Vikt i kg" rule="setKg" confirmValue={p.confirmKg} type="number" inputMode="decimal" initialValue={p.kgInitial} onSave={p.onSaveKg} placeholder={p.kgPlaceholder || "—"} className={`w-20 flex-1 min-w-[3.5rem] ${inputCls}`} />
             </>
           )}
           {showRpe && (
             <button
               type="button"
               onClick={(e) => { e.stopPropagation(); setRpeOpen((o) => !o); }}
-              className={`ml-auto text-[10px] px-1.5 py-0.5 rounded-full border font-mono ${p.rpe ? "border-primary/40 bg-primary/10 text-primary" : "border-dashed border-muted-foreground/40 text-muted-foreground"}`}
+              className={`ml-auto shrink-0 text-[10px] px-1.5 py-0.5 rounded-full border font-mono ${p.rpe ? "border-primary/40 bg-primary/10 text-primary" : "border-dashed border-muted-foreground/40 text-muted-foreground"}`}
               aria-label="Ange RPE (ansträngning)"
               aria-expanded={rpeOpen}
             >
               {p.rpe ? `RPE ${p.rpe.replace(".", ",")}` : "RPE"}
             </button>
           )}
-          <span className={`${showRpe ? "" : "ml-auto "}flex items-center`}><Checkbox checked={p.done} onCheckedChange={p.onToggle} className="h-11 w-11 rounded-lg" aria-label="Klart set (fyller i förifyllda värden)" /></span>
+          <span className={`${showRpe ? "" : "ml-auto "}flex items-center shrink-0`}><Checkbox checked={p.done} onCheckedChange={p.onToggle} className="h-11 w-11 rounded-lg" aria-label="Klart set (fyller i förifyllda värden)" /></span>
         </div>
       </SwipeableSetRow>
       {showRpe && rpeOpen && (
