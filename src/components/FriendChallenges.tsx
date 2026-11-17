@@ -210,11 +210,11 @@ export default function FriendChallenges({ userId }: Props) {
     const leader = list[0];
     return (
       <div key={c.id} className="bg-card border border-border rounded-2xl overflow-hidden">
-        <Button variant="ghost" onClick={() => toggle(c)} className="w-full flex items-center gap-2 p-3 text-left">
+        <Button variant="ghost" onClick={() => toggle(c)} className="w-full h-auto min-h-0 flex items-center gap-2 p-3 text-left whitespace-normal text-foreground hover:bg-muted/50 hover:text-foreground">
           <Trophy className={`w-4 h-4 ${done ? "text-muted-foreground" : "text-warning"}`} />
           <div className="flex-1 min-w-0">
-            <div className="text-sm font-bold truncate">{c.title}</div>
-            <span className="text-xs text-muted-foreground">{challengePhase(c.start_date, c.end_date, todayIso()) === "upcoming" ? "Kommande" : done ? "Avslutad" : "Pågår"}</span>
+            <div className="text-sm font-bold truncate">{c.title.replace(/\s+/g, " ")}</div>
+            <span className="block text-xs text-muted-foreground">{challengePhase(c.start_date, c.end_date, todayIso()) === "upcoming" ? "Kommande" : done ? "Avslutad" : "Pågår"}</span>
             <div className="text-[11px] text-muted-foreground">
               {METRICS.find((m) => m.key === c.metric)?.label || "Tidigare utmaning"} · {format(parseDateKeyNoonUtc(c.start_date), "d MMM", { locale: sv })} – {format(parseDateKeyNoonUtc(c.end_date), "d MMM yyyy", { locale: sv })}
               {c.target ? ` · mål ${fmt(c.target)} ${unitFor(c.metric)}` : ""}
