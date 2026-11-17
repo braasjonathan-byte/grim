@@ -63,7 +63,9 @@ function StrengthSetRowV2(p: StrengthSetRowV2Props) {
           >
             {p.label}
           </Button>
-          <AutoSaveInput aria-label="Repetitioner eller tid" rule={p.repsRule} type="number" inputMode="numeric" initialValue={p.repsInitial} placeholder={p.repsPlaceholder} onSave={p.onSaveReps} className={`w-16 flex-1 min-w-[3.25rem] ${inputCls}`} />
+          <div className="flex-1 min-w-[2.75rem]">
+            <AutoSaveInput aria-label="Repetitioner eller tid" rule={p.repsRule} type="number" inputMode="numeric" initialValue={p.repsInitial} placeholder={p.repsPlaceholder} onSave={p.onSaveReps} className={`w-full min-w-0 ${inputCls}`} />
+          </div>
           {p.showKg && (
             <>
               {p.bwToggle && (
@@ -77,7 +79,9 @@ function StrengthSetRowV2(p: StrengthSetRowV2Props) {
                   {p.bwToggle.mode === "add" ? "+" : "−"}
                 </button>
               )}
-              <AutoSaveInput aria-label="Vikt i kg" rule="setKg" confirmValue={p.confirmKg} type="number" inputMode="decimal" initialValue={p.kgInitial} onSave={p.onSaveKg} placeholder={p.kgPlaceholder || "—"} className={`w-20 flex-1 min-w-[3.5rem] ${inputCls}`} />
+              <div className="flex-[1.2] min-w-[3rem]">
+                <AutoSaveInput aria-label="Vikt i kg" rule="setKg" confirmValue={p.confirmKg} type="number" inputMode="decimal" initialValue={p.kgInitial} onSave={p.onSaveKg} placeholder={p.kgPlaceholder || "—"} className={`w-full min-w-0 ${inputCls}`} />
+              </div>
             </>
           )}
           {showRpe && (
