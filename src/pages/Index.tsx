@@ -53,6 +53,8 @@ const ChatView = lazyRetry(() => import("@/components/ChatView"));
 const NutritionView = lazyRetry(() => import("@/components/NutritionView"));
 const HomeView = lazyRetry(() => import("@/components/HomeView"));
 const WeeklyReportView = lazyRetry(() => import("@/components/WeeklyReportView"));
+const HealthWorkoutPrompt = lazyRetry(() => import("@/components/HealthWorkoutPrompt"));
+const HealthWorkoutSharing = lazyRetry(() => import("@/components/HealthWorkoutSharing"));
 
 
 type Tab = "home" | "workout" | "nutrition" | "social" | "friends" | "calc" | "stats" | "profile" | "settings";
@@ -1167,6 +1169,10 @@ const Index = () => {
 
       {/* Mini Timer above footer */}
       <MiniTimer />
+      {user?.id && <Suspense fallback={null}>
+        <HealthWorkoutPrompt key={`health-${user.id}`} userId={user.id} />
+        <HealthWorkoutSharing key={`health-share-${user.id}`} userId={user.id} nickname={nickname} />
+      </Suspense>}
       {user?.id && <WorkoutCheerListener userId={user.id} />}
 
       {/* Bottom tab bar */}

@@ -12,28 +12,29 @@ import {
 } from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
 import {
-  hasHealthPermissions,
+  checkHealthAccess,
   isHealthSupported,
   readHealthWorkouts,
   recordHealthSyncError,
   type HealthWorkout,
 } from "@/lib/healthSync";
 import { findImportedHealthWorkouts, healthWorkoutDayKey, importHealthWorkouts } from "@/lib/healthWorkoutImport";
+import { Capacitor } from "@capacitor/core";
 
 const DISMISS_KEY = "grim_health_prompt_dismissed";
 
-const loadDismissed = (): Set<string> => {
+const loadDismissed = (userId: string): Set<string> => {
   try {
-    const raw = localStorage.getItem(DISMISS_KEY);
+    const raw = localStorage.getItem(`${DISMISS_KEY}:${userId}`);
     return new Set(raw ? (JSON.parse(raw) as string[]) : []);
   } catch {
     return new Set();
   }
 };
 
-const saveDismissed = (keys: Set<string>) => {
+const saveDismissed = (userId: string, keys: Set<string>) => {
   try {
-    localStorage.setItem(DISMISS_KEY, JSON.stringify([...keys].slice(-200)));
+    localStorage.setItem(`${DISMISS_KEY}:${userId}`, JSON.stringify([...keys].slice(-200)));
   } catch {
     /* ignore */
   }
@@ -72,26 +73,50 @@ const HealthWorkoutPrompt = ({ userId, preview = false }: { userId: string; prev
     }
     if (!userId || !isHealthSupported()) return;
     let cancelled = false;
-    (async () => {
+    let reading = false;
+    const scan = async () => {
+      if (cancelled || reading || document.hidden) return;
+      reading = true;
       try {
-        if (!(await hasHealthPermissions())) return;
+        if (!(await checkHealthAccess(true)).workouts) return;
         const list = await readHealthWorkouts(7);
         if (cancelled || list.length === 0) return;
         const imported = await findImportedHealthWorkouts(userId, list);
-        const dismissed = loadDismissed();
+        const dismissed = loadDismissed(userId);
         const fresh = list.filter(
           (w) => !isShortWalk(w) && !imported.has(healthWorkoutDayKey(w)) && !dismissed.has(healthWorkoutDayKey(w)),
         );
-        if (cancelled || fresh.length === 0) return;
+        if (cancelled) return;
         setPending(fresh);
-        setOpen(true);
+        setOpen(fresh.length > 0);
       } catch (err) {
         // Hälsodata är frivilligt – ingen dialog, men felet ska synas i Health Connect-kortet.
         recordHealthSyncError("workout prompt read", err);
+      } finally {
+        reading = false;
       }
-    })();
+    };
+    void scan();
+    const refresh = () => { void scan(); };
+    const onVisible = () => { if (!document.hidden) refresh(); };
+    window.addEventListener("focus", refresh);
+    document.addEventListener("visibilitychange", onVisible);
+    // Health Connect writers can finish just after Grim resumes.
+    const interval = window.setInterval(refresh, 60_000);
+    let removeNative: (() => void) | undefined;
+    if (Capacitor.isNativePlatform()) {
+      void import("@capacitor/app").then(async ({ App }) => {
+        const handle = await App.addListener("appStateChange", ({ isActive }) => { if (isActive) refresh(); });
+        removeNative = () => { void handle.remove(); };
+        if (cancelled) removeNative();
+      }).catch((err) => recordHealthSyncError("workout prompt resume", err));
+    }
     return () => {
       cancelled = true;
+      window.clearInterval(interval);
+      window.removeEventListener("focus", refresh);
+      document.removeEventListener("visibilitychange", onVisible);
+      removeNative?.();
     };
   }, [userId, preview]);
 
@@ -100,11 +125,11 @@ const HealthWorkoutPrompt = ({ userId, preview = false }: { userId: string; prev
       setOpen(false);
       return;
     }
-    const dismissed = loadDismissed();
+    const dismissed = loadDismissed(userId);
     pending.forEach((w) => dismissed.add(healthWorkoutDayKey(w)));
-    saveDismissed(dismissed);
+    saveDismissed(userId, dismissed);
     setOpen(false);
-  }, [pending, preview]);
+  }, [pending, preview, userId]);
 
   const confirm = useCallback(async () => {
     if (preview) {
@@ -118,9 +143,9 @@ const HealthWorkoutPrompt = ({ userId, preview = false }: { userId: string; prev
       const succeeded = new Set(res.successfulKeys);
       if (succeeded.size > 0) {
         toast.success(succeeded.size === 1 ? "Passet registrerat i Grim" : `${succeeded.size} pass registrerade i Grim`);
-        const dismissed = loadDismissed();
+        const dismissed = loadDismissed(userId);
         succeeded.forEach((key) => dismissed.add(key));
-        saveDismissed(dismissed);
+        saveDismissed(userId, dismissed);
       }
       const remaining = pending.filter((w) => !succeeded.has(healthWorkoutDayKey(w)));
       setPending(remaining);

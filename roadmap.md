@@ -1,5 +1,12 @@
 # Roadmap
 
+## Tacx via Health Connect 17 november 2026
+- [x] Upptäckt flyttad från Hem till inloggad app; återkomst och synlig efterkontroll använder passbehörighet, avvisningar är användarspecifika.
+- [x] Bekräftad import från båda ingångarna erbjuder delning och respekterar Alltid; sparfel bevarar granskningen och HC-identiteter återanvänder befintliga inlägg.
+- [x] Tacx-cykling sparas som genomfört cykelpass med verklig distans; befintlig statistikklassificering behöver ingen ändring.
+- [x] 36 regressionstester godkända; inloggad import av 65 min/32,5 km verifierad genom passhistorik och synligt Social-inlägg, testdata borttagna.
+- [ ] Kontrollera faktisk Tacx/Health Connect-upptäckt vid start och återkomst på fysisk Android; kräver telefon och uppdaterad app.
+
 ## Matskanning 17 november 2026
 - [x] Separata komponenter, säker livsmedelsmatchning och justerbara gram/bortval; källor och uppskattningar visas per rad.
 - [x] Kamera/galleri direkt från måltiden; bevara granskningen vid sparfel och spara valda rader i en batch med ångra.

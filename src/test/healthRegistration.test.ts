@@ -42,6 +42,8 @@ vi.mock("@/lib/healthSync", () => ({ healthLog: vi.fn(), withTimeout: (p: any) =
 vi.mock("@/lib/workoutHistory", () => ({ notifyWorkoutsChanged: vi.fn() }));
 
 import { findImportedHealthWorkouts, healthWorkoutDayKey, importHealthWorkouts } from "@/lib/healthWorkoutImport";
+import { getCardioCategory } from "@/lib/cardioVisibility";
+import { isCompletedWorkout } from "@/lib/completionCounting";
 const workout = { key: "abc123", start: "2026-11-08T10:00:00+01:00", end: "2026-11-08T11:00:00+01:00", label: "Löpning", type: "running", source: "Samsung", minutes: 60, distanceKm: 10, avgHeartRate: 140, calories: null, steps: null, maxHeartRate: null };
 const plan = (day: string, id: string, week = 5) => ({ id, user_id: "u", week, day, details: "Knäböj — 3x5", session_name: "Styrka" });
 
@@ -51,6 +53,16 @@ beforeEach(() => {
 });
 
 describe("HC registration replacement and retry", () => {
+  it("registers a Tacx cycling import as completed cycling with its real distance", async () => {
+    const imported = { ...workout, type: "cycling", label: "Cykling", source: "Tacx", distanceKm: 32.5 };
+    const result = await importHealthWorkouts("u", [imported]);
+    expect(result.imported).toBe(1);
+    const savedPlan = db.rows.workout_plans.find(r => r.day.endsWith("_hcabc123"));
+    const savedCompletion = db.rows.workout_completions.find(r => r.day.endsWith("_hcabc123"));
+    expect(getCardioCategory(savedPlan.details)).toBe("cykling");
+    expect(isCompletedWorkout(savedCompletion)).toBe(true);
+    expect(savedCompletion.logged_distance_km).toBe(32.5);
+  });
   it("saves the completed HC workout before removing only unfinished workouts on the same date", async () => {
     db.rows.workout_plans.push(plan("Sön_extra1", "same-date"), plan("Sön_extra2", "completed"), plan("Sön_hcold", "other-hc"));
     db.rows.workout_completions.push({ user_id: "u", week: 5, day: "Sön_extra2", done: true });

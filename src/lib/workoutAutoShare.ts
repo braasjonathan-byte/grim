@@ -260,16 +260,16 @@ export async function autoShareCompletion(
   day: string,
   captionOverride?: string,
   visibility: "friends" | "public" = "friends"
-): Promise<void> {
+): Promise<boolean> {
   try {
     let caption = captionOverride;
     if (!caption) {
       const preview = await previewWorkoutCaption(userId, week, day);
-      if (!preview) return;
+      if (!preview) return false;
       caption = preview;
     }
 
-    const { data: existing } = await supabase
+    const { data: existing, error: lookupError } = await supabase
       .from("social_posts")
       .select("id, created_at")
       .eq("user_id", userId)
@@ -277,18 +277,20 @@ export async function autoShareCompletion(
       .eq("workout_day", day)
       .maybeSingle();
 
+    if (lookupError) return false;
+
     const isStale =
       !!existing?.id &&
       (!existing.created_at ||
         Date.now() - new Date(existing.created_at as string).getTime() > 12 * 60 * 60 * 1000);
 
-    if (existing?.id && !isStale) {
+    if (existing?.id && (!isStale || day.includes("_hc"))) {
       // Samma pass delas om – uppdatera texten på det befintliga inlägget.
-      await supabase
+      const { error } = await supabase
         .from("social_posts")
         .update({ caption, visibility })
         .eq("id", existing.id);
-      return;
+      return !error;
     }
 
     if (existing?.id && isStale) {
@@ -301,14 +303,15 @@ export async function autoShareCompletion(
         .eq("id", existing.id);
       if (detachError) {
         // Kan inte frigöra nyckeln – fall tillbaka på att uppdatera inlägget.
-        await supabase
+        const { error } = await supabase
           .from("social_posts")
           .update({ caption, visibility, created_at: new Date().toISOString() })
           .eq("id", existing.id);
+        if (error) return false;
         supabase.functions
           .invoke("notify-social-post", { body: { caption, visibility } })
           .catch(() => {});
-        return;
+        return true;
       }
     }
 
@@ -324,10 +327,9 @@ export async function autoShareCompletion(
         .invoke("notify-social-post", { body: { caption, visibility } })
         .catch(() => {});
     }
-
-
+    return !error;
   } catch {
-    // best-effort
+    return false;
   }
 }
 

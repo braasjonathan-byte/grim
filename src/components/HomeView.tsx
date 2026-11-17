@@ -44,7 +44,6 @@ import { toLocalDateKey } from "@/lib/dateUtils";
 import { completionTrainingDate, currentStreakFromDates } from "@/lib/streak";
 import { loadUntrainedRegions, buildSuggestion } from "@/lib/untrainedMuscles";
 import { restingHrSignal } from "@/lib/restingHr";
-import HealthWorkoutPrompt from "@/components/HealthWorkoutPrompt";
 import HomeTrainingStats from "@/components/HomeTrainingStats";
 import HomeHealthTrends from "@/components/HomeHealthTrends";
 import WeeklySummaryCard from "@/components/WeeklySummaryCard";
@@ -682,7 +681,6 @@ const HomeView = ({ userId, onNavigate, isHonorary = false }: HomeViewProps) => 
       )}
 
       {/* 4. Aktivitet från hälsoappen (Health Connect / Apple Health) */}
-      <HealthWorkoutPrompt userId={userId} preview={healthPreview} />
       {healthToday && (
         <section className="card-soft p-4 space-y-3" aria-label="Aktivitet idag">
           {healthPreview && (

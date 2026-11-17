@@ -8,6 +8,9 @@ import { healthLog, withTimeout, type HealthWorkout } from "@/lib/healthSync";
 import { DAYS, daysBetweenCalendarDates, getMonday, getPlanDayDateValue, parseDateKey, toLocalDateKey, toUtcDateKey } from "@/lib/workoutDayUtils";
 import { notifyWorkoutsChanged } from "@/lib/workoutHistory";
 
+export const HEALTH_WORKOUT_IMPORTED_EVENT = "grim:health-workout-imported";
+export interface ImportedHealthSession { userId: string; week: number; day: string }
+
 /** Ingen nätverksförfrågan får hänga och låsa knappen i laddningsläge. */
 const DB_TIMEOUT_MS = 15000;
 
@@ -309,6 +312,9 @@ export async function importHealthWorkouts(
       imported += 1;
       successfulKeys.push(key);
       seen.add(key);
+      window.dispatchEvent(new CustomEvent<ImportedHealthSession>(HEALTH_WORKOUT_IMPORTED_EVENT, {
+        detail: { userId, week, day },
+      }));
     } catch (err: any) {
       healthLog("import failed", err?.message);
       failed += 1;
