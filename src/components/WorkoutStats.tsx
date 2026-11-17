@@ -11,7 +11,7 @@ import { parseNum, isPlausibleSet } from "@/lib/inputValidation";
 import { StatsSkeleton } from "@/components/LoadingSkeletons";
 import { useState, useEffect, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { BarChart3, CheckCircle, Flame, Footprints, Weight, Star, Swords, ChevronLeft, ChevronRight, Sparkles, SlidersHorizontal } from "lucide-react";
+import { BarChart3, CheckCircle, Flame, Footprints, Weight, Star, Swords, ChevronLeft, ChevronRight, Sparkles, SlidersHorizontal, RefreshCw } from "lucide-react";
 import PeriodRecapView from "@/components/PeriodRecapView";
 import BodyWeightChart from "@/components/BodyWeightChart";
 import ProgressPhotos from "@/components/ProgressPhotos";
@@ -209,12 +209,22 @@ const DailyQuoteCard = () => {
   const dayOfYear = Math.floor(
     (Date.now() - new Date(new Date().getFullYear(), 0, 0).getTime()) / 86400000
   );
-  const quote = motivationalQuotes[dayOfYear % motivationalQuotes.length];
+  // offset flyttar fram till nästa citat när användaren trycker på knappen
+  const [offset, setOffset] = useState(0);
+  const quote = motivationalQuotes[(dayOfYear + offset) % motivationalQuotes.length];
   return (
-    <div className="rounded-2xl p-4 text-center flex flex-col items-center justify-center min-h-[120px] bg-card shadow-soft">
+    <div className="relative rounded-2xl p-4 text-center flex flex-col items-center justify-center min-h-[120px] bg-card shadow-soft">
       <Flame className="w-6 h-6 text-primary mx-auto mb-2" />
       <p className="text-sm font-medium leading-relaxed">{quote.text}</p>
       {quote.author && <p className="mt-1.5 text-xs text-muted-foreground">– {quote.author}</p>}
+      <button
+        type="button"
+        onClick={() => setOffset((o) => o + 1)}
+        aria-label="Visa ett nytt citat"
+        className="absolute bottom-2 right-2 rounded-full p-1.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+      >
+        <RefreshCw className="w-3.5 h-3.5" />
+      </button>
     </div>);
 
 };
