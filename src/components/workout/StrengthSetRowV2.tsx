@@ -1,5 +1,6 @@
-import { memo, useState, type ReactNode } from "react";
+import { memo, useRef, useState, type ReactNode } from "react";
 import { RPE_VALUES, rpeToRir } from "@/lib/underPass";
+import { nextUndoneRow, scrollToRow } from "@/lib/setAutoScroll";
 import SwipeableSetRow from "@/components/SwipeableSetRow";
 import AutoSaveInput from "@/components/AutoSaveInput";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -50,9 +51,15 @@ function StrengthSetRowV2(p: StrengthSetRowV2Props) {
   const [rpeOpen, setRpeOpen] = useState(false);
   const showRpe = !!p.onRpe && p.done && p.setType !== "w";
   const inputCls = "h-11 bg-background text-foreground text-base px-2 rounded-lg border border-input text-center font-mono focus:ring-2 focus:ring-primary outline-none placeholder:text-muted-foreground";
+  const rowRef = useRef<HTMLDivElement>(null);
+  const handleToggle = () => {
+    const wasDone = p.done;
+    p.onToggle();
+    if (!wasDone) window.setTimeout(() => { const n = nextUndoneRow(rowRef.current); if (n) scrollToRow(n); }, 350);
+  };
   return (
-    <div>
-      <SwipeableSetRow done={p.done} isPR={p.isPR && p.setType !== "w"} celebrationKey={p.celebrationKey} onToggle={p.onToggle}>
+    <div ref={rowRef} data-set-row="" data-set-done={p.done ? "true" : "false"}>
+      <SwipeableSetRow done={p.done} isPR={p.isPR && p.setType !== "w"} celebrationKey={p.celebrationKey} onToggle={handleToggle}>
         <div className={`flex items-center gap-1.5 py-1 rounded px-1 ${p.done ? "bg-success/5" : ""} ${p.setType === "w" ? "bg-warning/5" : ""}`}>
           <Button variant="ghost"
             type="button"

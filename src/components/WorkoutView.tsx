@@ -71,6 +71,7 @@ import WorkoutCompleteOverlay from "@/components/WorkoutCompleteOverlay";
 import { getRestSecondsFor } from "@/lib/restTimer";
 import { getSetType, getSetTypes, withSetType, nextSetType, setLabel, getSuperset, nextSupersetLetter, shouldStartRest, supersetMembers, SET_TYPE_KEY, SUPERSET_KEY } from "@/lib/setTypes";
 import StrengthSetRowV2 from "@/components/workout/StrengthSetRowV2";
+import { nextUndoneRow, scrollToRow } from "@/lib/setAutoScroll";
 import ExerciseLeadIn from "@/components/workout/ExerciseLeadIn";
 import { suggestFromRpe } from "@/lib/progression";
 import { useExerciseFormState, useConditioningDialogState } from "@/components/workout/useWorkoutDialogState";
@@ -179,6 +180,18 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack, acti
     el?.scrollIntoView({ behavior: "smooth", inline: "center", block: "nearest" });
   }, [currentWeek, weeks.length]);
   const [expandedDay, setExpandedDay] = useState<string | null>(null);
+  // Auto-scroll to the first unfinished set once per opened workout.
+  const autoScrolledDayRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (!active || !expandedDay || autoScrolledDayRef.current === expandedDay) return;
+    const t = window.setTimeout(() => {
+      const row = nextUndoneRow(null);
+      if (!row) return;
+      autoScrolledDayRef.current = expandedDay;
+      scrollToRow(row);
+    }, 500);
+    return () => window.clearTimeout(t);
+  }, [expandedDay, active]);
 
   // Archived completions for weight history lookup
   const [archivedCompletions, setArchivedCompletions] = useState<Record<string, any>[]>([]);
