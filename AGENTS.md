@@ -1,4 +1,5 @@
 # Architecture rules
+- Restore scheduled accounts only through the admin-authenticated restore-account function and the Auth Admin API; cancel the purge before lifting the ban to preserve existing data without editing managed auth tables.
 - Edge functions use their scoped Deno configuration with automatic npm dependency resolution; pinned server packages must resolve independently of the frontend's installed versions.
 - Health workout discovery lives at the signed-in app level and refreshes on foreground entry using workout-specific permission; confirmed imports emit exact saved slots to a shared privacy-aware sharing queue so manual and startup imports behave alike.
 - Photo meal scans resolve each ingredient server-side against owned foods or a non-ambiguous catalogue match; the review saves selected validated rows in one confirmed insert, so estimates cannot masquerade as verified data or partially log a plate.
