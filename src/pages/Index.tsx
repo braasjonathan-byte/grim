@@ -1048,12 +1048,12 @@ const Index = () => {
         <>
           {keep("home") && (<div hidden={tab !== "home"} className={tab === "home" ? "tab-transition-in" : undefined}>
             <PullToRefresh onRefresh={() => setRefreshKeys((k) => ({ ...k, home: k.home + 1 }))}>
-              <HomeView key={`home-${refreshKeys.home}`} userId={user.id} isHonorary={isHonorary} onNavigate={(t) => setTab(t as Tab)} />
+              <HomeView key={`home-${refreshKeys.home}`} active={tab === "home"} userId={user.id} isHonorary={isHonorary} onNavigate={(t) => setTab(t as Tab)} />
             </PullToRefresh>
           </div>)}
           {keep("workout") && <div hidden={tab !== "workout"} className={tab === "workout" ? "tab-transition-in" : undefined}>
             <OnboardingTutorial />
-            <WorkoutView key={adminViewUserId || user.id} userId={adminViewUserId || user.id} isAdmin={userRole === "admin"} isHonorary={isHonorary} onBack={adminViewUserId ? () => { setAdminViewUserId(null); setTab("calc"); } : undefined} />
+            <WorkoutView key={adminViewUserId || user.id} active={tab === "workout"} userId={adminViewUserId || user.id} isAdmin={userRole === "admin"} isHonorary={isHonorary} onBack={adminViewUserId ? () => { setAdminViewUserId(null); setTab("calc"); } : undefined} />
           </div>}
           {tab === "social" &&
             <PullToRefresh onRefresh={() => setRefreshKeys((k) => ({ ...k, social: k.social + 1 }))}>
@@ -1108,7 +1108,7 @@ const Index = () => {
 
           {keep("nutrition") && <div hidden={tab !== "nutrition"} className={tab === "nutrition" ? "tab-transition-in" : undefined}><NutritionView userId={user.id} isHonorary={isHonorary} /></div>}
           {tab === "calc" &&
-            <ToolsTab userId={user.id} isAdmin={userRole === "admin"} isHonorary={isHonorary} userRole={userRole} onLogout={handleLogout} onViewUserPlan={(targetUserId) => { setAdminViewUserId(targetUserId); setTab("workout"); }} onStartPlan={() => { setTab("workout"); localStorage.setItem("grim_start_plan_from_settings", "1"); }} />
+            <ToolsTab userId={user.id} isAdmin={userRole === "admin"} isHonorary={isHonorary} userRole={userRole} onLogout={handleLogout} onViewUserPlan={(targetUserId) => { setAdminViewUserId(targetUserId); setTab("workout"); }} onStartPlan={() => { localStorage.setItem("grim_start_plan_from_settings", "1"); setTab("workout"); }} />
           }
         </>
       </main>

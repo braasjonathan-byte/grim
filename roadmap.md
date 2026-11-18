@@ -1,5 +1,9 @@
 # Roadmap
 
+## Kvarliggande flikar 18 november 2026
+- [x] Hem hämtar resultaten igen vid återkomst, träningsändring och offlinesynk utan ommontering; 12 befintliga tester godkända.
+- [x] Bekräftad planstart konsumeras när Träning blir synlig och färdigladdad; inloggad kontroll visar exakt ett arkiveringsanrop efter tidigare besök. Arkiveringen blockerades i kontrollen för att skydda kontots pass. Automatisk kontroll sparad i e2e/tab_refresh.py.
+
 ## Eldreaktion och Test2 17 november 2026
 - [x] Hämta namn och profilbilder även för personer som eldar utan egna inlägg i flödet.
 - [x] Grims bildinlägg visar Test2 utan frågetecken även efter omladdning; 10 befintliga Social-tester godkända. Denna kontroll var endast läsning; tidigare tests ursprung kan inte bekräftas från tillgänglig historik.

@@ -118,7 +118,7 @@ const SHOW_STRAVA_INTEGRATION = false;
 
 
 
-const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: WorkoutViewProps) => {
+const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack, active = true }: WorkoutViewProps) => {
   const readyWorkoutCategories = useReadyWorkouts();
   const { triggerSave } = useSaveIndicator();
   const isMobile = useIsMobile();
@@ -589,16 +589,6 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
     });
   }, []);
 
-  // Trigger plan-start flow when coming from Settings panel
-  useEffect(() => {
-    const flag = localStorage.getItem("grim_start_plan_from_settings");
-    if (flag === "1") {
-      localStorage.removeItem("grim_start_plan_from_settings");
-      // Bekräftad redan i Inställningar.
-      startPlanFromSingles(true);
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
   const canEditExercises = isAdmin || (authUserId ? EXERCISE_EDITOR_IDS.includes(authUserId) : false);
 
   // Calibration state
@@ -2009,6 +1999,16 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
 
 
 
+
+  // Kept-mounted tabs consume navigation intents only when visible and hydrated.
+  const startPlanFromSettingsRef = useRef(startPlanFromSingles);
+  startPlanFromSettingsRef.current = startPlanFromSingles;
+  useEffect(() => {
+    if (!active || mode === "loading") return;
+    if (localStorage.getItem("grim_start_plan_from_settings") !== "1") return;
+    localStorage.removeItem("grim_start_plan_from_settings");
+    void startPlanFromSettingsRef.current(true);
+  }, [active, mode]);
 
   const addSingleWorkout = async (copyFrom?: PlanDay) => {
     const name = copyFrom ? copyFrom.session_name : singleName.trim();

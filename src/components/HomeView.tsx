@@ -137,6 +137,7 @@ const fixCardioUnitSuffix = (line: string): string => {
 
 interface HomeViewProps {
   userId: string;
+  active?: boolean;
   onNavigate: (tab: "workout" | "stats" | "social" | "nutrition" | "calc") => void;
   onOpenAchievements?: () => void;
   isHonorary?: boolean;
@@ -156,7 +157,17 @@ const homeCache = new Map<string, HomeCache>();
 const archivedCache = new Map<string, string[]>();
 const untrainedCache = new Map<string, string[]>();
 
-const HomeView = ({ userId, onNavigate, isHonorary = false }: HomeViewProps) => {
+const HomeView = ({ userId, onNavigate, isHonorary = false, active = true }: HomeViewProps) => {
+  const [refreshVersion, setRefreshVersion] = useState(0);
+  useEffect(() => {
+    const refresh = () => setRefreshVersion(v => v + 1);
+    window.addEventListener("grim:workouts-changed", refresh);
+    window.addEventListener("grim:offline-queue-flushed", refresh);
+    return () => {
+      window.removeEventListener("grim:workouts-changed", refresh);
+      window.removeEventListener("grim:offline-queue-flushed", refresh);
+    };
+  }, []);
   const focus = getFirstFocus(userId);
   const cached = homeCache.get(userId);
   // Visar en ofarlig Samsung Health-demonstration i Lovables förhandsvisning.
@@ -178,7 +189,7 @@ const HomeView = ({ userId, onNavigate, isHonorary = false }: HomeViewProps) => 
 
   // Dagens kost (kalorier + protein) – samma mål och rimlighetsregler som Kost-fliken.
   useEffect(() => {
-    if (!nutritionOn) return;
+    if (!active || !nutritionOn) return;
     let cancelled = false;
     const day = toLocalDateKey(new Date());
     Promise.all([
@@ -196,7 +207,7 @@ const HomeView = ({ userId, onNavigate, isHonorary = false }: HomeViewProps) => 
       });
     }).catch(() => { /* kortet visas inte utan data */ });
     return () => { cancelled = true; };
-  }, [userId, nutritionOn]);
+  }, [userId, nutritionOn, active, refreshVersion]);
 
   // Steg och aktiva kalorier från hälsoappen (sparad data visas även i webben).
   useEffect(() => {
@@ -267,6 +278,7 @@ const HomeView = ({ userId, onNavigate, isHonorary = false }: HomeViewProps) => 
 
   // Träningsdatum från arkiverade planer räknas också in i streaken.
   useEffect(() => {
+    if (!active) return;
     let cancelled = false;
     supabase
       .from("archived_plans")
@@ -289,19 +301,21 @@ const HomeView = ({ userId, onNavigate, isHonorary = false }: HomeViewProps) => 
         setArchivedDates(dates);
       });
     return () => { cancelled = true; };
-  }, [userId]);
+  }, [userId, active, refreshVersion]);
 
   useEffect(() => {
+    if (!active) return;
     let cancelled = false;
     loadUntrainedRegions(userId)
       .then((regions) => { untrainedCache.set(userId, regions); if (!cancelled) setUntrainedRegions(regions); })
       .catch(() => { if (!cancelled) setUntrainedRegions([]); });
     return () => { cancelled = true; };
-  }, [userId]);
+  }, [userId, active, refreshVersion]);
 
 
 
   useEffect(() => {
+    if (!active) return;
     let cancelled = false;
     Promise.all([
       supabase.from("profiles").select("display_name, plan_start_date").eq("user_id", userId).maybeSingle(),
@@ -314,7 +328,7 @@ const HomeView = ({ userId, onNavigate, isHonorary = false }: HomeViewProps) => 
         const p = profile as { display_name?: string | null; plan_start_date?: string | null } | null;
         // Hälsningen använder visningsnamn – aldrig användarnamnet.
         setNickname(p?.display_name?.trim() || "");
-        if (p?.plan_start_date) setPlanStartDate(p.plan_start_date);
+        setPlanStartDate(p?.plan_start_date ?? null);
         setPlans((planData as PlanRow[]) ?? []);
         setCompletions((compData as CompletionRow[]) ?? []);
         const prev = homeCache.get(userId);
@@ -343,7 +357,7 @@ const HomeView = ({ userId, onNavigate, isHonorary = false }: HomeViewProps) => 
     return () => {
       cancelled = true;
     };
-  }, [userId]);
+  }, [userId, active, refreshVersion]);
 
   const now = new Date();
   const todayIdx = (now.getDay() + 6) % 7; // 0 = Monday

@@ -2,6 +2,7 @@ import type { AchievementDefinition } from "@/lib/achievements";
 
 export interface WorkoutViewProps {
   userId: string;
+  active?: boolean;
   isAdmin?: boolean;
   isHonorary?: boolean;
   onBack?: () => void;
