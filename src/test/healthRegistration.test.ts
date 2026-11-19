@@ -56,6 +56,24 @@ beforeEach(() => {
 });
 
 describe("HC registration replacement and retry", () => {
+  it.each(["plan", "completion", "both", "exercise"])("allows reimport after removal of %s", async removal => {
+    await importHealthWorkouts("u", [workout]);
+    expect((await findImportedHealthWorkouts("u", [workout])).size).toBe(1);
+    if (removal === "plan" || removal === "both") db.rows.workout_plans = db.rows.workout_plans.filter(r => !r.day.endsWith("_hcabc123"));
+    if (removal === "completion" || removal === "both") db.rows.workout_completions = [];
+    if (removal === "exercise") db.rows.workout_plans.find(r => r.day.endsWith("_hcabc123")).details = "";
+    expect((await findImportedHealthWorkouts("u", [workout])).size).toBe(0);
+    expect((await importHealthWorkouts("u", [workout])).imported).toBe(1);
+    expect(db.rows.workout_plans.filter(r => r.day.endsWith("_hcabc123"))).toHaveLength(1);
+    expect(db.rows.workout_completions.filter(r => r.day.endsWith("_hcabc123"))).toHaveLength(1);
+  });
+  it("does not duplicate an import that still exists", async () => {
+    await importHealthWorkouts("u", [workout]);
+    const result = await importHealthWorkouts("u", [workout]);
+    expect(result.imported).toBe(0);
+    expect(result.skipped).toBe(1);
+    expect(db.rows.workout_completions.filter(r => r.day.endsWith("_hcabc123"))).toHaveLength(1);
+  });
   it("fills previously missing Tacx distance on fetch without duplicating or resetting the workout", async () => {
     const cycling = { ...workout, label: "Cykling", type: "cycling", source: "Tacx", distanceKm: null };
     await importHealthWorkouts("u", [cycling]);

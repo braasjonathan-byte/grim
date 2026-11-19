@@ -1,5 +1,5 @@
 import { describe, expect, it, vi, beforeEach } from "vitest";
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor, fireEvent } from "@testing-library/react";
 import * as healthSync from "@/lib/healthSync";
 
 vi.mock("@/integrations/supabase/client", () => ({
@@ -8,10 +8,11 @@ vi.mock("@/integrations/supabase/client", () => ({
   },
 }));
 
+const imports = vi.hoisted(() => ({ find: vi.fn(), save: vi.fn() }));
 vi.mock("@/lib/healthWorkoutImport", () => ({
   healthWorkoutDayKey: (w: { key: string }) => w.key,
-  findImportedHealthWorkouts: async () => new Set<string>(),
-  importHealthWorkouts: async () => ({ imported: 0 }),
+  findImportedHealthWorkouts: imports.find,
+  importHealthWorkouts: imports.save,
   relocateHealthImports: async () => 0,
   cleanupHealthImportDetails: async () => 0,
 }));
@@ -26,9 +27,27 @@ import HealthConnectCard from "@/components/HealthConnectCard";
 describe("HealthConnectCard", () => {
   beforeEach(() => {
     vi.restoreAllMocks();
+    imports.find.mockReset().mockResolvedValue(new Set());
+    imports.save.mockReset().mockResolvedValue({ imported: 1, failed: 0, skipped: 0, successfulKeys: ["hc1"] });
     vi.spyOn(healthSync, "isHealthSupported").mockReturnValue(true);
     vi.spyOn(healthSync, "isHealthAvailable").mockResolvedValue(true);
     vi.spyOn(healthSync, "loadStoredHealthDays").mockResolvedValue(rows);
+  });
+
+  it.each(["single", "all"])("rechecks previously imported workouts before %s import after deletion", async mode => {
+    vi.spyOn(healthSync, "checkHealthAccess").mockResolvedValue({ activity: true, workouts: true, heartRate: true, sleep: true, weight: true });
+    const workout = { key: "hc1", label: "Cykling", start: "2026-11-17T10:00:00Z", minutes: 59, source: "Tacx" } as healthSync.HealthWorkout;
+    vi.spyOn(healthSync, "readHealthWorkouts").mockResolvedValue([workout]);
+    imports.find.mockResolvedValue(new Set(["hc1"]));
+    render(<HealthConnectCard />);
+    await waitFor(() => expect(screen.getByRole("button", { name: /Hämta genomförda pass/ })).toBeEnabled());
+    fireEvent.click(screen.getByRole("button", { name: /Hämta genomförda pass/ }));
+    await waitFor(() => expect(screen.getByRole("button", { name: /Kontrollera och importera/ })).toBeEnabled());
+    // No change event arrives: the old imported marker remains on screen.
+    imports.find.mockResolvedValue(new Set());
+    fireEvent.click(screen.getByRole("button", { name: mode === "single" ? /Kontrollera och importera/ : "Importera alla" }));
+    await waitFor(() => expect(imports.save).toHaveBeenCalledWith("u1", [workout]));
+    expect(imports.save).toHaveBeenCalledTimes(1);
   });
 
   it("visar status per datatyp och knapp för det som saknas", async () => {

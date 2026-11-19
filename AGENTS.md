@@ -1,4 +1,5 @@
 # Architecture rules
+- Health import controls revalidate saved existence on every import, including previously imported rows and bulk actions; foreground status refreshes are sequenced so stale UI cannot block restoring deleted sessions or create duplicates.
 - Health workout distance reads source-scoped DistanceRecords for the session window; fetches fill only missing active-import distance through workoutHistory with a concurrent-edit guard, never daily totals or new social posts.
 - Kept-mounted Home and Workout receive explicit tab activity; Home refreshes on entry and workout changes, and Workout consumes confirmed settings intents only after activation and hydration to preserve fast navigation without stale state.
 - Restore scheduled accounts only through the admin-authenticated restore-account function and the Auth Admin API; cancel the purge before lifting the ban to preserve existing data without editing managed auth tables.

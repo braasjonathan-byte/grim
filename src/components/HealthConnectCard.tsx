@@ -67,6 +67,9 @@ const HealthConnectCard = () => {
   const [workouts, setWorkouts] = useState<HealthWorkout[] | null>(null);
   const [importedKeys, setImportedKeys] = useState<Set<string>>(new Set());
   const [loadingWorkouts, setLoadingWorkouts] = useState(false);
+  const [importingKey, setImportingKey] = useState<string | null>(null);
+  const importBusy = useRef(false);
+  const statusRequest = useRef(0);
   const [lastError, setLastError] = useState<{ ref: string; message: string } | null>(null);
   const [diag, setDiag] = useState<HealthDiagnostics | null>(null);
   const [diagOpen, setDiagOpen] = useState(false);
@@ -294,14 +297,18 @@ const HealthConnectCard = () => {
 
 
   const importAll = useCallback(async () => {
-    if (!userId || !workouts) return;
-    const pending = workouts.filter((w) => !importedKeys.has(healthWorkoutDayKey(w)));
-    if (pending.length === 0) {
-      toast.info("Alla pass är redan importerade");
-      return;
-    }
+    if (!userId || !workouts || importBusy.current) return;
+    importBusy.current = true;
+    statusRequest.current += 1;
     setLoadingWorkouts(true);
     try {
+      const current = await findImportedHealthWorkouts(userId, workouts);
+      setImportedKeys(current);
+      const pending = workouts.filter((w) => !current.has(healthWorkoutDayKey(w)));
+      if (pending.length === 0) {
+        toast.info("Alla pass är redan importerade");
+        return;
+      }
       const res = await importHealthWorkouts(userId, pending);
       setImportedKeys((prev) => new Set([...prev, ...res.successfulKeys]));
       if (res.failed > 0) {
@@ -312,13 +319,17 @@ const HealthConnectCard = () => {
     } catch (err: any) {
       toast.error(err?.message || "Kunde inte importera passen");
     } finally {
+      importBusy.current = false;
       setLoadingWorkouts(false);
     }
-  }, [userId, workouts, importedKeys]);
+  }, [userId, workouts]);
 
   const importOne = useCallback(
     async (w: HealthWorkout) => {
-      if (!userId) return;
+      if (!userId || importBusy.current) return;
+      importBusy.current = true;
+      statusRequest.current += 1;
+      setImportingKey(healthWorkoutDayKey(w));
       try {
         const res = await importHealthWorkouts(userId, [w]);
         if (res.failed > 0) {
@@ -329,6 +340,9 @@ const HealthConnectCard = () => {
         toast.success(res.skipped > 0 ? `${w.label} var redan importerat` : `${w.label} importerat`);
       } catch (err: any) {
         toast.error(err?.message || "Kunde inte importera passet");
+      } finally {
+        importBusy.current = false;
+        setImportingKey(null);
       }
     },
     [userId],
@@ -338,14 +352,23 @@ const HealthConnectCard = () => {
   // När ett pass ändras/tas bort i Träning: räkna om vilka HC-pass som är importerade.
   useEffect(() => {
     if (!userId || !workouts?.length) return;
+    let active = true;
     const onChanged = () => {
-      findImportedHealthWorkouts(userId, workouts).then(setImportedKeys).catch(() => {});
+      if (importBusy.current) return;
+      const request = ++statusRequest.current;
+      findImportedHealthWorkouts(userId, workouts).then(keys => {
+        if (active && request === statusRequest.current) setImportedKeys(keys);
+      }).catch(() => {});
     };
+    const onVisible = () => { if (!document.hidden) onChanged(); };
     window.addEventListener(WORKOUTS_CHANGED_EVENT, onChanged);
     window.addEventListener("focus", onChanged);
+    document.addEventListener("visibilitychange", onVisible);
     return () => {
+      active = false;
       window.removeEventListener(WORKOUTS_CHANGED_EVENT, onChanged);
       window.removeEventListener("focus", onChanged);
+      document.removeEventListener("visibilitychange", onVisible);
     };
   }, [userId, workouts]);
 
@@ -736,7 +759,7 @@ const HealthConnectCard = () => {
         <div className="space-y-2 rounded-2xl border border-border/60 bg-card/60 p-3">
           <div className="flex items-center justify-between gap-2">
             <p className="text-sm font-semibold">Pass senaste 30 dagarna</p>
-            <Button size="sm" className="rounded-full" onClick={importAll} disabled={loadingWorkouts}>
+            <Button size="sm" className="rounded-full" onClick={importAll} disabled={loadingWorkouts || importingKey !== null}>
               Importera alla
             </Button>
           </div>
@@ -758,13 +781,13 @@ const HealthConnectCard = () => {
                       {info.length > 0 && ` · ${info.join(" · ")}`} · {w.source}
                     </p>
                   </div>
-                  {done ? (
-                    <span className="shrink-0 text-xs font-semibold text-success">Importerat</span>
-                  ) : (
-                    <Button size="sm" variant="outline" className="shrink-0 rounded-full" onClick={() => void importOne(w)}>
-                      Importera
-                    </Button>
-                  )}
+                  <Button size="sm" variant="outline" className="shrink-0 rounded-full"
+                    disabled={loadingWorkouts || importingKey !== null}
+                    aria-label={done ? `Kontrollera och importera ${w.label} igen` : `Importera ${w.label}`}
+                    onClick={() => void importOne(w)}>
+                    {importingKey === healthWorkoutDayKey(w) ? <Loader2 className="h-4 w-4 animate-spin" /> : done ? <RefreshCw className="mr-1 h-3 w-3" /> : null}
+                    {done ? "Importerat" : "Importera"}
+                  </Button>
                 </li>
               );
             })}
