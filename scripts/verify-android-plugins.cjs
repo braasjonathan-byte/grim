@@ -55,6 +55,11 @@ if (fs.existsSync(variablesPath)) {
 const manifestPath = path.join(root, "android", "app", "src", "main", "AndroidManifest.xml");
 if (fs.existsSync(manifestPath)) {
   const manifest = fs.readFileSync(manifestPath, "utf8");
+  // Play: screenOrientation="portrait" kräver att screen.portrait deklareras som icke-obligatorisk.
+  if (/android:screenOrientation="portrait"/.test(manifest) &&
+      !/<uses-feature\b[^>]*android:name="android\.hardware\.screen\.portrait"[^>]*android:required="false"/.test(manifest)) {
+    failures.push('AndroidManifest.xml: saknar <uses-feature android:name="android.hardware.screen.portrait" android:required="false"/> (Play-hårdvarukrav)');
+  }
   const requiredHealth = [
     "android.permission.health.READ_STEPS",
     "android.permission.health.READ_ACTIVE_CALORIES_BURNED",

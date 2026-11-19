@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { readFileSync, mkdtempSync, mkdirSync, cpSync, rmSync } from "node:fs";
+import { readFileSync, writeFileSync, mkdtempSync, mkdirSync, cpSync, rmSync } from "node:fs";
 import { execFileSync } from "node:child_process";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -14,6 +14,24 @@ describe("Android release assets and symbols", () => {
     const script = read("scripts/patch-android-native-symbols.cjs");
     expect(script).toContain("debugSymbolLevel 'FULL'");
     expect(script).toContain("27.0.12077973");
+  });
+  it("declares screen.portrait as not required, also after the manifest patch re-adds it", () => {
+    const re = /<uses-feature\b[^>]*android:name="android\.hardware\.screen\.portrait"[^>]*android:required="false"/;
+    expect(read("android/app/src/main/AndroidManifest.xml")).toMatch(re);
+    const dir = mkdtempSync(join(tmpdir(), "grim-portrait-"));
+    try {
+      mkdirSync(join(dir, "scripts"));
+      cpSync("scripts/patch-android-manifest.cjs", join(dir, "scripts/patch-android-manifest.cjs"));
+      cpSync("scripts/android", join(dir, "scripts/android"), { recursive: true });
+      cpSync("android/app/src/main", join(dir, "android/app/src/main"), { recursive: true });
+      const mp = join(dir, "android/app/src/main/AndroidManifest.xml");
+      writeFileSync(mp, read(mp).replace(/\s*<uses-feature\b[^>]*screen\.portrait[^>]*\/>/, ""));
+      expect(read(mp)).not.toContain("screen.portrait");
+      execFileSync(process.execPath, [join(dir, "scripts/patch-android-manifest.cjs")], { stdio: "pipe" });
+      expect(read(mp)).toMatch(re);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
   });
   it("installs a white transparent vector and patches manifest metadata idempotently", () => {
     const dir = mkdtempSync(join(tmpdir(), "grim-notification-"));

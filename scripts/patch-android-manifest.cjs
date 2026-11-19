@@ -47,6 +47,8 @@ const FEATURES = [
   { name: "android.hardware.camera", required: false },
   { name: "android.hardware.camera.autofocus", required: false },
   { name: "android.hardware.bluetooth_le", required: false },
+  // screenOrientation="portrait" gör annars screen.portrait till ett implicit krav (Play-deklaration).
+  { name: "android.hardware.screen.portrait", required: false },
 ];
 
 let changed = false;
