@@ -6,7 +6,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { buildWorkoutFromAiExercises } from "@/lib/aiWorkoutImport";
 import { healthLog, withTimeout, type HealthWorkout } from "@/lib/healthSync";
 import { DAYS, daysBetweenCalendarDates, getMonday, getPlanDayDateValue, parseDateKey, toLocalDateKey, toUtcDateKey } from "@/lib/workoutDayUtils";
-import { notifyWorkoutsChanged } from "@/lib/workoutHistory";
+import { notifyWorkoutsChanged, loadWorkoutHistory, fillMissingHealthDistance } from "@/lib/workoutHistory";
 
 export const HEALTH_WORKOUT_IMPORTED_EVENT = "grim:health-workout-imported";
 export interface ImportedHealthSession { userId: string; week: number; day: string }
@@ -95,6 +95,15 @@ export async function findImportedHealthWorkouts(
     "Ingen kontakt med servern – försök igen.",
   );
   if (error || completionError) throw error || completionError;
+  // A later read may contain distance that the initial provider sync lacked.
+  if (workouts.some(w => (w.distanceKm ?? 0) > 0)) {
+    const history = await loadWorkoutHistory(userId);
+    for (const w of workouts) {
+      if (!(w.distanceKm && w.distanceKm > 0)) continue;
+      const session = history.find(s => s.source.kind === "active" && s.day.endsWith(`_hc${w.key}`));
+      if (session) await fillMissingHealthDistance(userId, session, w.distanceKm);
+    }
+  }
   const doneKeys = new Set((completions ?? []).filter((c) => c.done).map((c) => `${c.week}-${c.day}`));
   // A plan row alone is not a successful import: completion may have failed.
   const imported = importedKeysFromRows((data ?? []).filter((p) => p.day.includes("_hc") && doneKeys.has(`${p.week}-${p.day}`)), workouts);

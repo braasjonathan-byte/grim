@@ -3,6 +3,7 @@ import { isCompletedWorkout } from "@/lib/completionCounting";
 import { checkedSetsFor, setVolumeKg } from "@/lib/checkedSets";
 import { parseExerciseWeight } from "@/lib/workoutSetData";
 import { getPlanDayDateValue, toUtcDateKey } from "@/lib/workoutDayUtils";
+import { missingHealthDistancePatch } from "@/lib/healthWorkoutDistance";
 
 /**
  * Unified list of every completed workout — active plan, single workouts and
@@ -128,6 +129,27 @@ const removeSocialPost = async (userId: string, s: HistorySession) => {
   if (s.source.kind === "archive") q = q.lte("created_at", s.source.archivedAt);
   await q;
 };
+
+/** Repair an existing active Health import, never recreate or republish it. */
+export async function fillMissingHealthDistance(userId: string, s: HistorySession, km: number | null): Promise<boolean> {
+  if (s.source.kind !== "active" || !/_hc[a-z0-9]+$/i.test(s.day)) return false;
+  const patch = missingHealthDistancePatch(s.completion, km);
+  if (!patch) return false;
+  const { data, error } = await supabase.from("workout_completions")
+    .update(patch as any).eq("user_id", userId).eq("id", s.completion.id)
+    .eq("updated_at", s.completion.updated_at).select("id");
+  if (error) throw error;
+  if (!data?.length) return false; // Concurrent edits win; retry on next fetch.
+  notifyWorkoutsChanged(userId);
+  const { previewWorkoutCaption } = await import("@/lib/workoutAutoShare");
+  const caption = await previewWorkoutCaption(userId, s.week, s.day);
+  if (caption) {
+    const { error: postError } = await supabase.from("social_posts").update({ caption })
+      .eq("user_id", userId).eq("workout_week", s.week).eq("workout_day", s.day);
+    if (postError) throw postError;
+  }
+  return true;
+}
 
 /** Writes edited set data (and optional new date for single workouts). */
 export async function saveSessionEdit(

@@ -1049,7 +1049,25 @@ if (!kt.includes("GRIM_HC_DIAGNOSTICS_METHOD")) {
   kt = kt.replace("    // Open Google Health Connect app settings\n", `${diagMethod}    // Open Google Health Connect app settings\n`);
 }
 
+// GRIM_WORKOUT_DISTANCE: raw, source-scoped records also cover indoor cycling.
+fs.copyFileSync(path.join(ROOT, "scripts/android/GrimWorkoutDistance.kt"), path.join(path.dirname(PLUGIN_KT), "GrimWorkoutDistance.kt"));
+if (!kt.includes("GRIM_WORKOUT_DISTANCE")) {
+  const old = '                    addWorkoutMetric(workout, workoutObject, getMetricAndMapper("distance"))';
+  if (!kt.includes(old)) throw new Error("Workout distance call not found");
+  kt = kt.replace(old, `                    // GRIM_WORKOUT_DISTANCE
+                    if (hasPermission(CapHealthPermission.READ_DISTANCE)) {
+                        try {
+                            GrimWorkoutDistance.read(healthConnectClient, workout)?.let {
+                                workoutObject.put("distance", it)
+                            }
+                        } catch (e: Exception) {
+                            Log.e(tag, "Workout distance read failed", e)
+                        }
+                    }`);
+}
+
 const requiredMarkers = [
+  "GRIM_WORKOUT_DISTANCE",
   "GRIM_BRIDGE_ACTIVITY_RESULT",
   "handleHealthPermissionResult",
   "GRIM_LAUNCH_GUARD",

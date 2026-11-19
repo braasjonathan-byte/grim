@@ -1,5 +1,11 @@
 # Roadmap
 
+## Passdistans från Health Connect 19 november 2026
+- [x] Läs separat passdistans från rätt källa utan att använda dygnets gångdistans; reproducerbar Android-patch och pluginverifiering godkända.
+- [x] Komplettera saknad distans på redan importerade aktiva pass vid nästa hämtning genom passhistoriken utan dubbletter eller ändrad tid/puls/anteckning; uppdatera bara redan delade inlägg.
+- [x] 52 regressionstester godkända och senaste automatiska bygge godkänt.
+- [ ] Kontrollera faktisk distans för Tacx-passet den 17/11; kräver ny Android-version med ändringen och hämtning på telefonen. Telefonens Health Connect är inte tillgängligt här, och Android-kompilering har inte körts i denna miljö.
+
 ## Kvarliggande flikar 18 november 2026
 - [x] Hem hämtar resultaten igen vid återkomst, träningsändring och offlinesynk utan ommontering; 12 befintliga tester godkända.
 - [x] Bekräftad planstart konsumeras när Träning blir synlig och färdigladdad; inloggad kontroll visar exakt ett arkiveringsanrop efter tidigare besök. Arkiveringen blockerades i kontrollen för att skydda kontots pass. Automatisk kontroll sparad i e2e/tab_refresh.py.

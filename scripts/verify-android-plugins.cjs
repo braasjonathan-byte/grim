@@ -142,6 +142,12 @@ if (!fs.existsSync(healthPluginManifest)) {
 }
 if (fs.existsSync(healthPlugin)) {
   const source = fs.readFileSync(healthPlugin, "utf8");
+  if (!source.includes("GrimWorkoutDistance.read(healthConnectClient, workout)")) {
+    failures.push("capacitor-health: source-scoped workout distance reader missing");
+  }
+  if (!fs.existsSync(path.join(path.dirname(healthPlugin), "GrimWorkoutDistance.kt"))) {
+    failures.push("capacitor-health: GrimWorkoutDistance.kt missing");
+  }
   // GRIM_HC_WRITE: skrivstöd (scripts/patch-health-write.cjs).
   for (const marker of ["GRIM_HC_WRITE_ENUM", "GRIM_HC_WRITE_MAPPING", "GRIM_HC_WRITE_METHODS", "fun writeWorkout(call: PluginCall)", "fun deleteWorkouts(call: PluginCall)", "GRIM_ENSURE_CLIENT queryAggregated", "GRIM_HC_BACKGROUND_ENUM", "GRIM_HC_BACKGROUND_MAPPING", "GRIM_HC_BACKGROUND_METHODS", "fun readDailySummary(call: PluginCall)", "fun scheduleBackgroundSync(call: PluginCall)"]) {
     if (!source.includes(marker)) failures.push(`capacitor-health: ${marker} missing — run \`npm install\``);

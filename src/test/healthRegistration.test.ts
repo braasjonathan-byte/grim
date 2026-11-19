@@ -33,13 +33,16 @@ vi.mock("@/integrations/supabase/client", () => ({ supabase: { from: (table: str
         if (old) Object.assign(old, payload); else rows.push({ id: `id-${rows.length}`, ...payload });
         db.rows[table] = rows;
       }
-      return { data: null, error: null };
+      return { data: operation === "update" ? matches : null, error: null };
     }).then(resolve, reject),
   };
   return q;
 } } }));
 vi.mock("@/lib/healthSync", () => ({ healthLog: vi.fn(), withTimeout: (p: any) => p }));
-vi.mock("@/lib/workoutHistory", () => ({ notifyWorkoutsChanged: vi.fn() }));
+vi.mock("@/lib/workoutHistory", async (importOriginal) => ({
+  ...await importOriginal<typeof import("@/lib/workoutHistory")>(), notifyWorkoutsChanged: vi.fn(),
+}));
+vi.mock("@/lib/workoutAutoShare", () => ({ previewWorkoutCaption: async () => "Updated existing workout" }));
 
 import { findImportedHealthWorkouts, healthWorkoutDayKey, importHealthWorkouts } from "@/lib/healthWorkoutImport";
 import { getCardioCategory } from "@/lib/cardioVisibility";
@@ -53,6 +56,23 @@ beforeEach(() => {
 });
 
 describe("HC registration replacement and retry", () => {
+  it("fills previously missing Tacx distance on fetch without duplicating or resetting the workout", async () => {
+    const cycling = { ...workout, label: "Cykling", type: "cycling", source: "Tacx", distanceKm: null };
+    await importHealthWorkouts("u", [cycling]);
+    const saved = db.rows.workout_completions.find(r => r.day.endsWith("_hcabc123"));
+    saved.user_comment = "Keep my notes";
+    const timestamp = saved.updated_at;
+    const weights = JSON.stringify(saved.logged_weights);
+    const postsBefore = (db.rows.social_posts ?? []).length;
+    await findImportedHealthWorkouts("u", [{ ...cycling, distanceKm: 32.5 }]);
+    expect(saved.logged_distance_km).toBe(32.5);
+    expect(JSON.parse(saved.logged_weights.__cond__Cykling).dist).toBe("32.5");
+    expect(saved.updated_at).toBe(timestamp);
+    expect(saved.user_comment).toBe("Keep my notes");
+    expect(db.rows.workout_completions.filter(r => r.day.endsWith("_hcabc123"))).toHaveLength(1);
+    expect((db.rows.social_posts ?? []).length).toBe(postsBefore);
+    expect(JSON.stringify(saved.logged_weights)).not.toBe(weights);
+  });
   it("registers a Tacx cycling import as completed cycling with its real distance", async () => {
     const imported = { ...workout, type: "cycling", label: "Cykling", source: "Tacx", distanceKm: 32.5 };
     const result = await importHealthWorkouts("u", [imported]);
