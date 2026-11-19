@@ -180,6 +180,8 @@ export type RawHealthWorkout = {
   sourceBundleId?: string;
   duration: number;
   distance?: number;
+  /** Native diagnostik: vilka appar hade distans för passet (GrimWorkoutDistance). */
+  distanceDiag?: string;
   steps?: number;
   calories: number;
   heartRate?: { timestamp: string; bpm: number }[];
@@ -1124,6 +1126,12 @@ export async function readHealthWorkouts(days = 30): Promise<HealthWorkout[]> {
     throw err instanceof HealthError ? err : new HealthError("data-timeout", err?.message || "Hälsoappen svarade inte i tid. Försök igen.");
   });
   healthLog("workouts read", res?.workouts?.length ?? 0);
+  // Pass utan distans: logga varför (vilka källor som hade DistanceRecord) så det går att felsöka.
+  for (const w of res?.workouts ?? []) {
+    if (!(w.distance && w.distance > 0) && w.distanceDiag) {
+      healthLog("workout without distance", { type: w.workoutType, source: w.sourceBundleId, diag: w.distanceDiag });
+    }
+  }
 
   const mapped = (res?.workouts ?? [])
     .map((w) => {

@@ -147,7 +147,7 @@ if (!fs.existsSync(healthPluginManifest)) {
 }
 if (fs.existsSync(healthPlugin)) {
   const source = fs.readFileSync(healthPlugin, "utf8");
-  if (!source.includes("GrimWorkoutDistance.read(healthConnectClient, workout)")) {
+  if (!source.includes("GRIM_WORKOUT_DISTANCE_V2")) {
     failures.push("capacitor-health: source-scoped workout distance reader missing");
   }
   if (!fs.existsSync(path.join(path.dirname(healthPlugin), "GrimWorkoutDistance.kt"))) {

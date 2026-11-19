@@ -1049,25 +1049,31 @@ if (!kt.includes("GRIM_HC_DIAGNOSTICS_METHOD")) {
   kt = kt.replace("    // Open Google Health Connect app settings\n", `${diagMethod}    // Open Google Health Connect app settings\n`);
 }
 
-// GRIM_WORKOUT_DISTANCE: raw, source-scoped records also cover indoor cycling.
+// GRIM_WORKOUT_DISTANCE_V2: raw records from all origins (pro-rated, own origin preferred) also cover indoor cycling.
 fs.copyFileSync(path.join(ROOT, "scripts/android/GrimWorkoutDistance.kt"), path.join(path.dirname(PLUGIN_KT), "GrimWorkoutDistance.kt"));
-if (!kt.includes("GRIM_WORKOUT_DISTANCE")) {
-  const old = '                    addWorkoutMetric(workout, workoutObject, getMetricAndMapper("distance"))';
-  if (!kt.includes(old)) throw new Error("Workout distance call not found");
-  kt = kt.replace(old, `                    // GRIM_WORKOUT_DISTANCE
+if (!kt.includes("GRIM_WORKOUT_DISTANCE_V2")) {
+  const v2 = `                    // GRIM_WORKOUT_DISTANCE_V2
                     if (hasPermission(CapHealthPermission.READ_DISTANCE)) {
                         try {
-                            GrimWorkoutDistance.read(healthConnectClient, workout)?.let {
-                                workoutObject.put("distance", it)
-                            }
+                            val distanceResult = GrimWorkoutDistance.read(healthConnectClient, workout)
+                            distanceResult.meters?.let { workoutObject.put("distance", it) }
+                            workoutObject.put("distanceDiag", distanceResult.diag)
                         } catch (e: Exception) {
                             Log.e(tag, "Workout distance read failed", e)
+                            workoutObject.put("distanceDiag", "read failed: " + (e.message ?: e.javaClass.simpleName))
                         }
-                    }`);
+                    } else {
+                        workoutObject.put("distanceDiag", "READ_DISTANCE not granted")
+                    }`;
+  const v1 = /                    \/\/ GRIM_WORKOUT_DISTANCE\n                    if \(hasPermission\(CapHealthPermission\.READ_DISTANCE\)\) \{[\s\S]*?Workout distance read failed", e\)\n                        \}\n                    \}/;
+  const old = '                    addWorkoutMetric(workout, workoutObject, getMetricAndMapper("distance"))';
+  if (v1.test(kt)) kt = kt.replace(v1, () => v2);
+  else if (kt.includes(old)) kt = kt.replace(old, () => v2);
+  else throw new Error("Workout distance call not found");
 }
 
 const requiredMarkers = [
-  "GRIM_WORKOUT_DISTANCE",
+  "GRIM_WORKOUT_DISTANCE_V2",
   "GRIM_BRIDGE_ACTIVITY_RESULT",
   "handleHealthPermissionResult",
   "GRIM_LAUNCH_GUARD",
