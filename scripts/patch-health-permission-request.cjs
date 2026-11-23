@@ -3,10 +3,10 @@
  * Sista ordet för requestHealthPermissions.
  * Körs efter scripts/patch-capacitor-health.cjs.
  *
- * Dialogen startas på UI-tråden via den launcher som registrerades i load().
- * Kommer inget Activity Result inom 8 sekunder och behörighetsrutan har inte
- * synts släpps anropet med HC_NATIVE_04. Syns rutan förlängs gränsen till 125 s,
- * så JavaScript-löftet aldrig kan hänga men användaren hinner bocka i.
+ * Dialogen startas på UI-tråden via den launcher som registrerades i load()
+ * med PermissionController.createRequestPermissionResultContract().
+ * Detta är den dokumenterade vägen och den som diagnostiken förväntar sig.
+ * Proxy används bara som reserv om launchern inte är redo.
  */
 const fs = require("fs");
 const path = require("path");
@@ -26,12 +26,12 @@ if (!fs.existsSync(PLUGIN_KT)) {
 }
 
 let kt = fs.readFileSync(PLUGIN_KT, "utf8");
-if (kt.includes("GRIM_SIMPLE_PERMISSION_REQUEST") && kt.includes("GRIM_REQUEST_DEADLINE_V2")) {
-  console.log("[patch-health-permission-request] redan patchad.");
+if (kt.includes("GRIM_LAUNCHER_FIRST_REQUEST") && kt.includes("GRIM_REQUEST_DEADLINE_V2")) {
+  console.log("[patch-health-permission-request] redan patchad (launcher-first).");
   process.exit(0);
 }
 
-const requestMethod = `    // GRIM_SIMPLE_PERMISSION_REQUEST
+const requestMethod = `    // GRIM_LAUNCHER_FIRST_REQUEST
     @PluginMethod
     fun requestHealthPermissions(call: PluginCall) {
         val permissionsToRequest = call.getArray("permissions")
@@ -43,12 +43,12 @@ const requestMethod = `    // GRIM_SIMPLE_PERMISSION_REQUEST
             .mapNotNull { CapHealthPermission.from(it) }.toSet()
         val healthConnectPermissions = permissions.mapNotNull { permissionMapping[it] }.toSet()
 
-        // GRIM_SAVED_PERMISSION_CALL
         call.setKeepAlive(true)
         bridge.saveCall(call)
-        // Sätts före kontrollen så 8-sekundersvakten kan släppa anropet även
-        // om Health Connect aldrig svarar på getGrantedPermissions.
+        lastPermissionCallId = call.callbackId
+        lastRequestedPermissions = permissions
         requestPermissionContext.set(RequestPermissionContext(permissions, call))
+
         CoroutineScope(Dispatchers.IO).launch {
             val grantedNow = try {
                 if (ensureClient()) healthConnectClient.permissionController.getGrantedPermissions() else emptySet()
@@ -59,7 +59,6 @@ const requestMethod = `    // GRIM_SIMPLE_PERMISSION_REQUEST
                 val pending = requestPermissionContext.getAndSet(null) ?: return@runOnUiThread
                 try {
                     if (healthConnectPermissions.isNotEmpty() && healthConnectPermissions.all { grantedNow.contains(it) }) {
-                        // GRIM_LAUNCH_GUARD
                         healthTrace("dialog-start", "permissions=\${healthConnectPermissions.size}")
                         healthTrace("dialog-launch-attempt", "route=already-granted")
                         pending.pluginCal.resolve(grantedPermissionResult(permissions, grantedNow))
@@ -71,6 +70,19 @@ const requestMethod = `    // GRIM_SIMPLE_PERMISSION_REQUEST
                         bridge.releaseCall(pending.pluginCal)
                         return@runOnUiThread
                     }
+
+                    // Prefer the early-registered launcher (correct contract).
+                    val launcher = permissionsLauncher
+                    if (launcher != null) {
+                        requestPermissionContext.set(pending)
+                        healthTrace("dialog-start", "permissions=\${healthConnectPermissions.size}")
+                        healthTrace("dialog-launch-attempt", "route=launcher")
+                        launcher.launch(healthConnectPermissions)
+                        healthTrace("dialog-launch-returned", "route=launcher")
+                        return@runOnUiThread
+                    }
+
+                    // Fallback: proxy (should rarely be needed after early registration).
                     requestPermissionContext.set(pending)
                     val proxyIntent = Intent(activity, HealthPermissionProxyActivity::class.java).apply {
                         putStringArrayListExtra(
@@ -79,20 +91,19 @@ const requestMethod = `    // GRIM_SIMPLE_PERMISSION_REQUEST
                         )
                     }
                     healthTrace("dialog-start", "permissions=\${healthConnectPermissions.size}")
-                    healthTrace("dialog-launch-attempt", "route=proxy")
+                    healthTrace("dialog-launch-attempt", "route=proxy-fallback")
                     startActivityForResult(pending.pluginCal, proxyIntent, "handleHealthPermissionResult")
-                    healthTrace("dialog-launch-returned", "route=proxy")
+                    healthTrace("dialog-launch-returned", "route=proxy-fallback")
                 } catch (e: Exception) {
                     requestPermissionContext.set(null)
+                    Log.e(tag, "health permission launch failed", e)
                     pending.pluginCal.reject("HC_NATIVE_05: \${e.message}")
                     bridge.releaseCall(pending.pluginCal)
                 }
             }
         }
-        // GRIM_REQUEST_DEADLINE_V2: 8 s gäller bara tills behörighetsrutan syns.
-        // När proxyn sett rutan (GrimHcDiag.sheetVisibleAt) får användaren upp till
-        // 125 s – strax efter proxyns eget skyddsnät på 120 s – så anropet aldrig
-        // kan hänga men inte heller avbryts medan användaren bockar i.
+
+        // GRIM_REQUEST_DEADLINE_V2
         val deadlineHandler = android.os.Handler(android.os.Looper.getMainLooper())
         val requestStartedAt = System.currentTimeMillis()
         val deadline = object : Runnable {
@@ -100,7 +111,7 @@ const requestMethod = `    // GRIM_SIMPLE_PERMISSION_REQUEST
                 val current = requestPermissionContext.get() ?: return
                 if (current.pluginCal.callbackId != call.callbackId) return
                 val elapsed = System.currentTimeMillis() - requestStartedAt
-                val sheetShown = GrimHcDiag.sheetVisibleAt >= requestStartedAt
+                val sheetShown = try { GrimHcDiag.sheetVisibleAt >= requestStartedAt } catch (_: Throwable) { false }
                 if (sheetShown && elapsed < 125_000) {
                     deadlineHandler.postDelayed(this, 125_000 - elapsed)
                     return
@@ -146,11 +157,13 @@ function replacePluginMethod(source, name, replacement) {
 }
 
 let next = replacePluginMethod(kt, "requestHealthPermissions", requestMethod);
-// Uppgradering från en tidigare version: markörkommentaren ligger ovanför @PluginMethod.
-if (next) next = next.replace(/(    \/\/ GRIM_SIMPLE_PERMISSION_REQUEST\n)+/, "    // GRIM_SIMPLE_PERMISSION_REQUEST\n").replace(/\n\n\n(    \/\/ GRIM_SIMPLE_PERMISSION_REQUEST)/, "\n\n$1");
-if (!next || !next.includes("GRIM_SIMPLE_PERMISSION_REQUEST") || !next.includes("GRIM_REQUEST_DEADLINE_V2")) {
-  console.error("[patch-health-permission-request] kunde inte ersätta requestHealthPermissions.");
+if (next) {
+  next = next.replace(/(    \/\/ GRIM_SIMPLE_PERMISSION_REQUEST\n)+/g, "");
+  next = next.replace(/(    \/\/ GRIM_LAUNCHER_FIRST_REQUEST\n)+/g, "    // GRIM_LAUNCHER_FIRST_REQUEST\n");
+}
+if (!next || !next.includes("GRIM_LAUNCHER_FIRST_REQUEST") || !next.includes("route=launcher")) {
+  console.error("[patch-health-permission-request] kunde inte ersätta requestHealthPermissions med launcher-first.");
   process.exit(1);
 }
 fs.writeFileSync(PLUGIN_KT, next, "utf8");
-console.log("[patch-health-permission-request] requestHealthPermissions startar proxyn på UI-tråden.");
+console.log("[patch-health-permission-request] requestHealthPermissions använder nu early launcher först (PermissionController-kontrakt).");
