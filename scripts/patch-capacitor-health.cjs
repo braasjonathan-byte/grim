@@ -1090,9 +1090,14 @@ const requiredMarkers = [
 ];
 const missingMarkers = requiredMarkers.filter((m) => {
   if (kt.includes(m)) return false;
-  // requestHealthPermissions ersatts av UI-tradsstarten. route=proxy finns da inte kvar,
+  // requestHealthPermissions ersatts av UI-tradstarten. route=proxy finns da inte kvar,
   // och ett andra korpass (postinstall + workflow) far inte falla pa den gamla vagen.
   if (kt.includes("GRIM_SIMPLE_PERMISSION_REQUEST") && m.includes("route=proxy")) return false;
+  if (
+    kt.includes("GRIM_LAUNCHER_FIRST_REQUEST") &&
+    kt.includes("route=proxy-fallback") &&
+    m.includes("route=proxy")
+  ) return false;
   return true;
 });
 if (missingMarkers.length > 0) {

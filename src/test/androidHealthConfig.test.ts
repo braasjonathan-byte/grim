@@ -155,6 +155,17 @@ describe("Android-konfiguration för Health Connect", () => {
     expect(mainActivity).toContain("deferredIntent");
   });
 
+  it("låter CI köra patch-capacitor-health en andra gång efter launcher-first-patchen", () => {
+    const patch = read("scripts/patch-capacitor-health.cjs");
+    expect(patch).toContain("GRIM_LAUNCHER_FIRST_REQUEST");
+    expect(patch).toContain("route=proxy-fallback");
+    expect(patch).toMatch(/kt\.includes\("GRIM_LAUNCHER_FIRST_REQUEST"\)[\s\S]*m\.includes\("route=proxy"\)/);
+    const plugin = read("node_modules/capacitor-health/android/src/main/java/com/fit_up/health/capacitor/HealthPlugin.kt");
+    expect(plugin).toContain("GRIM_LAUNCHER_FIRST_REQUEST");
+    expect(plugin).toContain('healthTrace("dialog-launch-attempt", "route=proxy-fallback")');
+    expect(plugin).not.toContain('healthTrace("dialog-launch-attempt", "route=proxy")');
+  });
+
   it("isolerar Health Connect-dialogen från MainActivity och återställer patchen efter npm install", () => {
     const pkg = JSON.parse(read("package.json"));
     expect(pkg.scripts.postinstall).toContain("patch-capacitor-health.cjs");
