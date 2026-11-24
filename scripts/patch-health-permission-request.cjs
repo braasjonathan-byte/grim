@@ -11,7 +11,7 @@
 const fs = require("fs");
 const path = require("path");
 
-const PLUGIN_KT = path.join(
+const PLUGIN_KT = process.env.GRIM_HEALTH_PLUGIN_KT || path.join(
   __dirname,
   "..",
   "node_modules",
@@ -26,7 +26,7 @@ if (!fs.existsSync(PLUGIN_KT)) {
 }
 
 let kt = fs.readFileSync(PLUGIN_KT, "utf8");
-if (kt.includes("GRIM_LAUNCHER_FIRST_REQUEST") && kt.includes("GRIM_REQUEST_DEADLINE_V2")) {
+if (kt.includes("GRIM_LAUNCHER_FIRST_REQUEST") && kt.includes("GRIM_REQUEST_DEADLINE_V3") && kt.includes("GRIM_SAVED_PERMISSION_CALL") && kt.includes("GRIM_LAUNCH_GUARD")) {
   console.log("[patch-health-permission-request] redan patchad (launcher-first).");
   process.exit(0);
 }
@@ -43,11 +43,13 @@ const requestMethod = `    // GRIM_LAUNCHER_FIRST_REQUEST
             .mapNotNull { CapHealthPermission.from(it) }.toSet()
         val healthConnectPermissions = permissions.mapNotNull { permissionMapping[it] }.toSet()
 
+        // GRIM_SAVED_PERMISSION_CALL: preserve the callback during user choices.
         call.setKeepAlive(true)
         bridge.saveCall(call)
         lastPermissionCallId = call.callbackId
         lastRequestedPermissions = permissions
         requestPermissionContext.set(RequestPermissionContext(permissions, call))
+        val launcherDispatched = java.util.concurrent.atomic.AtomicBoolean(false)
 
         CoroutineScope(Dispatchers.IO).launch {
             val grantedNow = try {
@@ -57,6 +59,7 @@ const requestMethod = `    // GRIM_LAUNCHER_FIRST_REQUEST
             }
             activity.runOnUiThread {
                 val pending = requestPermissionContext.getAndSet(null) ?: return@runOnUiThread
+                // GRIM_LAUNCH_GUARD: synchronous launch errors reject the saved call.
                 try {
                     if (healthConnectPermissions.isNotEmpty() && healthConnectPermissions.all { grantedNow.contains(it) }) {
                         healthTrace("dialog-start", "permissions=\${healthConnectPermissions.size}")
@@ -78,6 +81,9 @@ const requestMethod = `    // GRIM_LAUNCHER_FIRST_REQUEST
                         healthTrace("dialog-start", "permissions=\${healthConnectPermissions.size}")
                         healthTrace("dialog-launch-attempt", "route=launcher")
                         launcher.launch(healthConnectPermissions)
+                        // The direct launcher never runs the proxy's onPause hook.
+                        // Keep its saved call alive while the user chooses permissions.
+                        launcherDispatched.set(true)
                         healthTrace("dialog-launch-returned", "route=launcher")
                         return@runOnUiThread
                     }
@@ -103,7 +109,7 @@ const requestMethod = `    // GRIM_LAUNCHER_FIRST_REQUEST
             }
         }
 
-        // GRIM_REQUEST_DEADLINE_V2
+        // GRIM_REQUEST_DEADLINE_V3
         val deadlineHandler = android.os.Handler(android.os.Looper.getMainLooper())
         val requestStartedAt = System.currentTimeMillis()
         val deadline = object : Runnable {
@@ -111,7 +117,8 @@ const requestMethod = `    // GRIM_LAUNCHER_FIRST_REQUEST
                 val current = requestPermissionContext.get() ?: return
                 if (current.pluginCal.callbackId != call.callbackId) return
                 val elapsed = System.currentTimeMillis() - requestStartedAt
-                val sheetShown = try { GrimHcDiag.sheetVisibleAt >= requestStartedAt } catch (_: Throwable) { false }
+                val sheetShown = launcherDispatched.get() ||
+                    (try { GrimHcDiag.sheetVisibleAt >= requestStartedAt } catch (_: Throwable) { false })
                 if (sheetShown && elapsed < 125_000) {
                     deadlineHandler.postDelayed(this, 125_000 - elapsed)
                     return

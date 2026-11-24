@@ -234,11 +234,11 @@ if (fs.existsSync(healthPlugin)) {
       failures.push("capacitor-health: raw permission result logging / HC_NATIVE_06 separation is missing");
     }
   }
-  if (!source.includes("GRIM_SIMPLE_PERMISSION_REQUEST") || !source.includes('healthTrace("dialog-launch-attempt", "route=proxy")') || !source.includes('healthTrace("dialog-launch-attempt", "route=already-granted")') || !source.includes("HC_NATIVE_04: no permission result in 8s") || !source.includes("GRIM_REQUEST_DEADLINE_V2")) {
-    failures.push("capacitor-health: permission request must launch the proxy activity and time out — run patch-health-permission-request.cjs");
+  if (!source.includes("GRIM_LAUNCHER_FIRST_REQUEST") || !source.includes('healthTrace("dialog-launch-attempt", "route=launcher")') || !source.includes('healthTrace("dialog-launch-attempt", "route=already-granted")') || !source.includes("HC_NATIVE_04: no permission result in 8s") || !source.includes("GRIM_REQUEST_DEADLINE_V3") || !source.includes("launcherDispatched.set(true)") || !source.includes("launcherDispatched.get() ||")) {
+    failures.push("capacitor-health: launcher-first permission request must preserve the call for the extended deadline — run patch-health-permission-request.cjs");
   }
-  if (!source.includes("GRIM_SIMPLE_PERMISSION_REQUEST") && (!source.includes("GRIM_PERMISSION_PROXY_ACTIVITY") || !source.includes('healthTrace("dialog-launch-attempt", "route=proxy")'))) {
-    failures.push("capacitor-health: Health Connect permission flow is not isolated from MainActivity");
+  if (!source.includes("GRIM_PERMISSION_PROXY_ACTIVITY") || !source.includes('healthTrace("dialog-launch-attempt", "route=proxy-fallback")')) {
+    failures.push("capacitor-health: Health Connect permission proxy fallback is missing");
   }
   if (!fs.existsSync(healthPermissionProxy)) {
     failures.push("capacitor-health: HealthPermissionProxyActivity source is missing");

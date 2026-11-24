@@ -39,7 +39,8 @@ async function ln() {
     } catch { /* ignore */ }
     channelReady = true;
   }
-  return plugin;
+  // A bare Capacitor proxy is mistaken for a thenable by Promise resolution.
+  return { plugin };
 }
 
 const hhmm = (t: number) => new Date(t).toLocaleTimeString("sv-SE", { hour: "2-digit", minute: "2-digit" });
@@ -52,7 +53,8 @@ export async function touchOngoingWorkout(opts: { exercise?: string; restSeconds
   const state: State = { startedAt: prev?.startedAt ?? now, lastAt: now, sets: (prev?.sets ?? 0) + 1, exercise: opts.exercise };
   localStorage.setItem(STATE_KEY, JSON.stringify(state));
   try {
-    const p = await ln();
+    const loaded = await ln();
+    const p = loaded?.plugin;
     if (!p) return;
     const perm = await p.checkPermissions();
     if (perm.display !== "granted") {
@@ -63,8 +65,9 @@ export async function touchOngoingWorkout(opts: { exercise?: string; restSeconds
     const restEnd = opts.restSeconds ? now + opts.restSeconds * 1000 : 0;
     // Native vilotimer (nedräkning på låsskärmen + vibration). Reservnotisen nedan
     // schemaläggs bara om native saknas eller vilan är längre än shortService-gränsen.
-    const nativeRest = restEnd ? await nativeStartRest(opts.restSeconds!, opts.exercise) : (await nativeStopRest(), false);
-    const needFallback = !!restEnd && (!nativeRest || opts.restSeconds! > NATIVE_REST_MAX_SEC);
+    const restSeconds = opts.restSeconds ?? 0;
+    const nativeRest = restEnd ? await nativeStartRest(restSeconds, opts.exercise) : (await nativeStopRest(), false);
+    const needFallback = !!restEnd && (!nativeRest || restSeconds > NATIVE_REST_MAX_SEC);
     const body = [
       opts.exercise ? `Senast: ${opts.exercise}` : null,
       `${state.sets} set · ${mins} min`,
@@ -89,7 +92,8 @@ export async function endOngoingWorkout() {
   localStorage.removeItem(STATE_KEY);
   void nativeStopRest();
   try {
-    const p = await ln();
+    const loaded = await ln();
+    const p = loaded?.plugin;
     if (!p) return;
     await p.cancel({ notifications: [{ id: ONGOING_ID }, { id: REST_ID }] });
   } catch { /* ignore */ }

@@ -1,5 +1,11 @@
 # Roadmap
 
+## Android monitoring 24 November 2026
+- [x] Correct the confirmed Health Connect launcher deadline: retain the saved callback up to the existing 125-second limit after direct dispatch; keep the 8-second limit before dispatch and proxy fallback.
+- [x] Reproduce notification and Crashlytics failures using Android-like proxies, then correct promise handling; scheduling, cancellation, crash errors/context/user/logs and web no-ops pass regression tests.
+- [x] 40 regression tests passed; permission patch upgrade and idempotence verified, automatic app check passed.
+- [ ] Verify permissions after >8 seconds, lock-screen notifications and actual Crashlytics delivery on physical Android; requires an updated Android app and device unavailable here.
+
 ## Passdistans från Health Connect 19 november 2026
 - [x] Läs separat passdistans från rätt källa utan att använda dygnets gångdistans; reproducerbar Android-patch och pluginverifiering godkända.
 - [x] Komplettera saknad distans på redan importerade aktiva pass vid nästa hämtning genom passhistoriken utan dubbletter eller ändrad tid/puls/anteckning; uppdatera bara redan delade inlägg.

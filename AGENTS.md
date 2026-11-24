@@ -1,4 +1,6 @@
 # Architecture rules
+- Never resolve promises with bare Capacitor plugin proxies; wrap them in plain objects so thenable assimilation cannot invoke a native `then` method.
+- Health Connect permission deadlines track direct launcher dispatch per request as well as proxy visibility; both preserve saved callbacks during the bounded user-choice window.
 - Health import controls revalidate saved existence on every import, including previously imported rows and bulk actions; foreground status refreshes are sequenced so stale UI cannot block restoring deleted sessions or create duplicates.
 - Health workout distance reads source-scoped DistanceRecords for the session window; fetches fill only missing active-import distance through workoutHistory with a concurrent-edit guard, never daily totals or new social posts.
 - Kept-mounted Home and Workout receive explicit tab activity; Home refreshes on entry and workout changes, and Workout consumes confirmed settings intents only after activation and hydration to preserve fast navigation without stale state.

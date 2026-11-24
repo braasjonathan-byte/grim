@@ -2,13 +2,14 @@ import { Capacitor } from "@capacitor/core";
 
 type CrashlyticsModule = typeof import("@capacitor-firebase/crashlytics");
 
-let crashlyticsPromise: Promise<CrashlyticsModule["FirebaseCrashlytics"] | null> | null = null;
+let crashlyticsPromise: Promise<{ plugin: CrashlyticsModule["FirebaseCrashlytics"] } | null> | null = null;
 
 const getCrashlytics = () => {
   if (!Capacitor.isNativePlatform()) return Promise.resolve(null);
   if (!crashlyticsPromise) {
     crashlyticsPromise = import("@capacitor-firebase/crashlytics")
-      .then((m) => m.FirebaseCrashlytics)
+      // Never resolve a Promise with the bare Capacitor plugin proxy.
+      .then((m) => ({ plugin: m.FirebaseCrashlytics }))
       .catch((e) => {
         console.warn("[crashlytics] plugin unavailable", e);
         return null;
@@ -18,7 +19,8 @@ const getCrashlytics = () => {
 };
 
 export const initCrashlytics = async () => {
-  const c = await getCrashlytics();
+  const loaded = await getCrashlytics();
+  const c = loaded?.plugin;
   if (!c) return;
   try {
     await c.setEnabled({ enabled: true });
@@ -38,7 +40,8 @@ export const initCrashlytics = async () => {
 };
 
 export const recordError = async (error: Error, context?: Record<string, string>) => {
-  const c = await getCrashlytics();
+  const loaded = await getCrashlytics();
+  const c = loaded?.plugin;
   if (!c) return;
   try {
     if (context) {
@@ -56,7 +59,8 @@ export const recordError = async (error: Error, context?: Record<string, string>
 };
 
 export const setCrashlyticsUserId = async (userId: string | null) => {
-  const c = await getCrashlytics();
+  const loaded = await getCrashlytics();
+  const c = loaded?.plugin;
   if (!c) return;
   try {
     await c.setUserId({ userId: userId ?? "" });
@@ -66,7 +70,8 @@ export const setCrashlyticsUserId = async (userId: string | null) => {
 };
 
 export const logCrashlyticsMessage = async (message: string) => {
-  const c = await getCrashlytics();
+  const loaded = await getCrashlytics();
+  const c = loaded?.plugin;
   if (!c) return;
   try {
     await c.log({ message });
@@ -77,7 +82,8 @@ export const logCrashlyticsMessage = async (message: string) => {
 
 // Force a native crash for testing the integration end-to-end.
 export const crashAppForTesting = async () => {
-  const c = await getCrashlytics();
+  const loaded = await getCrashlytics();
+  const c = loaded?.plugin;
   if (!c) return;
   await c.crash({ message: "Test crash from JS" });
 };
