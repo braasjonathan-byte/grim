@@ -54,8 +54,8 @@ import { findImportedHealthWorkouts, healthWorkoutDayKey, importHealthWorkouts, 
 
 const WEEKDAYS = ["sön", "mån", "tis", "ons", "tor", "fre", "lör"];
 const FEATURES: HealthFeature[] = ["activity", "workouts", "heartRate", "sleep", "weight"];
-// Sista skyddsnätet måste ligga efter native-dialogens egen diagnostik så att
-// användaren får den verkliga HC-koden i stället för ett för tidigt HC-04.
+// The data-sync deadline starts after permission choices have finished.
+// Permission UI has its own bounded, visibility-aware deadline.
 const SYNC_HARD_TIMEOUT_MS = 60000;
 /** Kopplar appen mot Apple Health / Health Connect och visar veckans rörelse. */
 const HealthConnectCard = () => {
@@ -213,8 +213,6 @@ const HealthConnectCard = () => {
       // godkännanderutan (egna hårda gränser: 12 s om ingen ruta syns, längre bara
       // medan rutan faktiskt visas). Blir det fortfarande nej ges ett tydligt fel
       // direkt – ingen datahämtning mot den hårda synkgränsen.
-      await withTimeout((async () => {
-      // Hela synken – även behörighetsfrågan – ligger under den hårda gränsen.
       // null = statusen gick inte att läsa: försök hämta data ändå (läsningen är facit).
       let current = await refreshAccess();
       if (current && !current.activity) {
@@ -233,6 +231,7 @@ const HealthConnectCard = () => {
           );
         }
       }
+      await withTimeout((async () => {
         healthLog("reading health connect");
         const windowDays = Math.max(7, syncWindowDays(getLastHealthSync()));
         const days = await readHealthDays(windowDays);

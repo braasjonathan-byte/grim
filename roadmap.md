@@ -1,5 +1,11 @@
 # Roadmap
 
+## Android flow sweep 24 November 2026
+- [x] Read native plugin loaders and all Health Connect permission entry points; found the same proxy return in interval speech and a shorter nutrition permission deadline.
+- [x] Correct interval speech initialization/speak/stop and nutrition permission waits; start the manual data-sync deadline only after permission choices finish.
+- [x] Read remaining native services, Health Connect entry points, notification senders and Android patch integration; 88 tests and Android plugin verification pass, latest automatic app check is successful. No existing records, permissions or settings were modified.
+- [ ] Physical Android permission screens, audible speech, lock-screen alerts and actual Crashlytics delivery remain unverified; requires an updated Android app and a device unavailable here.
+
 ## Android monitoring 24 November 2026
 - [x] Correct the confirmed Health Connect launcher deadline: retain the saved callback up to the existing 125-second limit after direct dispatch; keep the 8-second limit before dispatch and proxy fallback.
 - [x] Reproduce notification and Crashlytics failures using Android-like proxies, then correct promise handling; scheduling, cancellation, crash errors/context/user/logs and web no-ops pass regression tests.

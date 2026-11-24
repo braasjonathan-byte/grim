@@ -30,11 +30,12 @@ const isNative = (): boolean => {
 let _ttsMod: any | null = null;
 const getNativeTts = async (): Promise<any | null> => {
   if (!isNative()) return null;
-  if (_ttsMod) return _ttsMod;
+  if (_ttsMod) return { plugin: _ttsMod };
   try {
     const mod = await import("@capacitor-community/text-to-speech");
     _ttsMod = mod.TextToSpeech;
-    return _ttsMod;
+    // Capacitor proxies must not be resolved directly by an async function.
+    return { plugin: _ttsMod };
   } catch (e) { console.warn("[voice] native TTS import failed", e); return null; }
 };
 
@@ -219,7 +220,8 @@ const ensureNativeTtsReady = async (): Promise<boolean> => {
   if (!isNative()) return false;
   if (_nativeReadyPromise) return _nativeReadyPromise;
   _nativeReadyPromise = (async () => {
-    const tts = await getNativeTts();
+    const loaded = await getNativeTts();
+    const tts = loaded?.plugin;
     if (!tts) return false;
     const started = Date.now();
     while (Date.now() - started < 3500) {
@@ -282,7 +284,8 @@ const applyVoice = (u: SpeechSynthesisUtterance) => {
 
 const speakNative = async (text: string, queueStrategy = 0): Promise<boolean> => {
   if (!(await ensureNativeTtsReady())) return false;
-  const tts = await getNativeTts();
+  const loaded = await getNativeTts();
+  const tts = loaded?.plugin;
   if (!tts) return false;
   try {
     await tts.speak({
@@ -303,7 +306,8 @@ const speakNative = async (text: string, queueStrategy = 0): Promise<boolean> =>
 };
 
 const cancelNative = async () => {
-  const tts = await getNativeTts();
+  const loaded = await getNativeTts();
+  const tts = loaded?.plugin;
   if (tts) { try { await tts.stop(); } catch {} }
 };
 

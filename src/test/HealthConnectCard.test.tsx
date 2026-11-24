@@ -1,5 +1,6 @@
-import { describe, expect, it, vi, beforeEach } from "vitest";
-import { render, screen, waitFor, fireEvent } from "@testing-library/react";
+import { describe, expect, it, vi, beforeEach, afterEach } from "vitest";
+import { render, screen, waitFor, fireEvent, act } from "@testing-library/react";
+import { toast } from "sonner";
 import * as healthSync from "@/lib/healthSync";
 
 vi.mock("@/integrations/supabase/client", () => ({
@@ -25,6 +26,7 @@ const rows = [
 import HealthConnectCard from "@/components/HealthConnectCard";
 
 describe("HealthConnectCard", () => {
+  afterEach(() => { vi.useRealTimers(); });
   beforeEach(() => {
     vi.restoreAllMocks();
     imports.find.mockReset().mockResolvedValue(new Set());
@@ -48,6 +50,26 @@ describe("HealthConnectCard", () => {
     fireEvent.click(screen.getByRole("button", { name: mode === "single" ? /Kontrollera och importera/ : "Importera alla" }));
     await waitFor(() => expect(imports.save).toHaveBeenCalledWith("u1", [workout]));
     expect(imports.save).toHaveBeenCalledTimes(1);
+  });
+
+  it("does not apply the data-sync 60-second deadline while the user chooses permissions", async () => {
+    const denied = { activity: false, workouts: false, heartRate: false, sleep: false, weight: false };
+    const granted = { activity: true, workouts: true, heartRate: true, sleep: true, weight: true };
+    vi.spyOn(healthSync, "checkHealthAccess").mockResolvedValue(denied);
+    let finish: (value: healthSync.HealthAccess) => void = () => {};
+    vi.spyOn(healthSync, "requestHealthPermissions").mockReturnValue(new Promise(resolve => { finish = resolve; }));
+    const read = vi.spyOn(healthSync, "readHealthDays").mockResolvedValue(rows);
+    vi.spyOn(healthSync, "saveHealthDays").mockResolvedValue(undefined);
+    const errors = vi.spyOn(toast, "error");
+    render(<HealthConnectCard />);
+    await waitFor(() => expect(screen.getByRole("button", { name: /Synka hälsodata/ })).toBeEnabled());
+    vi.useFakeTimers();
+    fireEvent.click(screen.getByRole("button", { name: /Synka hälsodata/ }));
+    await act(async () => { await vi.advanceTimersByTimeAsync(61_000); });
+    expect(errors).not.toHaveBeenCalled();
+    expect(read).not.toHaveBeenCalled();
+    await act(async () => { finish(granted); await vi.advanceTimersByTimeAsync(0); });
+    expect(read).toHaveBeenCalledOnce();
   });
 
   it("visar status per datatyp och knapp för det som saknas", async () => {

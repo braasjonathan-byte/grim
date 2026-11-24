@@ -7,7 +7,7 @@
  */
 import { Capacitor, registerPlugin } from "@capacitor/core";
 import { supabase } from "@/integrations/supabase/client";
-import { healthLog, withTimeout } from "@/lib/healthSync";
+import { DIALOG_TIMEOUT_MS, DIALOG_VISIBLE_TIMEOUT_MS, healthLog, withDialogTimeout, withTimeout } from "@/lib/healthSync";
 
 type NutPlugin = {
   writeNutrition?: (o: { meals: MealExport[] }) => Promise<{ written: number }>;
@@ -71,7 +71,12 @@ const save = (s: Store) => { try { localStorage.setItem(STORE_KEY, JSON.stringif
 
 export async function requestNutritionWriteAccess(): Promise<boolean> {
   if (!Plugin.requestHealthPermissions) return false;
-  const res = await withTimeout(Plugin.requestHealthPermissions({ permissions: [...NUTRITION_WRITE_PERMS] }), 60000, "Health Connect svarade inte.");
+  const res = await withDialogTimeout(
+    Plugin.requestHealthPermissions({ permissions: [...NUTRITION_WRITE_PERMS] }),
+    "Health Connect svarade inte.",
+    DIALOG_TIMEOUT_MS,
+    DIALOG_VISIBLE_TIMEOUT_MS,
+  );
   const p = res?.permissions ?? res ?? {};
   const val = (k: string) => (Array.isArray(p) ? p.some((x: any) => x?.[k] === true) : p?.[k] === true);
   return val("WRITE_NUTRITION") || val("WRITE_HYDRATION");
