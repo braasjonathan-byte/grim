@@ -101,9 +101,16 @@ describe("Android-konfiguration för Health Connect", () => {
     expect(race).toContain("}, 120_000)");
     expect(race).not.toContain("}, 400)");
     const request = read("scripts/patch-health-permission-request.cjs");
-    expect(request).toContain("GRIM_REQUEST_DEADLINE_V2");
-    expect(request).toContain("GrimHcDiag.sheetVisibleAt >= requestStartedAt");
+    expect(request).toContain("GRIM_REQUEST_DEADLINE_V3");
+    expect(request).not.toContain("GRIM_REQUEST_DEADLINE_V2");
+    expect(request).toContain("val launcherDispatched = java.util.concurrent.atomic.AtomicBoolean(false)");
+    expect(request).toContain("launcherDispatched.set(true)");
+    expect(request).toMatch(/val sheetShown = launcherDispatched\.get\(\) \|\|\s*\(try \{ GrimHcDiag\.sheetVisibleAt >= requestStartedAt \}/);
+    expect(request).toContain("if (sheetShown && elapsed < 125_000)");
     expect(request).toContain("125_000");
+    expect(request).toContain("deadlineHandler.postDelayed(deadline, 8000)");
+    expect(request).toContain('else "HC_NATIVE_04: no permission result in 8s"');
+    expect(request).toContain('if (sheetShown) "HC_NATIVE_04: no permission result in 125s"');
     const proxy = read("node_modules/capacitor-health/android/src/main/java/com/fit_up/health/capacitor/HealthPermissionProxyActivity.kt");
     expect(proxy).toContain("GRIM_RESUME_GRACE");
     expect(proxy).toContain("var sheetVisibleAt: Long = 0L");
@@ -153,7 +160,14 @@ describe("Android-konfiguration för Health Connect", () => {
     expect(pkg.scripts.postinstall).toContain("patch-capacitor-health.cjs");
     expect(pkg.scripts.postinstall).toContain("patch-open-health-settings.cjs");
     expect(pkg.scripts.postinstall).toContain("patch-health-permission-request.cjs");
-    expect(read("scripts/patch-health-permission-request.cjs")).toContain('healthTrace("dialog-launch-attempt", "route=proxy")');
+    const request = read("scripts/patch-health-permission-request.cjs");
+    expect(request).toContain('healthTrace("dialog-launch-attempt", "route=launcher")');
+    expect(request).toContain('healthTrace("dialog-launch-attempt", "route=proxy-fallback")');
+    expect(request).toContain('healthTrace("dialog-launch-attempt", "route=already-granted")');
+    expect(request).not.toContain('healthTrace("dialog-launch-attempt", "route=proxy")');
+    expect(pkg.scripts.postinstall.indexOf("patch-capacitor-health.cjs")).toBeLessThan(
+      pkg.scripts.postinstall.indexOf("patch-health-permission-request.cjs"),
+    );
 
     const patch = read("scripts/patch-capacitor-health.cjs");
     expect(patch).toContain("GRIM_PERMISSION_PROXY_ACTIVITY");
