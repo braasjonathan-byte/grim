@@ -23,6 +23,28 @@ const REMEMBER_KEY = "grim_hr_device_v1";
 const isNative = Capacitor.isNativePlatform();
 const isWeb = !isNative;
 
+/** Pulsband via Bluetooth kräver Android 12+, eftersom Grim inte längre har platsbehörighet. */
+export const OLD_ANDROID_HR_MESSAGE = "Pulsband kräver Android 12 eller senare.";
+
+/** Android-huvudversion ur user agent (WebView), annars null. */
+export const androidMajorFromUserAgent = (ua: string): number | null => {
+  const m = /Android (\d+)/.exec(ua);
+  return m ? Number(m[1]) : null;
+};
+
+type BleClientType = typeof import("@capacitor-community/bluetooth-le").BleClient;
+
+/** Startar BLE utan platskrav; på Android 11 och äldre ger ett fel en tydlig text i stället. */
+export const initBle = async (ble: Pick<BleClientType, "initialize">, ua = typeof navigator !== "undefined" ? navigator.userAgent : "") => {
+  try {
+    await ble.initialize({ androidNeverForLocation: true });
+  } catch (err) {
+    const major = androidMajorFromUserAgent(ua);
+    if (major !== null && major < 12) throw new Error(OLD_ANDROID_HR_MESSAGE);
+    throw err;
+  }
+};
+
 let snapshot: Snapshot = {
   bpm: null,
   connected: false,
@@ -243,7 +265,7 @@ export const scanHeartRateDevices = async (
   }
 
   const { BleClient } = await import("@capacitor-community/bluetooth-le");
-  await BleClient.initialize({ androidNeverForLocation: false });
+  await initBle(BleClient);
 
   // Redan anslutna/parade pulsmätare (t.ex. via systemet) visas direkt överst.
   try {
@@ -286,7 +308,7 @@ export const connectHeartRateDevice = async (device: ScanDevice): Promise<void> 
     if (isNative) {
       await stopHeartRateScan();
       const { BleClient } = await import("@capacitor-community/bluetooth-le");
-      await BleClient.initialize({ androidNeverForLocation: false });
+      await initBle(BleClient);
       await nativeStart(device.id, device.name);
     } else {
       if (!webPickedDevice) throw new Error("Ingen enhet vald");
@@ -306,7 +328,7 @@ const nativeConnect = async (silent: boolean): Promise<void> => {
   const { BleClient } = await import("@capacitor-community/bluetooth-le");
   setSnap({ connecting: true, error: null });
   try {
-    await BleClient.initialize({ androidNeverForLocation: false });
+    await initBle(BleClient);
 
     // Silent path: try the remembered device id first (no scan needed)
     const remembered = getRemembered();

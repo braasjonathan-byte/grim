@@ -45,6 +45,8 @@ describe("Android release assets and symbols", () => {
       expect(xml).not.toContain('foregroundServiceType="location"');
       expect(xml).toContain('android:name="android.permission.health.READ_EXERCISE_ROUTES"');
       expect(xml).toContain('android:name="android.permission.health.READ_HEALTH_DATA_IN_BACKGROUND"');
+      // Pulsbandet (BLE) får inte kräva plats på Android 12+.
+      expect(xml).toMatch(/<uses-permission\b[^>]*android:name="android\.permission\.BLUETOOTH_SCAN"[^>]*android:usesPermissionFlags="neverForLocation"/);
     };
     check(read("android/app/src/main/AndroidManifest.xml"));
     const dir = mkdtempSync(join(tmpdir(), "grim-noloc-"));
