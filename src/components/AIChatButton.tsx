@@ -237,7 +237,10 @@ const AIChatButton = ({ userId, currentWeek = 1, onActionsExecuted }: AIChatButt
 
       {/* Chat popup - Messenger style */}
       {open && (
-        <div className="fixed bottom-20 right-3 z-50 w-[calc(100vw-1.5rem)] max-w-sm h-[28rem] flex flex-col bg-background border border-border rounded-2xl shadow-2xl overflow-hidden">
+        <div
+          className="fixed right-3 z-[70] w-[calc(100vw-1.5rem)] max-w-sm h-[28rem] flex flex-col bg-background border border-border rounded-2xl shadow-2xl overflow-hidden"
+          style={{ bottom: "var(--grim-bottom-nav-offset)" }}
+        >
           {/* Header */}
           <div className="flex items-center justify-between px-4 py-3 border-b border-border bg-background/95 backdrop-blur-sm">
             <div className="flex items-center gap-2.5">

@@ -316,6 +316,13 @@
       "when": 1794834596338,
       "tag": "0044_sparring_preserve_roster_format",
       "breakpoints": true
+    },
+    {
+      "idx": 45,
+      "version": "7",
+      "when": 1795596908152,
+      "tag": "0045_add_weighted_bodyweight_override",
+      "breakpoints": true
     }
   ]
 }

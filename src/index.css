@@ -209,6 +209,17 @@
     --grim-bottom-safe: max(env(safe-area-inset-bottom), 48px);
   }
 
+  :root {
+    /* Clears the fixed bottom tab bar (~64px) + gap + system navigation bar / safe area */
+    --grim-bottom-nav-offset: calc(4.75rem + var(--grim-bottom-safe, env(safe-area-inset-bottom, 0px)));
+  }
+
+  /* Guarantee Sonner toasts never render behind the bottom tab bar or Android system nav bar */
+  [data-sonner-toaster][data-y-position="bottom"] {
+    bottom: var(--grim-bottom-nav-offset) !important;
+    z-index: 110 !important;
+  }
+
   html.light body {
     color-scheme: light;
   }

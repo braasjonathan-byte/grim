@@ -11,12 +11,18 @@ const UNITS: { v: ExerciseUnit | ""; label: string }[] = [
   { v: "", label: "Automatiskt" }, { v: "reps", label: "Reps" }, { v: "seconds", label: "Sekunder" }, { v: "meters", label: "Meter" },
 ];
 const BW: { v: string; label: string }[] = [{ v: "", label: "Automatiskt" }, { v: "true", label: "Kroppsvikt" }, { v: "false", label: "Med vikt" }];
+const WEIGHTED_BW: { v: string; label: string }[] = [
+  { v: "", label: "Automatiskt" },
+  { v: "true", label: "På (+/- kg)" },
+  { v: "false", label: "Av" },
+];
 
 export default function AdminExerciseUnits({ userId }: { userId: string }) {
   const ov = useUnitOverrides();
   const [name, setName] = useState("");
   const [unit, setUnit] = useState<ExerciseUnit | "">("");
   const [bw, setBw] = useState("");
+  const [weightedBw, setWeightedBw] = useState("");
   const names = useMemo(() => exerciseLibrary.map((e: any) => e.name as string), []);
   const matches = name.trim().length > 1 ? names.filter((n) => n.toLowerCase().includes(name.trim().toLowerCase())).slice(0, 6) : [];
 
@@ -24,23 +30,28 @@ export default function AdminExerciseUnits({ userId }: { userId: string }) {
     setName(n);
     const o = ov.get(n.toLowerCase());
     setUnit(o?.unit ?? ""); setBw(o?.bodyweight == null ? "" : String(o.bodyweight));
+    setWeightedBw(o?.weighted_bodyweight == null ? "" : String(o.weighted_bodyweight));
   };
 
   const save = async () => {
     const n = name.trim();
     if (!n) return toast.error("Skriv övningens namn");
-    if (!unit && !bw) {
+    if (!unit && !bw && !weightedBw) {
       await supabase.from("exercise_unit_overrides").delete().eq("exercise_name_lower", n.toLowerCase());
     } else {
       const { error } = await supabase.from("exercise_unit_overrides").upsert({
-        exercise_name_lower: n.toLowerCase(), exercise_name: n, unit: unit || null, bodyweight: bw === "" ? null : bw === "true",
+        exercise_name_lower: n.toLowerCase(),
+        exercise_name: n,
+        unit: unit || null,
+        bodyweight: bw === "" ? null : bw === "true",
+        weighted_bodyweight: weightedBw === "" ? null : weightedBw === "true",
         updated_at: new Date().toISOString(), updated_by: userId,
       });
       if (error) return toast.error(error.message);
     }
     await loadUnitOverrides();
     toast.success("Sparat — gäller för alla i passen");
-    setName(""); setUnit(""); setBw("");
+    setName(""); setUnit(""); setBw(""); setWeightedBw("");
   };
 
   const remove = async (lower: string) => {
@@ -63,6 +74,9 @@ export default function AdminExerciseUnits({ userId }: { userId: string }) {
           <select value={bw} onChange={(e) => setBw(e.target.value)} className={sel}>{BW.map((u) => <option key={u.v} value={u.v}>{u.label}</option>)}</select>
         </label>
       </div>
+      <label className="block text-[11px] text-muted-foreground">Kroppsvikt med extra vikt (+/-)
+        <select value={weightedBw} onChange={(e) => setWeightedBw(e.target.value)} className={sel}>{WEIGHTED_BW.map((u) => <option key={u.v} value={u.v}>{u.label}</option>)}</select>
+      </label>
       <Button size="sm" onClick={save}>Spara</Button>
       {ov.size > 0 && (
         <ul className="divide-y divide-border pt-2">
@@ -71,7 +85,11 @@ export default function AdminExerciseUnits({ userId }: { userId: string }) {
               <button className="flex-1 text-left" onClick={() => pick(o.exercise_name)}>
                 {o.exercise_name}
                 <span className="block text-[11px] text-muted-foreground">
-                  {[UNITS.find((u) => u.v === (o.unit ?? ""))?.label, o.bodyweight == null ? null : o.bodyweight ? "Kroppsvikt" : "Med vikt"].filter(Boolean).join(" · ")}
+                  {[
+                    UNITS.find((u) => u.v === (o.unit ?? ""))?.label,
+                    o.bodyweight == null ? null : o.bodyweight ? "Kroppsvikt" : "Med vikt",
+                    o.weighted_bodyweight == null ? null : o.weighted_bodyweight ? "Kroppsvikt +/- kg" : "Ej kroppsvikt +/- kg",
+                  ].filter(Boolean).join(" · ")}
                 </span>
               </button>
               <button aria-label={`Ta bort ${o.exercise_name}`} onClick={() => remove(lower)} className="text-muted-foreground"><Trash2 className="w-4 h-4" /></button>

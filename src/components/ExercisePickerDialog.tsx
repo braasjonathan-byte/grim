@@ -428,7 +428,7 @@ const ExercisePickerDialog = ({
 
         {/* Create custom exercise */}
         {allowCreate && userId && (
-          <div className="flex-shrink-0 border-t border-border px-4 py-3" style={{ paddingBottom: "max(0.75rem, env(safe-area-inset-bottom))" }}>
+          <div className="flex-shrink-0 border-t border-border px-4 py-3" style={{ paddingBottom: "max(0.75rem, var(--grim-bottom-safe, env(safe-area-inset-bottom, 0px)))" }}>
             {showCreate ? (
               <div className="space-y-2 animate-fade-in">
                 <input

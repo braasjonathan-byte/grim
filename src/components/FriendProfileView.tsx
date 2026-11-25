@@ -322,7 +322,10 @@ const FriendProfileView = ({ friendUserId, nickname, onClose, embedded = false }
   return (
     <>
       {!embedded && <div className="fixed inset-0 z-[60] bg-background/80" onClick={handleClose} />}
-      <div className={embedded ? "flex flex-col" : "fixed inset-x-3 bottom-3 z-[70] max-w-sm mx-auto bg-card border border-border rounded-2xl overflow-hidden flex flex-col max-h-[85dvh]"}>
+      <div
+        className={embedded ? "flex flex-col" : "fixed inset-x-3 z-[70] max-w-sm mx-auto bg-card border border-border rounded-2xl overflow-hidden flex flex-col max-h-[85dvh]"}
+        style={embedded ? undefined : { bottom: "var(--grim-bottom-nav-offset)" }}
+      >
          <div className="flex items-center justify-between p-4 border-b border-border">
            <div className="flex items-center gap-3">
              <Button variant="ghost"

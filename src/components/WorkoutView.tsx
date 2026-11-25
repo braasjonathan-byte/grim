@@ -13,7 +13,7 @@ import { WorkoutNamePrompt, UncheckedSetsPrompt, BodyWeightPrompt } from "@/comp
 import { SaveWorkoutDialog, WorkoutSessionSettingsDialog, ShareWorkoutChatDialog } from "@/components/workout/WorkoutSessionDialogs";
 import { ChangeWorkoutDayDialog, CopyWorkoutDateDialog, AddWorkoutWeekDialog } from "@/components/workout/WorkoutScheduleDialogs";
 import { getProgramWeekPlans, getWorkoutDisplayDay, isWorkoutDayDone } from "@/lib/healthProgramVisibility";
-import { useUnitOverrides } from "@/lib/exerciseUnits";
+import { useUnitOverrides, resolveExerciseWeightMode } from "@/lib/exerciseUnits";
 import { formatDecimal, isPlausibleSet, validateNumber } from "@/lib/inputValidation";
 import { validateCardioEntry } from "@/lib/inputValidation";
 import { fuzzyFilterSort, fuzzyScoreMulti } from "@/lib/fuzzySearch";
@@ -8057,13 +8057,11 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack, acti
                                     const circuitSecMatch = plan.is_circuit ? plan.tempo?.match(/^circuit:(\d+)(?::\d+)?(?::\d+)?$/) : null;
                                     const circuitDefaultSec = circuitSecMatch ? circuitSecMatch[1] : null;
                                     const defReps = circuitDefaultSec || partReps || repsStr || "10";
-                                     // Detect bodyweight exercises that don't need kg input
-                                    const bodyweightExercises = ["box jumps", "burpees", "pull-ups", "pull ups", "armhävningar", "push-ups", "push ups", "planka", "dead bug", "bird dog", "sit-ups", "sit ups", "mountain climbers", "jumping jacks", "jump squats", "pistol squats", "handstand", "muscle-ups", "muscle ups", "ring rows", "v-ups", "toes to bar", "knees to elbow"];
-                                    const isBodyweight = unitOv.get(partName.trim().toLowerCase())?.bodyweight ?? (bodyweightExercises.some(bw => partName.toLowerCase().includes(bw)) || /max$/i.test(defReps));
-                                    // Weighted bodyweight exercises: user lifts bodyweight +/- additional weight
-                                    const weightedBwExercises = ["dips"];
                                     const matchedExForBw = allExercises.find(e => e.name.toLowerCase() === partName.toLowerCase());
-                                    const isWeightedBw = weightedBwExercises.some(bw => partName.toLowerCase().includes(bw)) || (matchedExForBw?.isBodyweightExercise === true);
+                                    const { isBodyweight, isWeightedBw } = resolveExerciseWeightMode(partName, unitOv, {
+                                      defReps,
+                                      isCustomBodyweight: matchedExForBw?.isBodyweightExercise === true,
+                                    });
                                     const repsHeader = (unitLabelOv(partName) ?? (/farmers?\s*walk|yoke\s*walk|sled|bear\s*crawl/i.test(partName) ? "m" : (plan.is_circuit || partIsTimeBased || /^(sido)?planka$|^vila$/i.test(partName.trim()) || customExercises.find(ce => ce.name.toLowerCase() === partName.trim().toLowerCase())?.is_time_based) ? "sek" : "reps")).toUpperCase();
                                     const v2Header = (
                                       <div key="hdr" className="flex items-center gap-1.5 px-1 text-[9px] font-semibold tracking-wider text-muted-foreground">

@@ -820,6 +820,7 @@ export type Database = {
           unit: string | null
           updated_at: string
           updated_by: string | null
+          weighted_bodyweight: boolean | null
         }
         Insert: {
           bodyweight?: boolean | null
@@ -828,6 +829,7 @@ export type Database = {
           unit?: string | null
           updated_at?: string
           updated_by?: string | null
+          weighted_bodyweight?: boolean | null
         }
         Update: {
           bodyweight?: boolean | null
@@ -836,6 +838,7 @@ export type Database = {
           unit?: string | null
           updated_at?: string
           updated_by?: string | null
+          weighted_bodyweight?: boolean | null
         }
         Relationships: []
       }
