@@ -184,6 +184,17 @@ jobs:
           echo "aab_path=$AAB" >> $GITHUB_OUTPUT
           echo "Found AAB at: $AAB"
 
+      # Grim spelar inte in pass med GPS: inga platsbehörigheter eller GPS-tjänst
+      # får finnas i det sammanslagna manifestet (inte heller via plugins).
+      - name: Verify no location permissions in AAB
+        run: |
+          MANIFEST_STRINGS=$(unzip -p "${{ steps.aab.outputs.aab_path }}" base/manifest/AndroidManifest.xml | strings)
+          if echo "$MANIFEST_STRINGS" | grep -E "ACCESS_FINE_LOCATION|ACCESS_COARSE_LOCATION|ACCESS_BACKGROUND_LOCATION|FOREGROUND_SERVICE_LOCATION|GrimGpsService"; then
+            echo "ERROR: AAB manifest still contains location permissions or GrimGpsService"
+            exit 1
+          fi
+          echo "OK: no location permissions in AAB manifest"
+
       - name: Locate mapping.txt (R8 deobfuscation)
         id: mapping
         run: |

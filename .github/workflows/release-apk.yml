@@ -134,7 +134,7 @@ jobs:
 
       # -------------------------
       # Patch AndroidManifest with required permissions
-      # (location, notifications, bluetooth, camera, mlkit metadata)
+      # (notifications, bluetooth, camera, mlkit metadata; location removed)
       # -------------------------
       - name: Patch AndroidManifest
         run: node scripts/patch-android-manifest.cjs
