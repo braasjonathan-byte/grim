@@ -8,7 +8,7 @@ export interface SessionHeartRate {
   min: number;
   /** Nedsamplad serie (max 90 punkter) för pulskurvan */
   series: number[];
-  /** Full serie (≈1 värde/5 s) för export till t.ex. Strava, max 2 h */
+  /** Full serie (≈1 värde/5 s), max 2 h */
   raw?: { t: number; bpm: number }[];
   start: string;
   end: string;

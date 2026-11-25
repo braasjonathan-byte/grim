@@ -1,6 +1,7 @@
 import { Capacitor, registerPlugin } from "@capacitor/core";
 import { supabase } from "@/integrations/supabase/client";
 import { downsampleHr } from "@/lib/hrCurve";
+import { toRoutePoints, type RoutePoint } from "@/lib/importedRoute";
 
 export type HealthDay = {
   day: string;
@@ -185,6 +186,8 @@ export type RawHealthWorkout = {
   steps?: number;
   calories: number;
   heartRate?: { timestamp: string; bpm: number }[];
+  /** ExerciseRoute – finns bara när Health Connect lämnar ut rutten (READ_EXERCISE_ROUTES). */
+  route?: { timestamp?: string; lat: number; lng: number; alt?: number }[];
 };
 
 const Health = registerPlugin<HealthPluginLike>("HealthPlugin");
@@ -1026,6 +1029,8 @@ export type HealthWorkout = {
   hrCurve?: number[] | null;
   /** Paketnamn för appen som skrev passet till Health Connect. */
   sourceBundleId?: string;
+  /** Nedsamplad rutt [lat, lng] om Health Connect lämnade ut den (visas som karta). */
+  route?: RoutePoint[] | null;
 };
 
 const WORKOUT_LABELS: Array<[RegExp, string]> = [
@@ -1096,8 +1101,12 @@ export function dedupeWorkouts(list: HealthWorkout[]): HealthWorkout[] {
     });
     if (index === -1) {
       kept.push(w);
-    } else if (score(w) > score(kept[index])) {
-      kept[index] = w;
+    } else {
+      const prev = kept[index];
+      const winner = score(w) > score(prev) ? w : prev;
+      const loser = winner === w ? prev : w;
+      // Rutten följer med även om den finns på dubbletten (t.ex. klockans pass).
+      kept[index] = !winner.route?.length && loser.route?.length ? { ...winner, route: loser.route } : winner;
     }
   }
   return kept;
@@ -1105,7 +1114,8 @@ export function dedupeWorkouts(list: HealthWorkout[]): HealthWorkout[] {
 
 
 /** Läser genomförda pass från hälsoappen (inkl. Samsung Health via Health Connect). */
-export async function readHealthWorkouts(days = 30): Promise<HealthWorkout[]> {
+export async function readHealthWorkouts(days = 30, opts: { includeRoute?: boolean } = {}): Promise<HealthWorkout[]> {
+  const includeRoute = opts.includeRoute ?? true;
   const plugin = loadPlugin();
   if (!plugin) throw new HealthError("unknown", "Hälsodata är bara tillgängligt i Grim-appen på mobilen.");
 
@@ -1117,7 +1127,9 @@ export async function readHealthWorkouts(days = 30): Promise<HealthWorkout[]> {
       startDate: start.toISOString(),
       endDate: end.toISOString(),
       includeHeartRate: true,
-      includeRoute: false,
+      // Rutten lämnas bara ut om användaren gett Grim åtkomst till träningsrutter
+      // i Health Connect; annars (ConsentRequired/NoData) saknas den bara.
+      includeRoute,
       includeSteps: true,
     }),
     STEP_TIMEOUT_MS,
@@ -1159,6 +1171,7 @@ export async function readHealthWorkouts(days = 30): Promise<HealthWorkout[]> {
         maxHeartRate: bpms.length ? Math.max(...bpms) : null,
         minHeartRate: bpms.length ? Math.min(...bpms) : null,
         hrCurve: bpms.length > 1 ? downsampleHr(w.heartRate ?? []) : null,
+        route: includeRoute ? toRoutePoints(w.route) : null,
       } satisfies HealthWorkout;
     });
   // GRIM_HC_WRITE: pass som Grim själv skrivit ska inte importeras tillbaka (loop).

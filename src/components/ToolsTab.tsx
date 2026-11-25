@@ -113,7 +113,7 @@ interface ToolGroup {
 
 const SETTINGS_CATEGORIES: { id: SettingsCategory; title: string; subtitle: string; icon: LucideIcon }[] = [
   { id: "profile", title: "Profil", subtitle: "Kroppsdata, titel och sociala medier", icon: UserRound },
-  { id: "training", title: "Träning", subtitle: "Vilotimer, ljud, GPS, skärm vaken, planer och Strava", icon: Dumbbell },
+  { id: "training", title: "Träning", subtitle: "Vilotimer, ljud, skärm vaken och planer", icon: Dumbbell },
   { id: "nutrition", title: "Kost", subtitle: "Kostmål, adaptiv förbrukning och periodisk fasta", icon: Apple },
   { id: "permissions", title: "Notiser", subtitle: "Push-notiser och påminnelser", icon: Bell },
   { id: "privacy", title: "Integritet", subtitle: "Delning, synlighet och blockeringar", icon: ShieldCheck },

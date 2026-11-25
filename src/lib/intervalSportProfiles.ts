@@ -31,58 +31,56 @@ export interface IntervalSportProfile {
   paceUnit: string;
   /** Spoken pace phrase, e.g. "per kilometer", "kilometer i timmen", "per 100 meter". */
   paceSpoken: string;
-  /** Whether GPS makes sense for this sport (outdoor). */
-  supportsGps: boolean;
 }
 
 const PROFILES: Array<{ match: RegExp; profile: IntervalSportProfile }> = [
   {
     match: /(?:^|[\s\-–])(löpning|löp|jogg|tröskellöp|långpass|sprint)/i,
-    profile: { sport: "löpning", defaultUnit: "distance_m", availableUnits: ["distance_m","distance_km","time"], defaultValue: 400, defaultRestSec: 90, defaultWarmupMin: 10, defaultCooldownMin: 5, paceLabel: "Tempo", paceUnit: "/km", paceSpoken: "per kilometer", supportsGps: true },
+    profile: { sport: "löpning", defaultUnit: "distance_m", availableUnits: ["distance_m","distance_km","time"], defaultValue: 400, defaultRestSec: 90, defaultWarmupMin: 10, defaultCooldownMin: 5, paceLabel: "Tempo", paceUnit: "/km", paceSpoken: "per kilometer" },
   },
   {
     match: /cykling|cykel|spinning|zwift/i,
-    profile: { sport: "cykling", defaultUnit: "distance_km", availableUnits: ["distance_km","distance_m","time"], defaultValue: 2, defaultRestSec: 120, defaultWarmupMin: 10, defaultCooldownMin: 5, paceLabel: "Fart", paceUnit: "km/h", paceSpoken: "kilometer i timmen", supportsGps: true },
+    profile: { sport: "cykling", defaultUnit: "distance_km", availableUnits: ["distance_km","distance_m","time"], defaultValue: 2, defaultRestSec: 120, defaultWarmupMin: 10, defaultCooldownMin: 5, paceLabel: "Fart", paceUnit: "km/h", paceSpoken: "kilometer i timmen" },
   },
   {
     match: /simning|sim\b/i,
-    profile: { sport: "simning", defaultUnit: "distance_m", availableUnits: ["distance_m","time","laps"], defaultValue: 100, defaultRestSec: 30, defaultWarmupMin: 5, defaultCooldownMin: 3, paceLabel: "Tempo", paceUnit: "/100m", paceSpoken: "per 100 meter", supportsGps: false },
+    profile: { sport: "simning", defaultUnit: "distance_m", availableUnits: ["distance_m","time","laps"], defaultValue: 100, defaultRestSec: 30, defaultWarmupMin: 5, defaultCooldownMin: 3, paceLabel: "Tempo", paceUnit: "/100m", paceSpoken: "per 100 meter" },
   },
   {
     match: /roddmaskin|^rodd|skierg|ski erg/i,
-    profile: { sport: "rodd", defaultUnit: "distance_m", availableUnits: ["distance_m","time","calories"], defaultValue: 500, defaultRestSec: 90, defaultWarmupMin: 5, defaultCooldownMin: 3, paceLabel: "Tempo", paceUnit: "/500m", paceSpoken: "per 500 meter", supportsGps: false },
+    profile: { sport: "rodd", defaultUnit: "distance_m", availableUnits: ["distance_m","time","calories"], defaultValue: 500, defaultRestSec: 90, defaultWarmupMin: 5, defaultCooldownMin: 3, paceLabel: "Tempo", paceUnit: "/500m", paceSpoken: "per 500 meter" },
   },
   {
     match: /crosstrainer/i,
-    profile: { sport: "crosstrainer", defaultUnit: "time", availableUnits: ["time","distance_km","calories"], defaultValue: 60, defaultRestSec: 60, defaultWarmupMin: 5, defaultCooldownMin: 3, paceLabel: "Fart", paceUnit: "km/h", paceSpoken: "kilometer i timmen", supportsGps: false },
+    profile: { sport: "crosstrainer", defaultUnit: "time", availableUnits: ["time","distance_km","calories"], defaultValue: 60, defaultRestSec: 60, defaultWarmupMin: 5, defaultCooldownMin: 3, paceLabel: "Fart", paceUnit: "km/h", paceSpoken: "kilometer i timmen" },
   },
   {
     match: /trappmaskin|stair\s*machine|stairclimber/i,
-    profile: { sport: "trappmaskin", defaultUnit: "time", availableUnits: ["time","calories"], defaultValue: 60, defaultRestSec: 60, defaultWarmupMin: 5, defaultCooldownMin: 3, paceLabel: "Steg/min", paceUnit: "spm", paceSpoken: "steg per minut", supportsGps: false },
+    profile: { sport: "trappmaskin", defaultUnit: "time", availableUnits: ["time","calories"], defaultValue: 60, defaultRestSec: 60, defaultWarmupMin: 5, defaultCooldownMin: 3, paceLabel: "Steg/min", paceUnit: "spm", paceSpoken: "steg per minut" },
   },
   {
     match: /airbike|air bike|assault\s*bike/i,
-    profile: { sport: "airbike", defaultUnit: "calories", availableUnits: ["calories","time","distance_km"], defaultValue: 10, defaultRestSec: 60, defaultWarmupMin: 3, defaultCooldownMin: 2, paceLabel: "Watt", paceUnit: "W", paceSpoken: "watt", supportsGps: false },
+    profile: { sport: "airbike", defaultUnit: "calories", availableUnits: ["calories","time","distance_km"], defaultValue: 10, defaultRestSec: 60, defaultWarmupMin: 3, defaultCooldownMin: 2, paceLabel: "Watt", paceUnit: "W", paceSpoken: "watt" },
   },
   {
     match: /hopprep|jump rope/i,
-    profile: { sport: "hopprep", defaultUnit: "time", availableUnits: ["time","reps"], defaultValue: 60, defaultRestSec: 30, defaultWarmupMin: 2, defaultCooldownMin: 2, paceLabel: "Frekvens", paceUnit: "/min", paceSpoken: "hopp per minut", supportsGps: false },
+    profile: { sport: "hopprep", defaultUnit: "time", availableUnits: ["time","reps"], defaultValue: 60, defaultRestSec: 30, defaultWarmupMin: 2, defaultCooldownMin: 2, paceLabel: "Frekvens", paceUnit: "/min", paceSpoken: "hopp per minut" },
   },
   {
     match: /promenad|vandring|(?<![-\w])gång(?![-\w])/i,
-    profile: { sport: "promenad", defaultUnit: "time", availableUnits: ["time","distance_km","distance_m"], defaultValue: 120, defaultRestSec: 60, defaultWarmupMin: 5, defaultCooldownMin: 5, paceLabel: "Tempo", paceUnit: "/km", paceSpoken: "per kilometer", supportsGps: true },
+    profile: { sport: "promenad", defaultUnit: "time", availableUnits: ["time","distance_km","distance_m"], defaultValue: 120, defaultRestSec: 60, defaultWarmupMin: 5, defaultCooldownMin: 5, paceLabel: "Tempo", paceUnit: "/km", paceSpoken: "per kilometer" },
   },
   {
     match: /skidåkning|skidor|längdskid/i,
-    profile: { sport: "skidåkning", defaultUnit: "distance_km", availableUnits: ["distance_km","distance_m","time"], defaultValue: 1, defaultRestSec: 90, defaultWarmupMin: 10, defaultCooldownMin: 5, paceLabel: "Tempo", paceUnit: "/km", paceSpoken: "per kilometer", supportsGps: true },
+    profile: { sport: "skidåkning", defaultUnit: "distance_km", availableUnits: ["distance_km","distance_m","time"], defaultValue: 1, defaultRestSec: 90, defaultWarmupMin: 10, defaultCooldownMin: 5, paceLabel: "Tempo", paceUnit: "/km", paceSpoken: "per kilometer" },
   },
   {
     match: /skridsko/i,
-    profile: { sport: "skridsko", defaultUnit: "distance_m", availableUnits: ["distance_m","distance_km","time"], defaultValue: 400, defaultRestSec: 90, defaultWarmupMin: 5, defaultCooldownMin: 5, paceLabel: "Tempo", paceUnit: "/km", paceSpoken: "per kilometer", supportsGps: true },
+    profile: { sport: "skridsko", defaultUnit: "distance_m", availableUnits: ["distance_m","distance_km","time"], defaultValue: 400, defaultRestSec: 90, defaultWarmupMin: 5, defaultCooldownMin: 5, paceLabel: "Tempo", paceUnit: "/km", paceSpoken: "per kilometer" },
   },
   {
     match: /paddling|kajak|kanot/i,
-    profile: { sport: "paddling", defaultUnit: "distance_m", availableUnits: ["distance_m","distance_km","time"], defaultValue: 500, defaultRestSec: 90, defaultWarmupMin: 5, defaultCooldownMin: 5, paceLabel: "Tempo", paceUnit: "/500m", paceSpoken: "per 500 meter", supportsGps: true },
+    profile: { sport: "paddling", defaultUnit: "distance_m", availableUnits: ["distance_m","distance_km","time"], defaultValue: 500, defaultRestSec: 90, defaultWarmupMin: 5, defaultCooldownMin: 5, paceLabel: "Tempo", paceUnit: "/500m", paceSpoken: "per 500 meter" },
   },
 ];
 

@@ -19,9 +19,6 @@ const native = vi.hoisted(() => {
 });
 vi.mock("@capacitor-community/text-to-speech", () => ({ TextToSpeech: native.plugin }));
 vi.mock("@capacitor/core", () => ({ CapacitorHttp: { post: vi.fn(async () => { throw new Error("AI speech unavailable"); }) } }));
-vi.mock("@/hooks/useGpsTracker", () => ({ useGpsTracker: () => ({
-  start: async () => true, isTracking: false, isPaused: false, distanceKm: 0,
-}) }));
 
 it("initializes, speaks through the native fallback and stops on pause without resolving the plugin proxy", async () => {
   vi.stubGlobal("Capacitor", { isNativePlatform: () => true });

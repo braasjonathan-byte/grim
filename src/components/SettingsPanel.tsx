@@ -1,12 +1,9 @@
 import { lazyRetry } from "@/lib/lazyRetry";
-import StravaExportControls from "@/components/StravaExportControls";
 import { useAccessLevel } from "@/hooks/useAccessLevel";
-import { useState, useEffect, useRef, lazy, Suspense, useCallback } from "react";
+import { useState, useEffect, useRef, lazy, Suspense } from "react";
 import { toast } from "sonner";
-import { Check, Loader2, ChevronDown, Smartphone, Mail, KeyRound, LogOut, Volume2, Link2, Unlink, RefreshCw, Fingerprint, BarChart3, MapPin, Dumbbell, Trash2, Timer } from "lucide-react";
+import { Check, Loader2, ChevronDown, Smartphone, Mail, KeyRound, LogOut, Volume2, Fingerprint, BarChart3, Dumbbell, Trash2, Timer } from "lucide-react";
 import { isFastingEnabled, setFastingEnabled } from "@/components/FastingWidget";
-import { getGpsVoiceIntervalMin, setGpsVoiceIntervalMin, getGpsVoiceIntervalKm, setGpsVoiceIntervalKm, speakPace } from "@/lib/gpsSettings";
-import { Slider } from "@/components/ui/slider";
 import ThemePicker from "@/components/ThemePicker";
 import { getStoredThemeId } from "@/lib/themes";
 import { supabase } from "@/integrations/supabase/client";
@@ -51,8 +48,6 @@ const SettingsPanel = ({ userId, isAdmin, isHonorary = false, category = "all", 
   const navigate = useNavigate();
   const [colorTheme, setColorTheme] = useState(getStoredThemeId());
   const { state: cardioVis, set: setCardioVis } = useCardioVisibility();
-  const [gpsVoiceMin, setGpsVoiceMinState] = useState<number>(() => getGpsVoiceIntervalMin());
-  const [gpsVoiceKm, setGpsVoiceKmState] = useState<number>(() => getGpsVoiceIntervalKm());
 
   // Behörighet läses alltid från den centrala källan (user_roles + is_honorary).
   // Admin/Skapare räknas alltid som hedersmedlem.
@@ -94,46 +89,6 @@ const SettingsPanel = ({ userId, isAdmin, isHonorary = false, category = "all", 
   const [emailDirty, setEmailDirty] = useState(false);
   const [hasEmail, setHasEmail] = useState(false);
   const [emailError, setEmailError] = useState("");
-  // Strava visas bara när kopplingen är aktiverad på servern (client id/secret finns)
-  const [stravaAvailable, setStravaAvailable] = useState(false);
-  useEffect(() => {
-    if (!userId || !(category === "all" || category === "training")) return;
-    let cancelled = false;
-    supabase.functions.invoke("strava-oauth-start", { body: { check: true } })
-      .then(({ data }) => { if (!cancelled) setStravaAvailable(!!data?.configured); })
-      .catch(() => {});
-    return () => { cancelled = true; };
-  }, [userId, category]);
-  const [stravaLoading, setStravaLoading] = useState(false);
-  const [stravaConnecting, setStravaConnecting] = useState(false);
-  const [stravaConnected, setStravaConnected] = useState(false);
-  const [stravaName, setStravaName] = useState("");
-  const [stravaSyncing, setStravaSyncing] = useState(false);
-  const [stravaSyncMessage, setStravaSyncMessage] = useState("");
-  const [stravaSyncStatus, setStravaSyncStatus] = useState({
-    lastSyncedAt: "" as string | null,
-    lastAttemptAt: "" as string | null,
-    lastImportedCount: 0,
-    totalImported: 0,
-    lastError: "" as string | null,
-  });
-
-  const refreshStravaConnection = useCallback(async () => {
-    if (!userId) return;
-    setStravaLoading(true);
-    const { data } = await (supabase as any).rpc("get_my_strava_connection");
-    const connection = data?.[0];
-    setStravaConnected(!!connection?.connected);
-    setStravaName([connection?.athlete_firstname, connection?.athlete_lastname].filter(Boolean).join(" ") || connection?.athlete_username || "Strava");
-    setStravaSyncStatus({
-      lastSyncedAt: connection?.last_synced_at ?? null,
-      lastAttemptAt: connection?.last_sync_attempt_at ?? null,
-      lastImportedCount: connection?.last_sync_imported_count ?? 0,
-      totalImported: connection?.total_imported_activities ?? 0,
-      lastError: connection?.last_sync_error ?? null,
-    });
-    setStravaLoading(false);
-  }, [userId]);
 
   // Dark/light mode is now handled by the theme system via applyTheme()
 
@@ -154,22 +109,7 @@ const SettingsPanel = ({ userId, isAdmin, isHonorary = false, category = "all", 
           setHasEmail(true);
         }
       });
-    if (stravaAvailable) refreshStravaConnection();
-  }, [userId, refreshStravaConnection, stravaAvailable]);
-
-  useEffect(() => {
-    if (!userId || !stravaAvailable) return;
-    const handleFocus = () => refreshStravaConnection();
-    const handleVisibility = () => {
-      if (document.visibilityState === "visible") refreshStravaConnection();
-    };
-    window.addEventListener("focus", handleFocus);
-    document.addEventListener("visibilitychange", handleVisibility);
-    return () => {
-      window.removeEventListener("focus", handleFocus);
-      document.removeEventListener("visibilitychange", handleVisibility);
-    };
-  }, [userId, refreshStravaConnection, stravaAvailable]);
+  }, [userId]);
 
   const handleSaveEmail = async () => {
     if (!userId || !email.trim()) return;
@@ -190,83 +130,6 @@ const SettingsPanel = ({ userId, isAdmin, isHonorary = false, category = "all", 
     setEmailSaved(true);
     setEmailDirty(false);
     setTimeout(() => setEmailSaved(false), 2000);
-  };
-
-  const handleConnectStrava = async (forcePrompt = false) => {
-    if (!userId) return;
-    const authWindow = window.open("", "_blank");
-    if (authWindow) {
-      authWindow.document.write("<p style='font-family: system-ui; padding: 24px;'>Öppnar Strava...</p>");
-    }
-    setStravaConnecting(true);
-    const { data: sessionData } = await supabase.auth.getSession();
-    const accessToken = sessionData.session?.access_token;
-    if (!accessToken) {
-      setStravaConnecting(false);
-      authWindow?.close();
-      alert("Du behöver logga in igen innan Strava kan kopplas.");
-      return;
-    }
-    const { data, error } = await supabase.functions.invoke("strava-oauth-start", {
-      body: { redirectOrigin: window.location.origin, forcePrompt },
-      headers: { Authorization: `Bearer ${accessToken}` },
-    });
-    setStravaConnecting(false);
-    if (error || !data?.authUrl) {
-      authWindow?.close();
-      const message = data?.error || error?.message || "Försök igen.";
-      alert(`Kunde inte starta Strava-kopplingen. ${message}`);
-      return;
-    }
-    if (authWindow) {
-      authWindow.location.href = data.authUrl;
-    } else {
-      window.location.assign(data.authUrl);
-    }
-  };
-
-  const handleDisconnectStrava = async () => {
-    if (!userId || !confirm("Koppla bort Strava från ditt konto?")) return;
-    setStravaLoading(true);
-    await supabase.from("strava_connections").delete().eq("user_id", userId);
-    setStravaConnected(false);
-    setStravaName("");
-    setStravaLoading(false);
-  };
-
-  const handleSyncStravaNow = async () => {
-    if (!userId || !stravaConnected) return;
-    setStravaSyncing(true);
-    setStravaSyncMessage("");
-    const { data, error } = await supabase.functions.invoke("strava-sync", {
-      body: { mode: "user", limit: 1, source: "settings-sync-now" },
-    });
-    setStravaSyncing(false);
-    if (error || data?.error) {
-      setStravaSyncMessage("Synken misslyckades. Försök igen.");
-      return;
-    }
-    const imported = data?.results?.[0]?.imported ?? 0;
-    const resultError = data?.results?.[0]?.error ?? null;
-    const nowIso = new Date().toISOString();
-    setStravaSyncStatus((status) => ({
-      lastSyncedAt: resultError ? status.lastSyncedAt : nowIso,
-      lastAttemptAt: nowIso,
-      lastImportedCount: imported,
-      totalImported: status.totalImported + imported,
-      lastError: resultError,
-    }));
-    setStravaSyncMessage(imported > 0 ? `${imported} nya aktiviteter importerade.` : "Inga nya aktiviteter hittades.");
-  };
-
-  const formatSyncTime = (value?: string | null) => {
-    if (!value) return "Aldrig";
-    return new Intl.DateTimeFormat("sv-SE", {
-      day: "2-digit",
-      month: "short",
-      hour: "2-digit",
-      minute: "2-digit",
-    }).format(new Date(value));
   };
 
   const inCategory = (target: SettingsCategory) => category === "all" || category === target;
@@ -431,62 +294,6 @@ const SettingsPanel = ({ userId, isAdmin, isHonorary = false, category = "all", 
         </button>
       </div>
 
-      {/* GPS – röst & inspelning */}
-      <div className="pt-2 border-t border-border space-y-2">
-        <div className="flex items-center gap-2">
-          <MapPin className="w-4 h-4 text-primary" />
-          <span className="text-sm font-semibold">GPS</span>
-        </div>
-        <div className="space-y-1.5">
-          <div className="flex items-center justify-between">
-            <p className="text-[11px] text-muted-foreground">
-              Röstuppläsning av tempo efter tid
-            </p>
-            <span className="text-[11px] font-semibold text-foreground">
-              {gpsVoiceMin === 0 ? "Av" : `Var ${gpsVoiceMin}:e min`}
-            </span>
-          </div>
-          <Slider
-            min={0}
-            max={30}
-            step={1}
-            value={[gpsVoiceMin]}
-            onValueChange={(v) => {
-              const val = v[0] ?? 0;
-              setGpsVoiceIntervalMin(val);
-              setGpsVoiceMinState(val);
-            }}
-            onValueCommit={(v) => {
-              if ((v[0] ?? 0) > 0) speakPace(1, 360);
-            }}
-          />
-        </div>
-
-        <div className="space-y-1.5 pt-1">
-          <div className="flex items-center justify-between">
-            <p className="text-[11px] text-muted-foreground">
-              Röstuppläsning av tempo efter distans
-            </p>
-            <span className="text-[11px] font-semibold text-foreground">
-              {gpsVoiceKm === 0 ? "Av" : `Var ${gpsVoiceKm.toFixed(1)} km`}
-            </span>
-          </div>
-          <Slider
-            min={0}
-            max={10}
-            step={0.5}
-            value={[gpsVoiceKm]}
-            onValueChange={(v) => {
-              const val = v[0] ?? 0;
-              setGpsVoiceIntervalKm(val);
-              setGpsVoiceKmState(val);
-            }}
-            onValueCommit={(v) => {
-              if ((v[0] ?? 0) > 0) speakPace(1, 360);
-            }}
-          />
-        </div>
-      </div>
 
 
 
@@ -588,89 +395,6 @@ const SettingsPanel = ({ userId, isAdmin, isHonorary = false, category = "all", 
 
       </>)}
 
-      {inCategory("training") && userId && stravaAvailable && (
-        <div className="border-t border-border pt-2">
-          <div className="flex flex-col gap-3 py-2 sm:flex-row sm:items-start sm:justify-between">
-            <div className="flex min-w-0 items-start gap-2">
-              <Link2 className="w-4 h-4 shrink-0 text-primary" />
-              <div className="min-w-0">
-                <div className="flex flex-wrap items-center gap-2">
-                  <p className="text-sm font-semibold leading-tight">Strava</p>
-                  {stravaConnected && (
-                    <span className="inline-flex items-center gap-1 rounded-md bg-primary/10 px-2 py-1 text-xs font-semibold leading-none text-primary">
-                      <Check className="h-3.5 w-3.5" /> Kopplad
-                    </span>
-                  )}
-                </div>
-                <p className="truncate text-xs text-muted-foreground">
-                  {stravaConnected ? `Kopplad${stravaName ? `: ${stravaName}` : ""}` : "Koppla ditt Strava-konto"}
-                </p>
-              </div>
-            </div>
-            {stravaConnected ? (
-              <div className="grid w-full grid-cols-2 gap-2 sm:w-auto">
-                <button
-                  type="button"
-                  onClick={handleSyncStravaNow}
-                  disabled={stravaSyncing || stravaLoading}
-                  className="flex min-h-9 min-w-0 items-center justify-center gap-1 rounded-md bg-primary px-2.5 py-2 text-xs font-semibold text-primary-foreground hover:opacity-90 disabled:opacity-50"
-                >
-                  {stravaSyncing ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RefreshCw className="h-3.5 w-3.5" />}
-                  Synka
-                </button>
-                <button
-                  type="button"
-                  onClick={handleDisconnectStrava}
-                  disabled={stravaLoading || stravaSyncing}
-                  className="flex min-h-9 min-w-0 items-center justify-center gap-1 rounded-md border border-border px-2.5 py-2 text-xs font-semibold text-muted-foreground hover:text-destructive disabled:opacity-50"
-                >
-                  {stravaLoading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Unlink className="h-3.5 w-3.5" />}
-                  <span className="truncate">Koppla från</span>
-                </button>
-              </div>
-            ) : (
-              <button
-                type="button"
-                onClick={() => handleConnectStrava()}
-                disabled={stravaConnecting || stravaLoading}
-                className="flex min-h-9 w-full items-center justify-center gap-1 rounded-md bg-primary px-2.5 py-2 text-xs font-semibold text-primary-foreground hover:opacity-90 disabled:opacity-50 sm:w-auto"
-              >
-                {stravaConnecting ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Link2 className="h-3.5 w-3.5" />}
-                Koppla Strava
-              </button>
-            )}
-          </div>
-          {stravaConnected && (
-            <div className="mb-2 grid grid-cols-2 gap-2 rounded-lg border border-border bg-secondary/40 p-3 text-xs">
-              <div>
-                <p className="text-muted-foreground">Senast synkad</p>
-                <p className="font-semibold text-foreground">{formatSyncTime(stravaSyncStatus.lastSyncedAt)}</p>
-              </div>
-              <div>
-                <p className="text-muted-foreground">Importerade senast</p>
-                <p className="font-semibold text-foreground">{stravaSyncStatus.lastImportedCount}</p>
-              </div>
-              <div>
-                <p className="text-muted-foreground">Totalt importerade</p>
-                <p className="font-semibold text-foreground">{stravaSyncStatus.totalImported}</p>
-              </div>
-              <div>
-                <p className="text-muted-foreground">Senaste försök</p>
-                <p className="font-semibold text-foreground">{formatSyncTime(stravaSyncStatus.lastAttemptAt)}</p>
-              </div>
-              {stravaSyncStatus.lastError && (
-                <div className="col-span-2 rounded-md border border-destructive/30 bg-destructive/10 p-2 text-destructive">
-                  {stravaSyncStatus.lastError}
-                </div>
-              )}
-            </div>
-          )}
-          {stravaSyncMessage && (
-            <p className="pb-2 text-xs text-muted-foreground">{stravaSyncMessage}</p>
-          )}
-          {stravaConnected && <StravaExportControls userId={userId} onReconnect={() => handleConnectStrava(true)} />}
-        </div>
-      )}
       {inCategory("privacy") && userId && <PrivacySocialSettings userId={userId} />}
 
       {inCategory("account") && (<>

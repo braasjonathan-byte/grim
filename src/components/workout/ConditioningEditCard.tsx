@@ -4,10 +4,10 @@ import { useState, useEffect, useRef } from "react";
 import { parseNum, validateCardioEntry, validateNumber } from "@/lib/inputValidation";
 import { toast } from "sonner";
 import { format } from "date-fns";
-import { Check, ChevronDown, ChevronUp, Gauge, Heart, Info, MapPin, Mountain, Pencil, Play, Route, Timer, X } from "lucide-react";
+import { Check, ChevronDown, ChevronUp, Gauge, Heart, Info, Mountain, Pencil, Play, Route, Timer, X } from "lucide-react";
 import RouteMap from "@/components/RouteMap";
+import { importedRoute } from "@/lib/importedRoute";
 import IntervalRunner from "@/components/IntervalRunner";
-import GpsTrackerControl from "@/components/workout/GpsTrackerControl";
 import { toTitleCase, sanitizePaceInput } from "@/lib/workoutIntervalUtils";
 import { cardioIconFor } from "@/lib/cardioIcons";
 import { type CardioMode, getCardioModes, getCardioDistUnit, modeLabel, modeFieldLabel, modeDisplaySuffix, modePlaceholder, isPaceMode, isLinkedMode, formatPaceDisplay, computeTempoValue, resolveTempoDisplay, kmPerTempoUnit, showCardioElevation } from "@/lib/cardioUnits";
@@ -31,7 +31,6 @@ export const ConditioningEditCard = ({ name, lineIndex, planId, planCondTime, pl
   // Drag & drop-handtag som ersätter upp/ner-pilarna när det skickas in.
   dragHandle?: React.ReactNode;
 }) => {
-  const isSwim = /simning|simma|sim\b/i.test(name);
   const SportIcon = cardioIconFor(name);
 
   // Per-sport tempo modes (presentation only). First entry is the default.
@@ -60,7 +59,6 @@ export const ConditioningEditCard = ({ name, lineIndex, planId, planCondTime, pl
   // Flera konditionsrader: visa kompakta rader, expandera en i taget vid tryck.
   const [expanded, setExpandedState] = useState(exerciseLinesCount <= 1);
   const setExpanded = (v: boolean) => setExpandedState(v);
-  const [showGps, setShowGps] = useState(false);
   const [showHourField, setShowHourField] = useState(false);
   // Planerade värden (planCondTime/Dist/Tempo) är endast mål/placeholders.
   // De ska ALDRIG räknas som ett loggat resultat förrän användaren själv
@@ -89,11 +87,11 @@ export const ConditioningEditCard = ({ name, lineIndex, planId, planCondTime, pl
   const showElevation = showCardioElevation(name);
   const [elevation, setElevation] = useState(savedData?.elev || "");
   const [showMore, setShowMore] = useState(() => !!(initPulse || savedData?.elev));
-  const [route, setRoute] = useState<[number, number][]>(() => {
+  const [route] = useState<[number, number][]>(() => {
     const r = savedData?.route;
     return Array.isArray(r) ? r as [number, number][] : [];
   });
-  const [splits, setSplits] = useState<number[]>(() => Array.isArray(savedData?.splits) ? (savedData!.splits as number[]) : []);
+  const [splits] = useState<number[]>(() => Array.isArray(savedData?.splits) ? (savedData!.splits as number[]) : []);
   const [autoField, setAutoField] = useState<"time" | "tempo" | "distance" | null>(null);
   const [showIntervalRunner, setShowIntervalRunner] = useState(false);
   const isIntervalRun = /intervall/i.test(name);
@@ -222,7 +220,11 @@ export const ConditioningEditCard = ({ name, lineIndex, planId, planCondTime, pl
     if (tempo.trim()) data.tempo = tempo.trim();
     if (pulse.trim()) data.pulse = pulse.trim();
     if (showElevation && String(elevation).trim()) data.elev = String(elevation).trim();
-    if (route.length > 1) data.route = route;
+    // Rutten (och dess källa) följer med vid redigering så att importerade pass behåller kartan.
+    if (route.length > 1) {
+      data.route = route;
+      if (savedData?.routeSource) data.routeSource = savedData.routeSource;
+    }
     if (splits.length > 0) data.splits = splits;
 
     // Inget tid/distans/tempo manuellt loggat ännu — varna i stället för att
@@ -313,9 +315,10 @@ export const ConditioningEditCard = ({ name, lineIndex, planId, planCondTime, pl
         {(Array.isArray(savedData?.hr) && savedData!.hr.length > 1) || savedData?.pulseMax ? (
           <HeartRateCurve hr={savedData?.hr} avg={displayPulse} max={savedData?.pulseMax} min={savedData?.pulseMin} minutes={Number(savedData?.time) || null} />
         ) : null}
-        {Array.isArray(savedData?.route) && (savedData!.route as any[]).length > 1 && (
-          <RouteMap route={savedData!.route as [number, number][]} height={180} collapsible defaultOpen={false} />
-        )}
+        {(() => {
+          const shown = importedRoute(savedData);
+          return shown ? <RouteMap route={shown} height={180} collapsible defaultOpen={false} /> : null;
+        })()}
         <SavedSplits splits={savedData?.splits} />
       </div>
     );
@@ -418,7 +421,7 @@ export const ConditioningEditCard = ({ name, lineIndex, planId, planCondTime, pl
           onClose={() => setShowIntervalRunner(false)}
           exerciseName={name}
           onComplete={async (res) => {
-            const km = res.gpsDistanceKm && res.gpsDistanceKm > 0 ? res.gpsDistanceKm : res.totalDistKm;
+            const km = res.totalDistKm;
             const totMin = res.totalTimeMin;
             const hh = Math.floor(totMin / 60);
             const rem = totMin - hh * 60;
@@ -431,7 +434,6 @@ export const ConditioningEditCard = ({ name, lineIndex, planId, planCondTime, pl
             const distStr = fmtDist(kmToDist(km));
             setDistance(distStr);
             setTempo(res.tempo);
-            if (res.route && res.route.length > 1) setRoute(res.route);
             // Persist with intervals so per-interval stats work
             await onSave({
               time: String(Math.round(totMin * 100) / 100),
@@ -440,31 +442,11 @@ export const ConditioningEditCard = ({ name, lineIndex, planId, planCondTime, pl
               pulse: pulse.trim() || undefined,
               elev: showElevation && String(elevation).trim() ? String(elevation).trim() : undefined,
               intervals: res.intervals,
-              route: res.route && res.route.length > 1 ? res.route : undefined,
             });
             setIsEditing(false);
           }}
         />
       )}
-
-      {!isSwim && showGps && <GpsTrackerControl
-        onStop={(km, sec, gpsRoute, gpsSplits) => {
-          if (gpsSplits && gpsSplits.length) setSplits(gpsSplits);
-          const totMin = sec / 60;
-          const hh = Math.floor(totMin / 60);
-          const rem = totMin - hh * 60;
-          const mm = Math.floor(rem);
-          const ss = Math.round((rem - mm) * 60);
-          setHours(hh > 0 ? String(hh) : "");
-          setMinutes(String(mm));
-          setSeconds(ss > 0 ? String(ss) : "");
-          const distVal = isSwim ? Math.round(km * 1000) : Math.round(km * 100) / 100;
-          const distStr = String(distVal);
-          setDistance(distStr);
-          if (gpsRoute.length > 1) setRoute(gpsRoute);
-          liveAutoCalc(totMin, tempo, distStr, "distance");
-        }}
-      />}
 
       {/* Primärt: Tid + Distans */}
       <div className={`grid gap-2 ${showDistance ? "grid-cols-[3fr_2fr]" : "grid-cols-1"}`}>
@@ -551,11 +533,6 @@ export const ConditioningEditCard = ({ name, lineIndex, planId, planCondTime, pl
       <div className="flex items-center gap-1.5">
         {!showMore && (
           <button type="button" onClick={() => setShowMore(true)} className="h-9 px-3 rounded-full text-xs font-medium text-muted-foreground bg-muted/50 hover:text-foreground">+ Puls{showElevation ? " & höjd" : ""}</button>
-        )}
-        {!isSwim && (
-          <button type="button" onClick={() => setShowGps((v) => !v)} className={`h-9 px-3 rounded-full text-xs font-medium flex items-center gap-1 ${showGps ? "bg-primary/15 text-primary" : "text-muted-foreground bg-muted/50 hover:text-foreground"}`}>
-            <MapPin className="w-3.5 h-3.5" /> GPS
-          </button>
         )}
         <div className="flex-1" />
         {hasSavedData && <button onClick={() => setIsEditing(false)} className="h-9 px-3 text-xs text-muted-foreground hover:text-foreground">Avbryt</button>}

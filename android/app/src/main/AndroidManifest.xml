@@ -83,9 +83,8 @@
                 android:name="android.support.FILE_PROVIDER_PATHS"
                 android:resource="@xml/file_paths"></meta-data>
         </provider>
-        <!-- GRIM_WORKOUT_SERVICES: vilotimer (shortService) och GPS-pass (location) -->
+        <!-- GRIM_WORKOUT_SERVICES: vilotimer (shortService) -->
         <service android:name="se.grim.app.GrimRestService" android:exported="false" android:foregroundServiceType="shortService" />
-        <service android:name="se.grim.app.GrimGpsService" android:exported="false" android:foregroundServiceType="location" />
         <!-- GRIM_WIDGET: hemskärms-widget (kcal) -->
         <receiver android:name="se.grim.app.GrimKcalWidget" android:exported="false" android:label="Grim kcal">
             <intent-filter>
@@ -98,10 +97,7 @@
     <!-- Permissions -->
 
     <uses-permission android:name="android.permission.INTERNET" />
-    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
-    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
-    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_LOCATION" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-permission android:name="android.permission.VIBRATE" />
     <uses-permission android:name="android.permission.WAKE_LOCK" />
@@ -160,4 +156,9 @@
     <uses-permission android:name="android.permission.health.READ_HEALTH_DATA_IN_BACKGROUND" />
     <uses-permission android:name="android.permission.health.WRITE_NUTRITION" />
     <uses-permission android:name="android.permission.health.WRITE_HYDRATION" />
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" tools:node="remove" />
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" tools:node="remove" />
+    <uses-permission android:name="android.permission.ACCESS_BACKGROUND_LOCATION" tools:node="remove" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_LOCATION" tools:node="remove" />
+    <uses-permission android:name="android.permission.health.READ_EXERCISE_ROUTES" />
 </manifest>

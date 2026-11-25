@@ -250,12 +250,17 @@ export async function importHealthWorkouts(
     // rader i details (varje rad tolkas annars som en styrkeövning).
     // Rikare puls-vy: max/lägsta + nedsamplad kurva sparas med konditionsraden.
     const condKey = `__cond__${w.label}`;
-    if (loggedWeights[condKey] && (w.maxHeartRate || w.hrCurve?.length)) {
+    if (loggedWeights[condKey] && (w.maxHeartRate || w.hrCurve?.length || (w.route?.length ?? 0) > 1)) {
       try {
         const c = JSON.parse(loggedWeights[condKey]);
         if (w.maxHeartRate) c.pulseMax = String(w.maxHeartRate);
         if (w.minHeartRate) c.pulseMin = String(w.minHeartRate);
         if (w.hrCurve && w.hrCurve.length > 1) c.hr = w.hrCurve;
+        // Rutt från Health Connect (klocka/Samsung Health m.fl.) visas som karta.
+        if (w.route && w.route.length > 1) {
+          c.route = w.route;
+          c.routeSource = "health_connect";
+        }
         loggedWeights[condKey] = JSON.stringify(c);
       } catch { /* behåll originalet */ }
     }

@@ -25,11 +25,6 @@ const clearAllCaches = async () => {
   await Promise.all(cacheNames.map((name) => caches.delete(name)));
 };
 
-// Defer PWA updates/reloads while a GPS recording is in progress to avoid losing data.
-const isGpsRecordingActive = () => {
-  try { return !!(window as any).__grimGpsActive; } catch { return false; }
-};
-
 // Was this page already controlled by a service worker when it loaded? On the very
 // first visit it is not, and the first SW install's clients.claim() fires
 // controllerchange — that is not an update and must not reload the page.
@@ -54,7 +49,7 @@ const safeReload = (beforeReload?: () => void | Promise<void>) => {
     try { await beforeReload?.(); } catch { /* ignore */ }
     window.location.reload();
   };
-  if (!isUserBusy() && !isGpsRecordingActive()) { void go(); return; }
+  if (!isUserBusy()) { void go(); return; }
   let done = false;
   const finish = () => {
     if (done) return;
@@ -63,8 +58,8 @@ const safeReload = (beforeReload?: () => void | Promise<void>) => {
     document.removeEventListener("visibilitychange", onVis);
     void go();
   };
-  const onVis = () => { if (document.visibilityState === "hidden" && !isGpsRecordingActive()) finish(); };
-  const id = window.setInterval(() => { if (!isUserBusy() && !isGpsRecordingActive()) finish(); }, 2000);
+  const onVis = () => { if (document.visibilityState === "hidden") finish(); };
+  const id = window.setInterval(() => { if (!isUserBusy()) finish(); }, 2000);
   document.addEventListener("visibilitychange", onVis);
 };
 
@@ -75,8 +70,6 @@ const syncAppVersion = async () => {
     localStorage.setItem(APP_VERSION_STORAGE_KEY, APP_VERSION);
     return;
   }
-
-  if (isGpsRecordingActive()) return; // skip — GPS pass pågår
 
   if (previousVersion === APP_VERSION || sessionStorage.getItem(APP_VERSION_REFRESH_KEY) === "1") {
     localStorage.setItem(APP_VERSION_STORAGE_KEY, APP_VERSION);
@@ -103,7 +96,6 @@ if (!IS_NATIVE_CAPACITOR) {
 // clear caches and hard-reload so PWA users always get the freshest build.
 const REMOTE_VERSION_REFRESH_KEY = "grim_remote_refresh_at";
 const checkRemoteVersion = async () => {
-  if (isGpsRecordingActive()) return; // skip — GPS pass pågår
   try {
     // Bust any intermediate cache (SW, CDN, browser) by adding a timestamp.
     const res = await fetch(`/version.json?t=${Date.now()}`, {
@@ -174,7 +166,6 @@ document.addEventListener("visibilitychange", () => {
 // Force service worker update check on every app load + periodically
 if (!IS_NATIVE_CAPACITOR && "serviceWorker" in navigator) {
   const checkForUpdate = () => {
-    if (isGpsRecordingActive()) return; // skip — GPS pass pågår
     navigator.serviceWorker.getRegistration().then((reg) => {
       if (reg) reg.update().catch(() => {});
     });
@@ -189,22 +180,11 @@ if (!IS_NATIVE_CAPACITOR && "serviceWorker" in navigator) {
   });
 
   let refreshing = false;
-  let pendingReload = false;
   navigator.serviceWorker.addEventListener("controllerchange", () => {
     if (refreshing) return;
     // First install (no controller at load) — not an update, so no reload.
     if (!HAD_SW_CONTROLLER_AT_LOAD) return;
     const doReload = () => {
-      if (isGpsRecordingActive()) {
-        // Re-check once GPS stops
-        if (!pendingReload) {
-          pendingReload = true;
-          const id = setInterval(() => {
-            if (!isGpsRecordingActive()) { clearInterval(id); doReload(); }
-          }, 5000);
-        }
-        return;
-      }
       const key = "grim_sw_reload";
       const last = sessionStorage.getItem(key);
       const now = Date.now();

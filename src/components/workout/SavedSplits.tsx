@@ -1,4 +1,4 @@
-/** Visar sparade km-splits för ett GPS-pass (snabbaste markerad). */
+/** Visar sparade km-splits (från äldre GPS-pass; snabbaste markerad). */
 const fmt = (sec: number) => `${Math.floor(sec / 60)}:${String(Math.round(sec % 60)).padStart(2, "0")}`;
 
 export default function SavedSplits({ splits }: { splits: unknown }) {

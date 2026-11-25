@@ -7,8 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { sanitizePaceInput } from "@/lib/workoutIntervalUtils";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Play, Pause, Square, MapPin, Volume2, Settings as SettingsIcon } from "lucide-react";
-import { useGpsTracker } from "@/hooks/useGpsTracker";
+import { Play, Pause, Square, Volume2, Settings as SettingsIcon } from "lucide-react";
 import { toast } from "sonner";
 import { getIntervalProfile, UNIT_LABELS, UNIT_SHORT, valueToSeconds, spokenTarget, type IntervalUnit } from "@/lib/intervalSportProfiles";
 
@@ -495,8 +494,6 @@ export type IntervalRunnerResult = {
   totalDistKm: number;
   totalTimeMin: number;
   tempo: string; // average / target tempo string
-  gpsDistanceKm?: number;
-  route?: [number, number][];
 };
 
 type Phase = "idle" | "warmup" | "interval" | "rest" | "cooldown" | "done";
@@ -544,7 +541,6 @@ export const IntervalRunner = ({ open, onClose, exerciseName = "Löpning – Int
   const [restSec, setRestSec] = useState(profile.defaultRestSec);
   const [warmupMin, setWarmupMin] = useState(hasPreset ? 0 : profile.defaultWarmupMin);
   const [cooldownMin, setCooldownMin] = useState(hasPreset ? 0 : profile.defaultCooldownMin);
-  const [useGps, setUseGps] = useState(profile.supportsGps);
 
   // Voice settings dialog
   const [showVoicePrefs, setShowVoicePrefs] = useState(false);
@@ -562,11 +558,9 @@ export const IntervalRunner = ({ open, onClose, exerciseName = "Löpning – Int
   const [paused, setPaused] = useState(false);
   const pauseAcc = useRef(0);
   const pauseStarted = useRef<number | null>(null);
-  const gps = useGpsTracker();
   // Track each interval's start (for achieved-pace announcement)
   const intervalStartMs = useRef<number>(0);
-  const intervalStartKm = useRef<number | null>(null);
-  // Achieved sec/km per interval index (from GPS) — overrides saved tempo
+  // Achieved sec/km per interval index — overrides saved tempo
   const achievedSecPerKm = useRef<number[]>([]);
 
   // Tick
@@ -609,8 +603,7 @@ export const IntervalRunner = ({ open, onClose, exerciseName = "Löpning – Int
   // awaiting speech (phase/phaseEnd aren't updated until the awaits finish).
   const advancingRef = useRef(false);
 
-  // Compute the achieved sec/km for an interval (uses GPS distance if available,
-  // otherwise the planned interval distance). Stores result in achievedSecPerKm
+  // Compute the achieved sec/km for an interval (from the planned interval distance). Stores result in achievedSecPerKm
   // and returns the value (0 if it couldn't be measured).
   const captureAchievedPace = (idx: number): number => {
     const cur = effective[idx];
@@ -618,11 +611,7 @@ export const IntervalRunner = ({ open, onClose, exerciseName = "Löpning – Int
     if (!intervalStartMs.current) return 0;
     const elapsedSec = Math.max(1, (Date.now() - intervalStartMs.current) / 1000);
     let achPace = 0;
-    if (intervalStartKm.current != null && gps.isTracking) {
-      const dKm = gps.distanceKm - intervalStartKm.current;
-      if (dKm > 0.01) achPace = elapsedSec / dKm;
-    }
-    if (achPace === 0 && cur.distKm > 0) {
+    if (cur.distKm > 0) {
       achPace = elapsedSec / cur.distKm;
     }
     if (achPace > 0) achievedSecPerKm.current[idx] = achPace;
@@ -700,7 +689,6 @@ export const IntervalRunner = ({ open, onClose, exerciseName = "Löpning – Int
         // Beep marks the exact moment the timer starts (no spoken countdown)
         beep(1000, 200);
         intervalStartMs.current = Date.now();
-        intervalStartKm.current = gps.isTracking ? gps.distanceKm : null;
       } else if (nextPhase === "rest") {
         durSec = restSec;
         setPlannedDurSec(durSec);
@@ -765,18 +753,6 @@ export const IntervalRunner = ({ open, onClose, exerciseName = "Löpning – Int
     if (prefs.enabled) {
       primeSpeech();
     }
-    if (useGps) {
-      try {
-        const started = await gps.start();
-        if (!started) {
-          toast.error("GPS-kontakt krävs innan passet kan starta.");
-          return;
-        }
-      } catch {
-        toast.error("GPS-kontakt krävs innan passet kan starta.");
-        return;
-      }
-    }
     setShowVoicePrefs(false);
     setPaused(false);
     setCurrentIdx(0);
@@ -792,12 +768,10 @@ export const IntervalRunner = ({ open, onClose, exerciseName = "Löpning – Int
       pauseAcc.current += pausedFor;
       pauseStarted.current = null;
       setPaused(false);
-      if (gps.isPaused) gps.resume();
     } else {
       pauseStarted.current = Date.now();
       setPaused(true);
       cancelVoice();
-      if (gps.isTracking && !gps.isPaused) gps.pause();
     }
   };
 
@@ -829,14 +803,7 @@ export const IntervalRunner = ({ open, onClose, exerciseName = "Löpning – Int
     const totalSec = effective.reduce((acc, e) => acc + e.durSec, 0);
     const totalTimeMin = (warmupMin + cooldownMin) + totalSec / 60 + Math.max(0, effective.length - 1) * (restSec / 60);
     const avgTempo = effective[0]?.tempoStr || tempo;
-    let gpsDistanceKm: number | undefined;
-    let route: [number, number][] | undefined;
-    if (gps.isTracking) {
-      const res = gps.stop();
-      gpsDistanceKm = res.distanceKm;
-      route = res.route;
-    }
-    return { intervals: all, totalDistKm, totalTimeMin, tempo: avgTempo, gpsDistanceKm, route };
+    return { intervals: all, totalDistKm, totalTimeMin, tempo: avgTempo };
   };
 
   const handleFinish = async () => {
@@ -845,7 +812,7 @@ export const IntervalRunner = ({ open, onClose, exerciseName = "Löpning – Int
     if (onComplete) {
       try { await onComplete(result); } catch (e) { console.error(e); }
     }
-    const km = result.gpsDistanceKm && result.gpsDistanceKm > 0 ? result.gpsDistanceKm : result.totalDistKm;
+    const km = result.totalDistKm;
     toast.success(
       profile.paceUnit === "/100m"
         ? `Simpass klart – ${Math.round(km * 1000)} m loggat`
@@ -857,7 +824,6 @@ export const IntervalRunner = ({ open, onClose, exerciseName = "Löpning – Int
 
   const handleAbort = () => {
     cancelVoice();
-    if (gps.isTracking) gps.stop();
     setPhase("idle");
     onClose();
   };
@@ -950,12 +916,6 @@ export const IntervalRunner = ({ open, onClose, exerciseName = "Löpning – Int
                   <Label className="text-xs">Nedvarvning (min)</Label>
                   <Input type="text" inputMode="decimal" min={0} value={cooldownMin} onChange={(e) => { const n = Math.max(0, parseInt(e.target.value) || 0); if (e.target.value !== String(n)) e.target.value = String(n); setCooldownMin(n); }} />
                 </div>
-                {profile.supportsGps && (
-                  <div className="col-span-2 flex items-center gap-2">
-                    <Checkbox checked={useGps} onCheckedChange={(v) => setUseGps(!!v)} id="usegps" />
-                    <label htmlFor="usegps" className="text-xs">Spela in GPS-spår under passet</label>
-                  </div>
-                )}
               </div>
 
               <div className="text-xs text-muted-foreground bg-muted/40 p-2 rounded">
@@ -1003,11 +963,6 @@ export const IntervalRunner = ({ open, onClose, exerciseName = "Löpning – Int
                 {phase === "interval" && (() => { const cur = effective[currentIdx] || effective[0]; return <>Mål-tempo: <strong>{fmtTempoDisplay(cur.tempoStr || tempo)}/km</strong>{cur.distKm > 0 ? <> · {cur.distKm} km</> : null}</>; })()}
                 {phase === "rest" && <>Vila innan intervall {currentIdx + 2}</>}
               </div>
-              {gps.isTracking && (
-                <div className="text-xs text-muted-foreground flex items-center justify-center gap-1">
-                  <MapPin className="w-3 h-3" /> GPS: {gps.distanceKm.toFixed(2)} km
-                </div>
-              )}
               <div className="flex gap-2 justify-center">
                 <Button variant="outline" onClick={handlePause}>
                   {paused ? <Play className="w-4 h-4 mr-1" /> : <Pause className="w-4 h-4 mr-1" />}
@@ -1024,11 +979,6 @@ export const IntervalRunner = ({ open, onClose, exerciseName = "Löpning – Int
             <div className="space-y-4 text-center py-4">
               <div className="text-2xl font-bold">Klart!</div>
               <p className="text-sm text-muted-foreground">Passet är genomfört. Spara för att logga det.</p>
-              {gps.isTracking && (
-                <div className="text-xs text-muted-foreground flex items-center justify-center gap-1">
-                  <MapPin className="w-3 h-3" /> GPS: {gps.distanceKm.toFixed(2)} km
-                </div>
-              )}
             </div>
           )}
 

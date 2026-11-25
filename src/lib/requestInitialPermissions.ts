@@ -4,7 +4,7 @@ const STORAGE_KEY = "grim_initial_permissions_requested_v1";
 
 /**
  * Requests all relevant OS permissions up-front on first app launch
- * (camera, photo library, geolocation, notifications). Runs once per
+ * (camera, photo library, notifications). Runs once per
  * device — tracked via localStorage. Safe to call on every startup.
  *
  * Works for both Capacitor native (APK/iOS) and PWA/web. Each request
@@ -28,20 +28,14 @@ export async function requestInitialPermissions(): Promise<void> {
       console.warn("Camera permission request failed:", err);
     }
 
-    // Geolocation — bara förgrundsplats. GPS-pass körs via en foreground service
-    // (GrimGpsService) och behöver inte "Tillåt alltid"/ACCESS_BACKGROUND_LOCATION.
-    try {
-      const { Geolocation } = await import("@capacitor/geolocation");
-      await Geolocation.requestPermissions({ permissions: ["location", "coarseLocation"] });
-    } catch (err) {
-      console.warn("Geolocation permission request failed:", err);
-    }
+    // Ingen platsbehörighet: Grim spelar inte in pass med GPS (Health Connect
+    // ersätter det).
 
     // Do not request push permission during startup/login. On Android, some
     // Capacitor PushNotifications permission paths can crash natively before JS
     // can catch the failure. Native push is requested only from explicit flows.
   } else {
-    // Web / PWA — only notifications and geolocation can be pre-prompted.
+    // Web / PWA — only notifications are pre-prompted.
     // Camera/photo access is requested by the browser on first use.
     try {
       if ("Notification" in window && Notification.permission === "default") {
@@ -49,20 +43,6 @@ export async function requestInitialPermissions(): Promise<void> {
       }
     } catch (err) {
       console.warn("Notification permission request failed:", err);
-    }
-
-    try {
-      if ("geolocation" in navigator) {
-        await new Promise<void>((resolve) => {
-          navigator.geolocation.getCurrentPosition(
-            () => resolve(),
-            () => resolve(),
-            { timeout: 5000, maximumAge: 600000 }
-          );
-        });
-      }
-    } catch (err) {
-      console.warn("Geolocation permission request failed:", err);
     }
   }
 

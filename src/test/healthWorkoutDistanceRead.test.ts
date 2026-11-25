@@ -19,7 +19,27 @@ describe("distance from the native workout read", () => {
     expect(workout.distanceKm).toBe(32.5);
     expect(workout.label).toBe("Cykling");
     expect(workout.minutes).toBe(59.25);
-    expect(native.queryWorkouts).toHaveBeenCalledWith(expect.objectContaining({ includeRoute: false }));
+    // Rutten begärs (för kartan) men distansen kommer från DistanceRecord, inte rutten.
+    expect(native.queryWorkouts).toHaveBeenCalledWith(expect.objectContaining({ includeRoute: true }));
+    expect(workout.route).toBeNull();
+  });
+
+  it("maps an ExerciseRoute from Health Connect to map points, and can skip it", async () => {
+    native.queryWorkouts.mockResolvedValue({ workouts: [{
+      id: "run-route", startDate: "2026-11-20T06:00:00Z", endDate: "2026-11-20T06:30:00Z",
+      workoutType: "RUNNING", sourceName: "Galaxy Watch", sourceBundleId: "com.sec.android.app.shealth",
+      duration: 1800, distance: 5000, calories: 300,
+      route: [
+        { timestamp: "2026-11-20T06:00:00Z", lat: 59.3293, lng: 18.0686, alt: 20 },
+        { timestamp: "2026-11-20T06:15:00Z", lat: 59.3326, lng: 18.0649, alt: 22 },
+        { timestamp: "2026-11-20T06:30:00Z", lat: 59.3293, lng: 18.0686, alt: 20 },
+      ],
+    }] });
+    const [workout] = await readHealthWorkouts(30);
+    expect(workout.route).toEqual([[59.3293, 18.0686], [59.3326, 18.0649], [59.3293, 18.0686]]);
+    const [noRoute] = await readHealthWorkouts(8, { includeRoute: false });
+    expect(native.queryWorkouts).toHaveBeenLastCalledWith(expect.objectContaining({ includeRoute: false }));
+    expect(noRoute.route).toBeNull();
   });
 });
 describe("distance diagnostics and native reader contract", () => {

@@ -288,7 +288,7 @@ async function doSync(userId: string): Promise<HealthWriteResult> {
   // Dubblettskydd mot klocka/Samsung/Strava som redan skrivit samma pass.
   let foreign: HealthWorkout[] = [];
   try {
-    foreign = await readHealthWorkouts(WRITE_WINDOW_DAYS + 1);
+    foreign = await readHealthWorkouts(WRITE_WINDOW_DAYS + 1, { includeRoute: false });
   } catch (err) {
     healthLog("write: could not read foreign workouts for dedupe", (err as Error)?.message);
   }

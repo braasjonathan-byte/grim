@@ -1,7 +1,9 @@
 #!/usr/bin/env node
 /**
- * Patch AndroidManifest.xml to declare background-location permissions
- * required for GPS workout recording when the screen is off.
+ * Patch AndroidManifest.xml: behörigheter, features, widget, delningsmål m.m.
+ * Grim spelar inte längre in pass med GPS (Health Connect ersätter det), så
+ * alla platsbehörigheter tas bort – även de som plugins (t.ex. bluetooth-le)
+ * annars smyger in i det sammanslagna manifestet.
  *
  * Run after `npx cap add android` and after every `npx cap sync android`.
  *   node scripts/patch-android-manifest.cjs
@@ -28,10 +30,7 @@ if (!/android:screenOrientation="portrait"/.test(xml)) {
 }
 
 const PERMS = [
-  "android.permission.ACCESS_FINE_LOCATION",
-  "android.permission.ACCESS_COARSE_LOCATION",
   "android.permission.FOREGROUND_SERVICE",
-  "android.permission.FOREGROUND_SERVICE_LOCATION",
   "android.permission.POST_NOTIFICATIONS",
   "android.permission.BLUETOOTH_SCAN",
   "android.permission.BLUETOOTH_CONNECT",
@@ -53,19 +52,51 @@ const FEATURES = [
 
 let changed = false;
 
-// Play-granskning (åtgärd 26): GPS-pass körs som foreground service (GrimGpsService,
-// foregroundServiceType="location") och behöver inte bakgrundsplats.
-{
-  const bg = /\s*<uses-permission\b[^>]*android:name="android\.permission\.ACCESS_BACKGROUND_LOCATION"[^>]*\/>/g;
-  if (bg.test(xml)) {
-    xml = xml.replace(bg, "");
-    changed = true;
-    console.log("[patch-android-manifest] Removed ACCESS_BACKGROUND_LOCATION");
-  }
-}
 if (!/xmlns:tools=/.test(xml)) {
   xml = xml.replace(/<manifest\b([^>]*)>/, `<manifest$1 xmlns:tools="http://schemas.android.com/tools">`);
   changed = true;
+}
+
+// GRIM_NO_LOCATION: ingen GPS-inspelning längre. Platsbehörigheterna markeras
+// med tools:node="remove" så att de inte heller kommer in via plugin-manifest
+// (bluetooth-le deklarerar ACCESS_FINE/COARSE_LOCATION). BLE-pulsband använder
+// BLUETOOTH_SCAN med neverForLocation (Android 12+).
+const LOCATION_PERMS_REMOVED = [
+  "android.permission.ACCESS_FINE_LOCATION",
+  "android.permission.ACCESS_COARSE_LOCATION",
+  "android.permission.ACCESS_BACKGROUND_LOCATION",
+  "android.permission.FOREGROUND_SERVICE_LOCATION",
+];
+for (const name of LOCATION_PERMS_REMOVED) {
+  const re = new RegExp(`\\s*<uses-permission\\b[^>]*android:name="${name.replace(/\./g, "\\.")}"[^>]*\\/>`, "g");
+  const tag = `<uses-permission android:name="${name}" tools:node="remove" />`;
+  const all = xml.match(re) || [];
+  if (all.length === 1 && all[0].includes('tools:node="remove"')) continue;
+  const stripped = xml.replace(re, "");
+  const next = stripped.replace(/<\/manifest>/, `    ${tag}\n</manifest>`);
+  if (next !== xml) {
+    xml = next;
+    changed = true;
+  }
+}
+// Förgrundstjänsten för GPS-pass (GrimGpsService) finns inte längre.
+{
+  const gpsService = /\s*<service\b[^>]*se\.grim\.app\.GrimGpsService[^>]*\/>/g;
+  if (gpsService.test(xml)) {
+    xml = xml.replace(gpsService, "");
+    changed = true;
+    console.log("[patch-android-manifest] Removed GrimGpsService");
+  }
+}
+// Health Connect: träningsrutter från andra appar (klocka, Samsung Health, Strava
+// via HC). Detta är en hälsobehörighet, inte en platsbehörighet.
+{
+  const ROUTES = "android.permission.health.READ_EXERCISE_ROUTES";
+  if (!xml.includes(`android:name="${ROUTES}"`)) {
+    xml = xml.replace(/<\/manifest>/, `    <uses-permission android:name="${ROUTES}" />\n</manifest>`);
+    changed = true;
+    console.log(`[patch-android-manifest] Added ${ROUTES}`);
+  }
 }
 // Legacy Bluetooth bara upp till Android 11, och BLE-scan används inte för plats.
 const PERM_ATTRS = {

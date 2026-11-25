@@ -29,7 +29,7 @@ const Privacy = () => {
             <li><strong>Kontouppgifter:</strong> e-postadress, namn, lösenord (krypterat).</li>
             <li><strong>Profil:</strong> ålder, kön, längd, vikt, träningsmål (frivilligt).</li>
             <li><strong>Trännings- och kostdata:</strong> pass, övningar, måltider, mått, foton du laddar upp.</li>
-            <li><strong>Hälso- och sensordata:</strong> puls, GPS-position och rörelse vid pass (endast under aktiv loggning).</li>
+            <li><strong>Hälso- och sensordata:</strong> puls och rörelse vid pass. Grim läser aldrig din position; en karta över passets rutt sparas bara om du importerar ett pass som redan har en rutt (Health Connect eller en GPX/TCX/FIT-fil).</li>
             <li><strong>Enhetsdata:</strong> enhetstyp, OS-version, push-token, kraschloggar.</li>
             <li><strong>Användning:</strong> anonymiserad statistik om hur appen används.</li>
           </ul>
@@ -50,7 +50,7 @@ const Privacy = () => {
           <h2 className="text-xl font-bold">4. Rättslig grund</h2>
           <p className="text-sm leading-relaxed">
             Behandlingen sker enligt avtal (för att leverera tjänsten), samtycke (känsliga
-            uppgifter som hälsa och GPS) och berättigat intresse (förbättring och säkerhet).
+            uppgifter som hälsa) och berättigat intresse (förbättring och säkerhet).
           </p>
         </section>
 
@@ -63,6 +63,7 @@ const Privacy = () => {
           <ul className="list-disc pl-5 space-y-1 text-sm leading-relaxed">
             <li><strong>Steg, aktiva och totala kalorier samt distans</strong> – för dagsöversikt och veckostatistik.</li>
             <li><strong>Genomförda pass</strong> – så att du kan registrera dem i din träningslogg.</li>
+            <li><strong>Träningsrutter</strong> – om du har gett Grim åtkomst till rutter i Health Connect visas passets karta i din träningslogg.</li>
             <li><strong>Puls och vilopuls</strong> – dygnsvärden (snitt, lägsta, högsta) och som en del av de pass du importerar.</li>
             <li><strong>Vikt</strong> – för att visa din senaste vägning.</li>
             <li><strong>Sömn</strong> – som underlag för återhämtning.</li>
@@ -99,7 +100,6 @@ const Privacy = () => {
             <li>Google Firebase (push-aviseringar).</li>
             <li>Stripe (betalningar för prenumeration).</li>
             <li>Open Food Facts (näringsdata – ingen personlig data skickas).</li>
-            <li>Strava (endast om du frivilligt kopplar ditt konto).</li>
           </ul>
         </section>
 

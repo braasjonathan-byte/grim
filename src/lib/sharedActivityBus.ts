@@ -67,13 +67,6 @@ export async function initSharedActivityListener(): Promise<void> {
           }
         }
 
-        // Delad text/länk (t.ex. "Dela till Grim" från Strava-appen)
-        const sharedText = [url, result?.title, result?.description]
-          .filter(Boolean)
-          .join(" ");
-        if (/strava/i.test(sharedText)) {
-          await importSharedStravaLink(sharedText);
-        }
       } catch (err) {
         console.warn("[sharedActivity] kunde inte läsa delad fil", err);
       }
@@ -85,59 +78,3 @@ export async function initSharedActivityListener(): Promise<void> {
     console.warn("[sharedActivity] send-intent ej tillgängligt", err);
   }
 }
-
-/**
- * Hämtar det delade Strava-passet via användarens Strava-koppling och
- * skickar det vidare till importdialogen som en vanlig aktivitet.
- */
-export async function importSharedStravaLink(sharedText: string): Promise<boolean> {
-  try {
-    const { supabase } = await import("@/integrations/supabase/client");
-    const { mapActivityType } = await import("@/lib/activityFileParser");
-    const { data, error } = await supabase.functions.invoke("strava-sync", {
-      body: { mode: "shared_link", sharedText },
-    });
-    if (error || !data?.activity) {
-      console.warn("[sharedActivity] Strava-import misslyckades", error);
-      const { toast } = await import("@/hooks/use-toast");
-      toast({
-        title: "Kunde inte hämta passet från Strava",
-        description: "Kontrollera att ditt Strava-konto är kopplat i Grim.",
-        variant: "destructive",
-      });
-      return false;
-    }
-
-
-    const a = data.activity;
-    if (a.isFallback) {
-      const { toast } = await import("@/hooks/use-toast");
-      toast({
-        title: "Kunde inte läsa länken från Strava",
-        description: "Visar ditt senaste Strava-pass – kontrollera att det är rätt innan du sparar.",
-      });
-    }
-    emit({
-      rawType: a.rawType ?? null,
-      exerciseName: mapActivityType(a.rawType),
-      title: a.title ?? null,
-      startTime: a.startTime ? new Date(a.startTime) : null,
-      durationSec: a.durationSec ?? null,
-      distanceKm: a.distanceKm ?? null,
-      elevationGainM: a.elevationGainM ?? null,
-      elevationLossM: null,
-      avgHeartRate: a.avgHeartRate ?? null,
-      maxHeartRate: a.maxHeartRate ?? null,
-      avgWatt: a.avgWatt ?? null,
-      calories: a.calories ?? null,
-      points: [],
-      format: "gpx",
-      fileName: `strava-${a.stravaActivityId ?? "pass"}`,
-    });
-    return true;
-  } catch (err) {
-    console.warn("[sharedActivity] Strava-import fel", err);
-    return false;
-  }
-}
-

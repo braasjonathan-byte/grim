@@ -9,6 +9,7 @@ import {
   type ParsedActivity,
 } from "@/lib/activityFileParser";
 import { buildWorkoutFromAiExercises, type AiExercise } from "@/lib/aiWorkoutImport";
+import { toRoutePoints } from "@/lib/importedRoute";
 
 export interface ImportedWorkout {
   name: string;
@@ -37,6 +38,17 @@ const secToHms = (sec: number) => {
   return h > 0
     ? `${h}:${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`
     : `${m}:${String(s).padStart(2, "0")}`;
+};
+
+/** FIT anger position i semicirklar; GPX/TCX i grader. */
+const SEMICIRCLE_TO_DEG = 180 / 2 ** 31;
+const fileRoute = (a: ParsedActivity | null) => {
+  if (!a?.points?.length) return null;
+  const fit = a.format === "fit";
+  return toRoutePoints(a.points.map((p) => ({
+    lat: typeof p.lat === "number" && fit && Math.abs(p.lat) > 90 ? p.lat * SEMICIRCLE_TO_DEG : p.lat,
+    lng: typeof p.lon === "number" && fit && Math.abs(p.lon) > 180 ? p.lon * SEMICIRCLE_TO_DEG : p.lon,
+  })));
 };
 
 const hmsToMin = (v: string): number | null => {
@@ -135,6 +147,17 @@ export default function ActivityFileImportDialog({ open, onClose, onConfirm, ini
     };
     const built = buildWorkoutFromAiExercises([ex]);
     if (!built.details.trim()) return null;
+    // Rutten i filen följer med och visas som karta på passet.
+    const route = fileRoute(activity);
+    if (route) {
+      for (const key of Object.keys(built.loggedWeights)) {
+        if (!key.startsWith("__cond__")) continue;
+        try {
+          const c = JSON.parse(built.loggedWeights[key]);
+          built.loggedWeights[key] = JSON.stringify({ ...c, route, routeSource: "file" });
+        } catch { /* behåll utan rutt */ }
+      }
+    }
     return {
       name: name.trim() || exercise,
       details: built.details,

@@ -4,8 +4,6 @@ import { Capacitor, registerPlugin } from "@capacitor/core";
 interface GrimWorkoutPlugin {
   startRest(o: { seconds: number; exercise?: string }): Promise<void>;
   stopRest(): Promise<void>;
-  startGps(o: { text?: string }): Promise<void>;
-  stopGps(): Promise<void>;
 }
 const GrimWorkout = registerPlugin<GrimWorkoutPlugin>("GrimWorkout");
 
@@ -22,12 +20,4 @@ export async function nativeStartRest(seconds: number, exercise?: string): Promi
 export async function nativeStopRest(): Promise<void> {
   if (!hasNativeWorkoutServices()) return;
   try { await GrimWorkout.stopRest(); } catch { /* ignore */ }
-}
-export async function nativeStartGps(text?: string): Promise<void> {
-  if (!hasNativeWorkoutServices()) return;
-  try { await GrimWorkout.startGps({ text }); } catch { /* ignore */ }
-}
-export async function nativeStopGps(): Promise<void> {
-  if (!hasNativeWorkoutServices()) return;
-  try { await GrimWorkout.stopGps(); } catch { /* ignore */ }
 }

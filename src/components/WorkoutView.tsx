@@ -5,7 +5,6 @@ import { SingleWorkoutForm } from "@/components/workout/SingleWorkoutForm";
 import EmptyState from "@/components/EmptyState";
 import { openMiniTimer } from "@/components/MiniTimer";
 import { cardioIconFor } from "@/lib/cardioIcons";
-import { maybeAutoExportToStrava, STRAVA_ERROR_TEXT } from "@/lib/stravaExport";
 import { getHeartRateSamplesBetween } from "@/lib/heartRate";
 import { readSessionHr, summarizeSessionHr, SESSION_HR_KEY } from "@/lib/sessionHeartRate";
 import { DeleteExercisePrompt, ExerciseRepsPrompt, ExercisePropagationPrompt, ReplaceExercisePrompt, type PendingReplace } from "@/components/workout/WorkoutExercisePrompts";
@@ -34,12 +33,11 @@ import { readOfflineWorkoutCache, writeOfflineWorkoutCache } from "@/lib/offline
 import { seedCheckmarkCounts } from "@/lib/completionGuard";
 import { Check, MessageSquare, ChevronDown, ChevronUp, Dumbbell, Footprints, Moon, Bike, Waves, ChevronLeft, ChevronRight, LogOut, Plus, Trash2, Search, CalendarIcon, X, TrendingUp, Equal, Weight, MessageCircle, XCircle, Timer, Route, Info, Pencil, Share2, Swords, ArrowLeftRight, Send, Settings, ArrowLeft, Flame, Download, Play, Save, Lock, RefreshCw, MapPin, Square, Maximize2, Minimize2, Pause, Heart, HeartOff, Sparkles, GripVertical, MoreHorizontal, CalendarRange, History } from "lucide-react";
 import { ExerciseDndContext, SortableLine } from "@/components/workout/ExerciseDnd";
-import { GPS_FIX_MAX_ACCURACY_M, useGpsTracker } from "@/hooks/useGpsTracker";
 import { useHeartRate } from "@/hooks/useHeartRate";
 import { openAppSettings } from "@/lib/openSettings";
 import { Capacitor } from "@capacitor/core";
 import RouteMap from "@/components/RouteMap";
-import { appendRouteToHistory, loadRouteHistory } from "@/lib/routeHistory";
+import { importedRoute } from "@/lib/importedRoute";
 import { toPng } from "html-to-image";
 import SwipeableSetRow from "@/components/SwipeableSetRow";
 import { buildPrIndex, isPrWeight, prDoubleWarning } from "@/lib/prBadges";
@@ -95,9 +93,7 @@ import { useReadyWorkouts } from "@/lib/liveContent";
 import { calculateAchievementMetrics, unlockEarnedAchievements, type AchievementDefinition } from "@/lib/achievements";
 import { type WorkoutViewProps, type PlanDay, type Completion, type FriendComment, type AchievementToastState, type CustomExercise, matchesPlanDay, matchesPlanLike } from "@/components/workout/types";
 import { toTitleCase, normalizeTempoInput, toSavedIntervalRows, sanitizePaceInput, derivePlanCardioValues, parsePlanCardioForExercise, buildConditioningIntervalLabel, parseConditioningIntervalLabel, computeIntervalSessionTotals, formatMinutesAsClock } from "@/lib/workoutIntervalUtils";
-import GpsTrackerControl from "@/components/workout/GpsTrackerControl";
 import EmptyDayChoiceDialog from "@/components/workout/EmptyDayChoiceDialog";
-import DayGpsRecorder from "@/components/workout/DayGpsRecorder";
 import { ConditioningEditCard, ConditioningHMSInput, condInputCls, condUnitCls } from "@/components/workout/ConditioningEditCard";
 import { DAYS, addUtcDays, daysBetweenCalendarDates, formatDayDisplay, getBaseDay, getDayIndex, getMonday, getPlanDayDateValue, getSessionColor, getSessionIcon, getTodayInfo, getWeekdayFromDayKey, isAssistedBodyweightExercise, isDailyChallengeLabel, normalizeExerciseKey, parseDateKey, planHasAnyExercise, resolveTodayDayIndex, sameWorkoutDay, sanitizeCopiedLoggedWeights, suggestSessionName, toLocalDateKey, toUtcDateKey } from "@/lib/workoutDayUtils";
 import { estimateCalories, getPlanDayDate } from "@/lib/workoutCalories";
@@ -112,7 +108,6 @@ const AiWorkoutScanDialog = lazyRetry(() => import("@/components/AiWorkoutScanDi
 const ActivityFileImportDialog = lazyRetry(() => import("@/components/ActivityFileImportDialog"));
 const ShareWorkoutPromptDialog = lazyRetry(() => import("@/components/ShareWorkoutPromptDialog"));
 
-const SHOW_STRAVA_INTEGRATION = false;
 
 
 
@@ -246,7 +241,6 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack, acti
     const u = unitOv.get(n.trim().toLowerCase())?.unit;
     return u === "seconds" ? "sek" : u === "meters" ? "m" : u === "reps" ? "reps" : undefined;
   };
-  const [stravaSyncing, setStravaSyncing] = useState(false);
 
   // Weight/reps/sets selection for exercises
 
@@ -1372,14 +1366,6 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack, acti
       } catch {}
 
 
-      // Strava: skicka passet automatiskt om användaren slagit på det (körs i bakgrunden)
-      void maybeAutoExportToStrava(userId, week, day).then((r) => {
-        if (!r) return;
-        if (r.status === "already") return;
-        if (r.ok) toast("Passet skickades till Strava ✅", { duration: 3000 });
-        else toast(STRAVA_ERROR_TEXT[r.error || ""] || "Kunde inte skicka passet till Strava", { duration: 5000 });
-      });
-
       // Prepare the share dialog; it opens once the celebration is dismissed.
       offerShare(week, day, true);
       checkAchievementUnlocks({ ...completions, [key]: { ...current, week, day, done: true, skipped: false, user_comment: finalComment } });
@@ -1487,27 +1473,6 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack, acti
       await supabase.from("workout_comments").delete().eq("id", commentId);
     }
     setFriendComments((prev) => prev.filter((c) => c.id !== commentId));
-  };
-
-  const syncStravaNow = async (plan: PlanDay) => {
-    setStravaSyncing(true);
-    const { data, error } = await supabase.functions.invoke("strava-sync", {
-      body: {
-        mode: "user",
-        limit: 1,
-        source: "workout-card",
-        targetWorkout: { week: plan.week, day: plan.day },
-      },
-    });
-    setStravaSyncing(false);
-    if (error || data?.error || data?.results?.[0]?.error) {
-      toast.error("Kunde inte synka från Strava.");
-      return;
-    }
-    const imported = data?.results?.[0]?.imported ?? 0;
-    const applied = data?.results?.[0]?.applied ?? imported;
-    toast.success(applied > 0 ? "Strava-pass synkat till kortet." : "Inget matchande Strava-pass hittades för kortet.");
-    fetchData();
   };
 
   // Set completion tracking helpers
@@ -4922,27 +4887,6 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack, acti
                           <Footprints className="w-4 h-4 text-warning" />
                           {conditioningDialog.exerciseName}
                         </h4>
-                        {!isStairMachine(conditioningDialog.exerciseName) && !conditioningDialog.exerciseName.toLowerCase().includes("intervall") && (
-                          <GpsTrackerControl
-                            onStop={(km, sec) => {
-                              const totMin = sec / 60;
-                              const hh = Math.floor(sec / 3600);
-                              const mm = Math.floor((sec % 3600) / 60);
-                              const ss = sec % 60;
-                              setCondTimeHours(hh > 0 ? String(hh) : "");
-                              setCondTimeMinutes(String(mm));
-                              setCondTimeSeconds(ss > 0 ? String(ss) : "");
-                              const distRounded = Math.round(km * 100) / 100;
-                              setCondDistanceInput(String(distRounded));
-                              if (km > 0) {
-                                const paceMin = totMin / km;
-                                const pm = Math.floor(paceMin);
-                                const ps = Math.round((paceMin - pm) * 60);
-                                setCondTempoInput(`${pm}:${String(ps).padStart(2, "0")}`);
-                              }
-                            }}
-                          />
-                        )}
                         {condTempoInput && !isStairMachine(conditioningDialog.exerciseName) && (
                           <p className="text-xs text-muted-foreground flex items-center gap-1">
                             <Timer className="w-3 h-3" /> Senast tempo: <span className="font-mono font-semibold text-foreground">{formatPaceDisplay(condTempoInput, condMode)}{modeDisplaySuffix(condMode)}</span>
@@ -5087,14 +5031,6 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack, acti
                     {/* Add warmup & exercise buttons */}
                     {!weightDialog && !conditioningDialog &&
                   <div className="space-y-1.5">
-                    {SHOW_STRAVA_INTEGRATION && (
-                      <button
-                        onClick={() => syncStravaNow(plan)}
-                        disabled={stravaSyncing}
-                        className="w-full py-2 border border-dashed border-primary/40 rounded-md text-xs text-muted-foreground hover:text-primary hover:border-primary transition-colors flex items-center justify-center gap-1">
-                          <RefreshCw className={`w-3 h-3 ${stravaSyncing ? "animate-spin" : ""}`} /> Synka från Strava
-                        </button>
-                    )}
                     <button
                       onClick={() => {
                         setShowExercisePicker(plan.id);
@@ -5260,51 +5196,6 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack, acti
                     <Download className="lucide lucide-download w-3.5 h-3.5 mx-0" />
                     <span>Spara       </span>
                   </button>
-                  {(() => {
-                    const konditionExercises = allExercises.filter(e => {
-                      if (e.category !== "kondition" || !e.name) return false;
-                      const n = e.name.toLowerCase();
-                      return !/(motioncykel|motionscykel|löpband|lopband|trappmaskin|crosstrainer|cross-trainer|arc trainer|arctrainer)/.test(n);
-                    });
-                    return (
-                      <DayGpsRecorder
-                        storageKey={String(plan.id)}
-                        isAdmin={isAdmin}
-                        konditionExercises={konditionExercises}
-
-                        onSave={async (name, km, sec, gpsRoute, gpsSplits) => {
-                          const totMin = sec / 60;
-                          const distRounded = Math.round(km * 100) / 100;
-                          const tempoMin = km > 0 ? totMin / km : 0;
-                          const tMin = Math.floor(tempoMin);
-                          const tSec = Math.round((tempoMin - tMin) * 60);
-                          const tempoStr = km > 0 ? `${tMin}:${String(tSec).padStart(2, "0")}` : "";
-                          const dataObj: Record<string, any> = {
-                            time: String(Math.round(totMin * 10) / 10),
-                            dist: String(distRounded),
-                            tempo: tempoStr,
-                            route: gpsRoute,
-                            ...(gpsSplits && gpsSplits.length ? { splits: gpsSplits } : {}),
-                          };
-                          await updateCompletionWeights(plan.week, plan.day, (existing) => {
-                            return { ...existing, [`__cond__${name}`]: JSON.stringify(dataObj) };
-                          });
-                          const infoParts: string[] = [];
-                          infoParts.push(`${Math.round(totMin)} min`);
-                          if (tempoStr) infoParts.push(`${tempoStr}/km`);
-                          infoParts.push(`${distRounded} km`);
-                          const entry = `${name} — ${infoParts.join(", ")}`;
-                          const existingLines = (plan.details || "").split(/[;\n]/).map(x => x.trim()).filter(Boolean);
-                          const idx = existingLines.findIndex(l => l.toLowerCase().startsWith(name.toLowerCase()));
-                          if (idx >= 0) existingLines[idx] = entry; else existingLines.push(entry);
-                          const newDetails = existingLines.join("\n");
-                          await supabase.from("workout_plans").update({ details: newDetails }).eq("id", plan.id);
-                          setPlans(prev => prev.map(p => p.id === plan.id ? { ...p, details: newDetails } : p));
-                          triggerSave();
-                        }}
-                      />
-                    );
-                  })()}
                   <button
                     onClick={(e) => {e.stopPropagation();deleteSingleWorkout(plan);}}
                     className="col-span-2 min-h-9 flex items-center justify-center gap-1.5 px-[5px] py-1 text-xs text-muted-foreground hover:text-destructive transition-colors rounded-md hover:bg-muted"
@@ -5933,13 +5824,13 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack, acti
                     let cardioInstructionLines: string[] = [];
 
                     // For all cardio/conditioning sessions: treat details as instructions
-                    // and surface a single conditioning entry so the user can log manually or via GPS.
+                    // and surface a single conditioning entry so the user can log manually.
                     if (isCardioSession && plan.session_name.trim() && detailParts.length > 0) {
                       // Skip rewrite if the only line is already a logged conditioning entry for this session
                       const onlyLine = detailParts.length === 1 ? detailParts[0] : null;
                       const { name: onlyName } = onlyLine ? parseExerciseWeight(onlyLine) : { name: "" };
                       const alreadySingleCondEntry = onlyLine && onlyName.trim().toLowerCase() === plan.session_name.trim().toLowerCase();
-                      // Also skip when the only line is a GPS-logged entry (auto-formatted by DayGpsRecorder
+                      // Also skip when the only line is a logged entry (auto-formatted by the former GPS recorder
                       // as "Name — X min, Y:YY/km, Z km") — it's an exercise, not instructions.
                       const isLoggedCondLine = !!onlyLine && /\d+\s*min/.test(onlyLine) && (/\/km/.test(onlyLine) || /\d+(?:[.,]\d+)?\s*km/.test(onlyLine));
                       // Skip when every line is already a structured exercise row (has " — " separator
@@ -6025,7 +5916,7 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack, acti
                           )}
                           {cardioInstructionsText && (() => {
                             // Resolve the actual conditioning name dynamically so we hit the
-                            // same __cond__<name> key that DayGpsRecorder used when saving
+                            // same __cond__<name> key that the former GPS recorder used when saving
                             // (e.g. on a "Vila" rest day where a "Löpning" pass was registered).
                             const lw = (completions[key]?.logged_weights || {}) as Record<string, any>;
                             const condKeys = Object.keys(lw).filter(k => k.startsWith("__cond__") && !k.startsWith("__cond_done__"));
@@ -6115,7 +6006,7 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack, acti
                                   onMoveDown={() => {}}
                                   onShowInfo={() => setExerciseInfoState({ name: condName })}
                                   onDelete={async () => {
-                                    // Clear the saved cardio payload (incl. GPS route)
+                                    // Clear the saved cardio payload (incl. any route)
                                     await deleteCondWeightLog(plan.week, plan.day, cKey);
                                     // Also remove the matching auto-added line from plan.details
                                     const lines = (plan.details || "").split(/\n/).map(l => l.trim()).filter(Boolean);
@@ -6596,7 +6487,8 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack, acti
 
                                 if (!(time || tempo || distance || pulse || spm || steps)) continue;
 
-                                const route = Array.isArray(data.route) && data.route.length > 1 ? (data.route as [number, number][]) : undefined;
+                                // Karta bara för importerade pass (HC/fil/Strava) – egna GPS-pass visas utan karta.
+                                const route = importedRoute(data);
 
                                 const existing = loggedEntries.find((entry) => entry.name.toLowerCase() === name.toLowerCase());
                                 if (existing) {
@@ -8522,11 +8414,6 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack, acti
                     }
                     return null;
                   })()}
-                  {SHOW_STRAVA_INTEGRATION && (
-                    <button onClick={() => syncStravaNow(plan)} disabled={stravaSyncing} className="w-full py-2 border border-dashed border-primary/40 rounded-md text-xs text-muted-foreground hover:text-primary hover:border-primary transition-colors flex items-center justify-center gap-1 disabled:opacity-50">
-                        <RefreshCw className={`w-3 h-3 ${stravaSyncing ? "animate-spin" : ""}`} /> Synka från Strava
-                      </button>
-                  )}
                    <button onClick={() => {setShowExercisePicker(plan.id);setSelectedMuscle(null);setIsWarmupMode(false);}} data-tour="add-exercise" className="w-full py-2 border border-dashed border-border rounded-md text-xs text-muted-foreground hover:text-foreground hover:border-primary transition-colors flex items-center justify-center gap-1">
                        <Plus className="w-3 h-3" /> Lägg till övning
                      </button>
@@ -8839,49 +8726,6 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack, acti
                   <Settings className="w-3.5 h-3.5" />
                   <span>Inställningar</span>
                 </button>
-                {(() => {
-                  const konditionExercises = allExercises.filter(e => {
-                    if (e.category !== "kondition" || !e.name) return false;
-                    const n = e.name.toLowerCase();
-                    return !/(motioncykel|motionscykel|löpband|lopband|trappmaskin|crosstrainer|cross-trainer|arc trainer|arctrainer)/.test(n);
-                  });
-                  return (
-                    <DayGpsRecorder
-                      isAdmin={isAdmin}
-                      konditionExercises={konditionExercises}
-                      onSave={async (name, km, sec, gpsRoute, gpsSplits) => {
-                        const totMin = sec / 60;
-                        const distRounded = Math.round(km * 100) / 100;
-                        const tempoMin = km > 0 ? totMin / km : 0;
-                        const tMin = Math.floor(tempoMin);
-                        const tSec = Math.round((tempoMin - tMin) * 60);
-                        const tempoStr = km > 0 ? `${tMin}:${String(tSec).padStart(2, "0")}` : "";
-                        const dataObj: Record<string, any> = {
-                          time: String(Math.round(totMin * 10) / 10),
-                          dist: String(distRounded),
-                          tempo: tempoStr,
-                          route: gpsRoute,
-                          ...(gpsSplits && gpsSplits.length ? { splits: gpsSplits } : {}),
-                        };
-                        await updateCompletionWeights(plan.week, plan.day, (existing) => {
-                          return { ...existing, [`__cond__${name}`]: JSON.stringify(dataObj) };
-                        });
-                        const infoParts: string[] = [];
-                        infoParts.push(`${Math.round(totMin)} min`);
-                        if (tempoStr) infoParts.push(`${tempoStr}/km`);
-                        infoParts.push(`${distRounded} km`);
-                        const entry = `${name} — ${infoParts.join(", ")}`;
-                        const existingLines = (plan.details || "").split(/[;\n]/).map(x => x.trim()).filter(Boolean);
-                        const idx = existingLines.findIndex(l => l.toLowerCase().startsWith(name.toLowerCase()));
-                        if (idx >= 0) existingLines[idx] = entry; else existingLines.push(entry);
-                        const newDetails = existingLines.join("\n");
-                        await supabase.from("workout_plans").update({ details: newDetails }).eq("id", plan.id);
-                        setPlans(prev => prev.map(p => p.id === plan.id ? { ...p, details: newDetails } : p));
-                        triggerSave();
-                      }}
-                    />
-                  );
-                })()}
               </div>
                 </div>
               }

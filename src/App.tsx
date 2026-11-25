@@ -8,7 +8,6 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { SaveIndicatorProvider } from "@/components/SaveIndicator";
 import { InAppBrowserDialog } from "@/components/InAppBrowserDialog";
-import RouteNavigationHost from "@/components/RouteNavigationHost";
 import HeartRateWidget from "@/components/HeartRateWidget";
 import { startWakeLockManager } from "@/lib/wakeLock";
 import AppErrorBoundary from "@/components/AppErrorBoundary";
@@ -42,7 +41,6 @@ const App = () => (
           <Toaster />
           <Sonner />
           <InAppBrowserDialog />
-          <RouteNavigationHost />
           <HeartRateWidget />
           <ConnectionNotice />
           <BrowserRouter>

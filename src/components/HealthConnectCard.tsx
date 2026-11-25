@@ -528,6 +528,11 @@ const HealthConnectCard = () => {
               ))}
             </ul>
           )}
+          {access?.workouts && (
+            <p className="text-[11px] leading-snug text-muted-foreground">
+              Vill du se kartan för importerade pass? Tillåt «Träningsrutter» för Grim i Health Connect.
+            </p>
+          )}
           {access && missing.length > 0 && (
             <Button
               size="sm"

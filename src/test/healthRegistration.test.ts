@@ -91,6 +91,17 @@ describe("HC registration replacement and retry", () => {
     expect((db.rows.social_posts ?? []).length).toBe(postsBefore);
     expect(JSON.stringify(saved.logged_weights)).not.toBe(weights);
   });
+  it("stores a Health Connect route with the cardio row so the imported pass shows its map", async () => {
+    const route: [number, number][] = [[59.3293, 18.0686], [59.3326, 18.0649]];
+    await importHealthWorkouts("u", [{ ...workout, key: "routed1", route }]);
+    const completion = db.rows.workout_completions.find((c) => String(c.day).endsWith("_hcrouted1"));
+    const cond = JSON.parse(completion.logged_weights["__cond__Löpning"]);
+    expect(cond.route).toEqual(route);
+    expect(cond.routeSource).toBe("health_connect");
+    const { importedRoute } = await import("@/lib/importedRoute");
+    expect(importedRoute(cond)).toEqual(route);
+  });
+
   it("registers a Tacx cycling import as completed cycling with its real distance", async () => {
     const imported = { ...workout, type: "cycling", label: "Cykling", source: "Tacx", distanceKm: 32.5 };
     const result = await importHealthWorkouts("u", [imported]);

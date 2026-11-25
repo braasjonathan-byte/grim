@@ -35,7 +35,7 @@ Skicka meddelanden, planera gemensamma pass eller bara snacka skit mellan seten.
 Logga måltider via AI-foto, streckkod eller manuellt. Räkna kalorier, protein, kolhydrater och fett mot dina mål.
 
 🏃 Triathlon-stöd
-Specialläge för simning, cykel och löpning med GPS-spårning, pulsmätning och anpassade pass.
+Specialläge för simning, cykel och löpning med pulsmätning, import från Health Connect och anpassade pass.
 
 🎵 Spotify-integration
 Visa din anthem på profilen och håll dig peppad under passet.
@@ -82,7 +82,7 @@ Sekundär tagg: Sport
 
 ## Sökord / ASO-nyckelord (för titel, beskrivning och Play Console-sökoptimering)
 
-träningsapp, gymapp, styrketräning, träningslogg, träningsdagbok, workout tracker, gym tracker, träningsschema, träningsprogram, PR-tracker, personliga rekord, 1RM, kaloriräknare, makrokalkylator, kostlogg, måltidslogg, streckkodsskanner mat, triathlon, simning cykel löpning, GPS löpning, pulszoner, vilotimer, cirkelträning, träna med vänner, social träning, topplista träning, dagens utmaning, Spotify träning, svensk träningsapp
+träningsapp, gymapp, styrketräning, träningslogg, träningsdagbok, workout tracker, gym tracker, träningsschema, träningsprogram, PR-tracker, personliga rekord, 1RM, kaloriräknare, makrokalkylator, kostlogg, måltidslogg, streckkodsskanner mat, triathlon, simning cykel löpning, pulszoner, vilotimer, cirkelträning, träna med vänner, social träning, topplista träning, dagens utmaning, Spotify träning, svensk träningsapp
 
 ## Kontakt och länkar
 

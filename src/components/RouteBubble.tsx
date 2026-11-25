@@ -1,7 +1,6 @@
 import { useMemo } from "react";
-import { MapPin, MoveUp, Navigation, Route as RouteIcon } from "lucide-react";
+import { MapPin, MoveUp, Route as RouteIcon } from "lucide-react";
 import type { RouteData, RoutePoint } from "@/lib/savedRoutes";
-import { startRouteNavigation } from "@/lib/routeNavigationBus";
 
 /** Liten SVG-skiss av rundan – lätt att rendera i chattbubblan. */
 const Sketch = ({ points }: { points: RoutePoint[] }) => {
@@ -53,14 +52,6 @@ const RouteBubble = ({ payload, isMine }: { payload: any; isMine: boolean }) => 
           </span>
         )}
       </p>
-      <button
-        onClick={() => startRouteNavigation({ route, activity: payload?.activity ?? "running", name: payload?.name })}
-        className={`mt-2 flex w-full items-center justify-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-bold ${
-          isMine ? "bg-primary-foreground/20" : "bg-primary text-primary-foreground"
-        }`}
-      >
-        <Navigation className="h-3.5 w-3.5" /> Starta rundan
-      </button>
     </div>
   );
 };
