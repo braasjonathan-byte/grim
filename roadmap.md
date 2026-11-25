@@ -1,5 +1,10 @@
 # Roadmap
 
+## Google Maps borttaget 25 november 2026
+- [x] Ta bort de tre deployade funktionerna route-directions, generate-route och place-search från molnet och från repot; ingen frontend-anropade dem längre.
+- [x] Koppla bort Google Maps-anslutningen från projektet, vilket tog bort dess tre hemligheter och de två env-variablerna; kartvyn använder fortfarande OpenStreetMap via Leaflet.
+- [x] Rensa den gamla Google Maps-stilen i index.css och den överblivna konfigurationsposten; 623 tester godkända och bygget godkänt.
+
 ## Android flow sweep 24 November 2026
 - [x] Read native plugin loaders and all Health Connect permission entry points; found the same proxy return in interval speech and a shorter nutrition permission deadline.
 - [x] Correct interval speech initialization/speak/stop and nutrition permission waits; start the manual data-sync deadline only after permission choices finish.
