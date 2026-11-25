@@ -4,6 +4,8 @@ import { checkedSetsFor, setVolumeKg } from "@/lib/checkedSets";
 import { parseExerciseWeight } from "@/lib/workoutSetData";
 import { getPlanDayDateValue, toUtcDateKey } from "@/lib/workoutDayUtils";
 import { missingHealthDistancePatch } from "@/lib/healthWorkoutDistance";
+import { missingHealthSeriesPatch } from "@/lib/healthWorkoutSeries";
+import type { WorkoutSeries } from "@/lib/workoutSeries";
 
 /**
  * Unified list of every completed workout — active plan, single workouts and
@@ -148,6 +150,22 @@ export async function fillMissingHealthDistance(userId: string, s: HistorySessio
       .eq("user_id", userId).eq("workout_week", s.week).eq("workout_day", s.day);
     if (postError) throw postError;
   }
+  return true;
+}
+
+/** Add the full pulse/distance series to an existing active Health import (never recreate or republish it). */
+export async function fillMissingHealthSeries(userId: string, s: HistorySession, series: WorkoutSeries | null | undefined): Promise<boolean> {
+  if (s.source.kind !== "active" || !/_hc[a-z0-9]+$/i.test(s.day)) return false;
+  const patch = missingHealthSeriesPatch(s.completion, series);
+  if (!patch) return false;
+  const { data, error } = await supabase.from("workout_completions")
+    .update(patch as any).eq("user_id", userId).eq("id", s.completion.id)
+    .eq("updated_at", s.completion.updated_at).select("id, updated_at");
+  if (error) throw error;
+  if (!data?.length) return false; // Concurrent edits win; retry on next fetch.
+  // Keep the in-memory row current so a distance fill in the same pass passes its guard.
+  s.completion = { ...s.completion, ...patch, updated_at: (data[0] as any).updated_at ?? s.completion.updated_at };
+  notifyWorkoutsChanged(userId);
   return true;
 }
 

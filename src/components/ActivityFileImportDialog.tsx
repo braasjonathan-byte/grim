@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { FileUp, Loader2, X } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
@@ -10,6 +10,7 @@ import {
 } from "@/lib/activityFileParser";
 import { buildWorkoutFromAiExercises, type AiExercise } from "@/lib/aiWorkoutImport";
 import { toRoutePoints } from "@/lib/importedRoute";
+import { buildWorkoutSeries, type WorkoutSeries } from "@/lib/workoutSeries";
 
 export interface ImportedWorkout {
   name: string;
@@ -51,6 +52,26 @@ const fileRoute = (a: ParsedActivity | null) => {
   })));
 };
 
+/** Hela passets tidsserie (puls, distans, watt, kadens) för pulsanalysen. */
+const fileSeries = (a: ParsedActivity | null): WorkoutSeries | null => {
+  const pts = (a?.points ?? []).filter((p) => typeof p.t === "number" && Number.isFinite(p.t));
+  if (pts.length < 2) return null;
+  const fit = a!.format === "fit";
+  const deg = (v: number | undefined, lim: number) => (typeof v === "number" && fit && Math.abs(v) > lim ? v * SEMICIRCLE_TO_DEG : v);
+  const tv = (key: "hr" | "power" | "cad") => pts.filter((p) => typeof p[key] === "number").map((p) => ({ t: p.t!, v: p[key]! }));
+  return buildWorkoutSeries({
+    start: pts[0].t!,
+    end: pts[pts.length - 1].t!,
+    hr: tv("hr"),
+    power: tv("power"),
+    cadence: tv("cad"),
+    distPoints: pts.filter((p) => typeof p.dist === "number").map((p) => ({ t: p.t!, m: p.dist! })),
+    route: pts
+      .filter((p) => typeof p.lat === "number" && typeof p.lon === "number")
+      .map((p) => ({ t: p.t!, lat: deg(p.lat, 90)!, lng: deg(p.lon, 180)! })),
+  });
+};
+
 const hmsToMin = (v: string): number | null => {
   const parts = v.trim().split(":").map((p) => parseInt(p, 10));
   if (parts.some((n) => !Number.isFinite(n))) return null;
@@ -78,6 +99,8 @@ export default function ActivityFileImportDialog({ open, onClose, onConfirm, ini
   const [elevation, setElevation] = useState("");
   const [watt, setWatt] = useState("");
   const [typeChosen, setTypeChosen] = useState(false);
+
+  const series = useMemo(() => fileSeries(activity), [activity]);
 
   const applyActivity = (a: ParsedActivity) => {
     setActivity(a);
@@ -148,13 +171,14 @@ export default function ActivityFileImportDialog({ open, onClose, onConfirm, ini
     const built = buildWorkoutFromAiExercises([ex]);
     if (!built.details.trim()) return null;
     // Rutten i filen följer med och visas som karta på passet.
+    // Pulsserien följer med för pulsanalysen.
     const route = fileRoute(activity);
-    if (route) {
+    if (route || series) {
       for (const key of Object.keys(built.loggedWeights)) {
         if (!key.startsWith("__cond__")) continue;
         try {
           const c = JSON.parse(built.loggedWeights[key]);
-          built.loggedWeights[key] = JSON.stringify({ ...c, route, routeSource: "file" });
+          built.loggedWeights[key] = JSON.stringify({ ...c, ...(route ? { route, routeSource: "file" } : {}), ...(series ? { series } : {}) });
         } catch { /* behåll utan rutt */ }
       }
     }

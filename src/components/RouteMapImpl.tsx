@@ -24,6 +24,8 @@ interface Props {
   livePosition?: Point | null;
   /** Aktiv navigering: rotera kartan så färdriktningen pekar uppåt (heading-up). */
   rotateToHeading?: boolean;
+  /** Markerad punkt (t.ex. vald tidpunkt i pulsgrafen). */
+  highlight?: Point | null;
 }
 
 
@@ -166,7 +168,7 @@ const RouteMap = ({
   traveledCount = 0,
   livePosition = null,
   rotateToHeading = false,
-
+  highlight = null,
 }: Props) => {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<L.Map | null>(null);
@@ -179,6 +181,7 @@ const RouteMap = ({
   const startMarkerRef = useRef<L.Marker | null>(null);
   const endMarkerRef = useRef<L.Marker | null>(null);
   const pulseRef = useRef<L.Marker | null>(null);
+  const highlightRef = useRef<L.CircleMarker | null>(null);
 
   const fittedOnceRef = useRef(false);
   const followPausedRef = useRef(false);
@@ -311,6 +314,7 @@ const RouteMap = ({
       startMarkerRef.current = null;
       endMarkerRef.current = null;
       pulseRef.current = null;
+      highlightRef.current = null;
       tileRef.current = null;
       mapRef.current?.remove();
       mapRef.current = null;
@@ -465,6 +469,24 @@ const RouteMap = ({
       fittedOnceRef.current = true;
     }
   }, [mapReady, route, heatmap, alternatives, live, primary, dark, traveledCount, livePosition]);
+
+  // Markerad punkt från pulsgrafen (flyttar inte kameran).
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !mapReady) return;
+    if (!highlight) {
+      highlightRef.current?.remove();
+      highlightRef.current = null;
+      return;
+    }
+    if (!highlightRef.current) {
+      highlightRef.current = L.circleMarker(highlight, {
+        radius: 7, color: "#ffffff", weight: 2, fillColor: "#ef4444", fillOpacity: 1, interactive: false,
+      }).addTo(map);
+    } else {
+      highlightRef.current.setLatLng(highlight);
+    }
+  }, [mapReady, highlight?.[0], highlight?.[1]]);
 
   // Return-to-start data
   const returnInfo = useMemo(() => {

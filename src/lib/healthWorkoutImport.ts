@@ -6,7 +6,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { buildWorkoutFromAiExercises } from "@/lib/aiWorkoutImport";
 import { healthLog, withTimeout, type HealthWorkout } from "@/lib/healthSync";
 import { DAYS, daysBetweenCalendarDates, getMonday, getPlanDayDateValue, parseDateKey, toLocalDateKey, toUtcDateKey } from "@/lib/workoutDayUtils";
-import { notifyWorkoutsChanged, loadWorkoutHistory, fillMissingHealthDistance } from "@/lib/workoutHistory";
+import { notifyWorkoutsChanged, loadWorkoutHistory, fillMissingHealthDistance, fillMissingHealthSeries } from "@/lib/workoutHistory";
 
 export const HEALTH_WORKOUT_IMPORTED_EVENT = "grim:health-workout-imported";
 export interface ImportedHealthSession { userId: string; week: number; day: string }
@@ -95,13 +95,16 @@ export async function findImportedHealthWorkouts(
     "Ingen kontakt med servern – försök igen.",
   );
   if (error || completionError) throw error || completionError;
-  // A later read may contain distance that the initial provider sync lacked.
-  if (workouts.some(w => (w.distanceKm ?? 0) > 0)) {
+  // A later read may contain distance or a fuller pulse series than the initial provider sync.
+  if (workouts.some(w => (w.distanceKm ?? 0) > 0 || w.series)) {
     const history = await loadWorkoutHistory(userId);
     for (const w of workouts) {
-      if (!(w.distanceKm && w.distanceKm > 0)) continue;
       const session = history.find(s => s.source.kind === "active" && s.day.endsWith(`_hc${w.key}`));
-      if (session) await fillMissingHealthDistance(userId, session, w.distanceKm);
+      if (!session) continue;
+      if (w.series) {
+        try { await fillMissingHealthSeries(userId, session, w.series); } catch (err: any) { healthLog("series fill failed", err?.message); }
+      }
+      if (w.distanceKm && w.distanceKm > 0) await fillMissingHealthDistance(userId, session, w.distanceKm);
     }
   }
   const doneKeys = new Set((completions ?? []).filter((c) => c.done).map((c) => `${c.week}-${c.day}`));
@@ -250,7 +253,7 @@ export async function importHealthWorkouts(
     // rader i details (varje rad tolkas annars som en styrkeövning).
     // Rikare puls-vy: max/lägsta + nedsamplad kurva sparas med konditionsraden.
     const condKey = `__cond__${w.label}`;
-    if (loggedWeights[condKey] && (w.maxHeartRate || w.hrCurve?.length || (w.route?.length ?? 0) > 1)) {
+    if (loggedWeights[condKey] && (w.maxHeartRate || w.hrCurve?.length || (w.route?.length ?? 0) > 1 || w.series)) {
       try {
         const c = JSON.parse(loggedWeights[condKey]);
         if (w.maxHeartRate) c.pulseMax = String(w.maxHeartRate);
@@ -261,6 +264,8 @@ export async function importHealthWorkouts(
           c.route = w.route;
           c.routeSource = "health_connect";
         }
+        // Hela passets serie (puls, distans, watt, kadens, återhämtning) för pulsanalysen.
+        if (w.series) c.series = w.series;
         loggedWeights[condKey] = JSON.stringify(c);
       } catch { /* behåll originalet */ }
     }

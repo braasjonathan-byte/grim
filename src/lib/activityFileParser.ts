@@ -15,6 +15,12 @@ export interface TrackPoint {
   t?: number;
   /** Puls (bpm) */
   hr?: number;
+  /** Kumulativ distans i meter (om filen anger den) */
+  dist?: number;
+  /** Effekt (W) */
+  power?: number;
+  /** Kadens (rpm / steg per minut) */
+  cad?: number;
 }
 
 export interface ParsedActivity {
@@ -229,6 +235,9 @@ function parseTcx(text: string, fileName: string): ParsedActivity {
       ele: numOrNull(firstText(tp, "AltitudeMeters")) ?? undefined,
       t: Number.isFinite(ts) ? ts : undefined,
       hr: hrEl ? numOrNull(firstText(hrEl, "Value")) ?? undefined : undefined,
+      dist: numOrNull(firstText(tp, "DistanceMeters")) ?? undefined,
+      power: numOrNull(firstText(tp, "Watts")) ?? undefined,
+      cad: numOrNull(firstText(tp, "Cadence")) ?? numOrNull(firstText(tp, "RunCadence")) ?? undefined,
     };
   });
 
@@ -323,6 +332,9 @@ async function parseFit(buffer: ArrayBuffer, fileName: string): Promise<ParsedAc
       ele: g(r, "altitude") ?? g(r, "enhancedAltitude") ?? undefined,
       t: time,
       hr: g(r, "heartRate") ?? undefined,
+      dist: g(r, "distance") ?? undefined,
+      power: g(r, "power") ?? undefined,
+      cad: g(r, "cadence") ?? undefined,
     };
   });
 

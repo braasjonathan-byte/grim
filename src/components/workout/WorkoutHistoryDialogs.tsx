@@ -6,6 +6,10 @@ import { ChevronRight, Pencil, Trash2 } from "lucide-react";
 import SetRowsEditor, { validateSetRows, type SetRow } from "./SetRowsEditor";
 import { deleteSession, loadWorkoutHistory, saveSessionEdit, WORKOUTS_CHANGED_EVENT, type HistorySession } from "@/lib/workoutHistory";
 import { showUndoToast } from "@/lib/undoToast";
+import PulseAnalysis from "@/components/PulseAnalysis";
+import { mainCardioEntry } from "@/lib/cardioHistory";
+import { sportKind } from "@/lib/pulseAnalysis";
+import { SESSION_HR_KEY } from "@/lib/sessionHeartRate";
 
 export const formatSessionDate = (d: string | null) =>
   d ? new Date(`${d}T12:00:00Z`).toLocaleDateString("sv-SE", { weekday: "short", day: "numeric", month: "short", year: "numeric" }) : "Okänt datum";
@@ -112,6 +116,7 @@ export const WorkoutDetailDialog = ({ userId, session, onClose }: { userId: stri
                   {session.pulse ? <span>❤️ {session.pulse} bpm</span> : null}
                 </div>
               )}
+              <SessionPulseAnalysis session={session} />
               {session.completion.user_comment ? <p className="text-xs italic text-muted-foreground whitespace-pre-line">💬 {session.completion.user_comment}</p> : null}
               <div className="flex gap-2 pt-2">
                 <button type="button" onClick={startEdit} disabled={strength.length === 0 && !canChangeDate} className="flex-1 py-2.5 rounded-xl bg-primary text-primary-foreground text-sm font-semibold flex items-center justify-center gap-1.5 disabled:opacity-40">
@@ -187,5 +192,25 @@ export const PastWorkoutsDialog = ({ userId, open, onClose, onlyDate }: { userId
       </Dialog>
       {selected && <WorkoutDetailDialog userId={userId} session={selected} onClose={() => setSelected(null)} />}
     </>
+  );
+};
+
+/** Pulsanalys för löp- och cykelpass (även importerade) i passdetaljen. */
+const SessionPulseAnalysis = ({ session }: { session: HistorySession }) => {
+  const lw = session.completion?.logged_weights;
+  const entry = mainCardioEntry(lw, session.name);
+  // Passets pulsinspelning gäller bara konditionsdelen om passet saknar styrkeset.
+  const sessionHr = session.setCount === 0 && lw && typeof lw === "object" ? (lw as Record<string, unknown>)[SESSION_HR_KEY] : undefined;
+  const kind = sportKind(entry?.name ?? session.name);
+  if (!kind || (!entry && !session.pulse)) return null;
+  return (
+    <PulseAnalysis
+      name={entry?.name ?? session.name}
+      cond={entry?.data ?? null}
+      sessionHr={sessionHr}
+      fallback={{ avgHr: session.pulse, distanceKm: session.distanceKm }}
+      sessionId={session.id}
+      defaultExpanded
+    />
   );
 };

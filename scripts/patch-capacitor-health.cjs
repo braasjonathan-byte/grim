@@ -1072,8 +1072,31 @@ if (!kt.includes("GRIM_WORKOUT_DISTANCE_V2")) {
   else throw new Error("Workout distance call not found");
 }
 
+// GRIM_WORKOUT_SERIES_V1: distans-, fart-, watt-, kadens- och efterpulsserier för pulsanalysen.
+// Läses bara när JS ber om dem (includeGrimSeries) och bara för beviljade behörigheter.
+fs.copyFileSync(path.join(ROOT, "scripts/android/GrimWorkoutSeries.kt"), path.join(path.dirname(PLUGIN_KT), "GrimWorkoutSeries.kt"));
+if (!kt.includes("GRIM_WORKOUT_SERIES_V1")) {
+  const flagAnchor = 'val includeSteps: Boolean = call.getBoolean("includeSteps", false) == true';
+  const routeAnchor = "                    if (includeRoute && workout.exerciseRouteResult is ExerciseRouteResult.Data) {";
+  if (!kt.includes(flagAnchor) || !kt.includes(routeAnchor)) throw new Error("[patch-capacitor-health] queryWorkouts anchors for GRIM_WORKOUT_SERIES_V1 not found");
+  kt = kt.replace(flagAnchor, () => `${flagAnchor}
+        val includeGrimSeries: Boolean = call.getBoolean("includeGrimSeries", false) == true`);
+  kt = kt.replace(routeAnchor, () => `                    // GRIM_WORKOUT_SERIES_V1
+                    if (includeGrimSeries) {
+                        try {
+                            val grantedForSeries = healthConnectClient.permissionController.getGrantedPermissions()
+                            workoutObject.put("grimSeries", GrimWorkoutSeries.read(healthConnectClient, workout, grantedForSeries))
+                        } catch (e: Exception) {
+                            Log.e(tag, "Workout series read failed", e)
+                        }
+                    }
+
+${routeAnchor}`);
+}
+
 const requiredMarkers = [
   "GRIM_WORKOUT_DISTANCE_V2",
+  "GRIM_WORKOUT_SERIES_V1",
   "GRIM_BRIDGE_ACTIVITY_RESULT",
   "handleHealthPermissionResult",
   "GRIM_LAUNCH_GUARD",

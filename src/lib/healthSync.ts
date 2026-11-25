@@ -2,6 +2,7 @@ import { Capacitor, registerPlugin } from "@capacitor/core";
 import { supabase } from "@/integrations/supabase/client";
 import { downsampleHr } from "@/lib/hrCurve";
 import { toRoutePoints, type RoutePoint } from "@/lib/importedRoute";
+import { buildWorkoutSeries, type WorkoutSeries } from "@/lib/workoutSeries";
 
 export type HealthDay = {
   day: string;
@@ -80,6 +81,8 @@ type HealthPluginLike = {
     includeHeartRate: boolean;
     includeRoute: boolean;
     includeSteps: boolean;
+    /** GRIM_WORKOUT_SERIES_V1: distans-, fart-, watt-, kadens- och efterpulsserier (nyare APK). */
+    includeGrimSeries?: boolean;
   }) => Promise<{ workouts: RawHealthWorkout[] }>;
   // GRIM_HC_BACKGROUND: finns bara i APK:er byggda med scripts/patch-health-background.cjs.
   readDailySummary?: (req: { days: number }) => Promise<NativeDailySummary>;
@@ -188,7 +191,43 @@ export type RawHealthWorkout = {
   heartRate?: { timestamp: string; bpm: number }[];
   /** ExerciseRoute – finns bara när Health Connect lämnar ut rutten (READ_EXERCISE_ROUTES). */
   route?: { timestamp?: string; lat: number; lng: number; alt?: number }[];
+  /** GRIM_WORKOUT_SERIES_V1 från GrimWorkoutSeries.kt: [ms, värde] resp. [startMs, slutMs, meter]. */
+  grimSeries?: {
+    distance?: [number, number, number][];
+    speed?: [number, number][];
+    power?: [number, number][];
+    cadence?: [number, number][];
+    hrAfter?: [number, number][];
+  };
 };
+
+const pairs = (xs: unknown): { t: number; v: number }[] =>
+  Array.isArray(xs) ? xs.filter((p) => Array.isArray(p) && p.length >= 2).map((p) => ({ t: Number(p[0]), v: Number(p[1]) })) : [];
+
+/**
+ * Hela passets tidsserie ur Health Connect: puls med tidsstämplar (alla APK:er)
+ * samt distans, fart, watt, kadens och puls efter passet när APK:n har
+ * GrimWorkoutSeries. Null om passet saknar både puls och distansserie.
+ */
+export function healthWorkoutSeries(w: RawHealthWorkout): WorkoutSeries | null {
+  const start = new Date(w.startDate).getTime();
+  const end = new Date(w.endDate).getTime();
+  const hr = (w.heartRate ?? []).map((s) => ({ t: new Date(s.timestamp).getTime(), v: s.bpm }));
+  const g = w.grimSeries ?? {};
+  return buildWorkoutSeries({
+    start,
+    end,
+    hr,
+    hrAfter: pairs(g.hrAfter),
+    distRecords: Array.isArray(g.distance)
+      ? g.distance.filter((r) => Array.isArray(r) && r.length >= 3).map((r) => ({ s: Number(r[0]), e: Number(r[1]), m: Number(r[2]) }))
+      : undefined,
+    speed: pairs(g.speed),
+    power: pairs(g.power),
+    cadence: pairs(g.cadence),
+    route: (w.route ?? []).map((p) => ({ t: p.timestamp ? new Date(p.timestamp).getTime() : NaN, lat: Number(p.lat), lng: Number(p.lng) })),
+  });
+}
 
 const Health = registerPlugin<HealthPluginLike>("HealthPlugin");
 
@@ -1027,6 +1066,8 @@ export type HealthWorkout = {
   minHeartRate?: number | null;
   /** Nedsamplad pulsserie (bpm) för pulskurva. */
   hrCurve?: number[] | null;
+  /** Hela passets tidsserie för pulsanalysen. */
+  series?: WorkoutSeries | null;
   /** Paketnamn för appen som skrev passet till Health Connect. */
   sourceBundleId?: string;
   /** Nedsamplad rutt [lat, lng] om Health Connect lämnade ut den (visas som karta). */
@@ -1131,6 +1172,7 @@ export async function readHealthWorkouts(days = 30, opts: { includeRoute?: boole
       // i Health Connect; annars (ConsentRequired/NoData) saknas den bara.
       includeRoute,
       includeSteps: true,
+      includeGrimSeries: true,
     }),
     STEP_TIMEOUT_MS,
     "Hälsoappen svarade inte i tid. Försök igen.",
@@ -1172,6 +1214,7 @@ export async function readHealthWorkouts(days = 30, opts: { includeRoute?: boole
         minHeartRate: bpms.length ? Math.min(...bpms) : null,
         hrCurve: bpms.length > 1 ? downsampleHr(w.heartRate ?? []) : null,
         route: includeRoute ? toRoutePoints(w.route) : null,
+        series: healthWorkoutSeries(w),
       } satisfies HealthWorkout;
     });
   // GRIM_HC_WRITE: pass som Grim själv skrivit ska inte importeras tillbaka (loop).

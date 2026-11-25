@@ -1,11 +1,11 @@
-import HeartRateCurve from "@/components/HeartRateCurve";
+import PulseAnalysis from "@/components/PulseAnalysis";
+import { sportKind } from "@/lib/pulseAnalysis";
 import SavedSplits from "@/components/workout/SavedSplits";
 import { useState, useEffect, useRef } from "react";
 import { parseNum, validateCardioEntry, validateNumber } from "@/lib/inputValidation";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { Check, ChevronDown, ChevronUp, Gauge, Heart, Info, Mountain, Pencil, Play, Route, Timer, X } from "lucide-react";
-import RouteMap from "@/components/RouteMap";
 import { importedRoute } from "@/lib/importedRoute";
 import IntervalRunner from "@/components/IntervalRunner";
 import { toTitleCase, sanitizePaceInput } from "@/lib/workoutIntervalUtils";
@@ -312,13 +312,9 @@ export const ConditioningEditCard = ({ name, lineIndex, planId, planCondTime, pl
           {savedData?.elev && <p className="text-xs inline-flex items-center gap-1"><Mountain className="w-3 h-3 text-muted-foreground" aria-label="Höjdmeter" /><span className="font-mono font-semibold">{savedData.elev} m</span></p>}
           {displayPulse && <p className="text-xs inline-flex items-center gap-1"><Heart className="w-3 h-3 text-destructive" aria-label="Puls" /><span className="font-mono font-semibold">{displayPulse} bpm</span></p>}
         </div>
-        {(Array.isArray(savedData?.hr) && savedData!.hr.length > 1) || savedData?.pulseMax ? (
-          <HeartRateCurve hr={savedData?.hr} avg={displayPulse} max={savedData?.pulseMax} min={savedData?.pulseMin} minutes={Number(savedData?.time) || null} />
+        {(savedData?.series || (Array.isArray(savedData?.hr) && savedData!.hr.length > 1) || savedData?.pulseMax || (savedData?.pulse && sportKind(name)) || importedRoute(savedData)) ? (
+          <PulseAnalysis name={name} cond={savedData} />
         ) : null}
-        {(() => {
-          const shown = importedRoute(savedData);
-          return shown ? <RouteMap route={shown} height={180} collapsible defaultOpen={false} /> : null;
-        })()}
         <SavedSplits splits={savedData?.splits} />
       </div>
     );
