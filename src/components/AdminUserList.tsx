@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { Users, UserPlus, Check, Loader2, ChevronDown, Eye, ShieldAlert } from "lucide-react";
+import { Users, UserPlus, Check, Loader2, ChevronDown, Eye, ShieldAlert, KeyRound } from "lucide-react";
 import HonoraryBadge from "./HonoraryBadge";
 import { toast } from "sonner";
 import {
@@ -51,6 +51,8 @@ const AdminUserList = ({ userId, onViewUserPlan }: AdminUserListProps) => {
   const [addingFriend, setAddingFriend] = useState<string | null>(null);
   const [savingAccess, setSavingAccess] = useState<string | null>(null);
   const [pendingChange, setPendingChange] = useState<{ user: UserEntry; level: AccessLevelKey } | null>(null);
+  const [resettingPassword, setResettingPassword] = useState<string | null>(null);
+  const [pendingPasswordReset, setPendingPasswordReset] = useState<UserEntry | null>(null);
   useEffect(() => {
     if (!open) return;
     fetchData();
@@ -148,6 +150,21 @@ const AdminUserList = ({ userId, onViewUserPlan }: AdminUserListProps) => {
     );
   };
 
+  const applyPasswordReset = async () => {
+    if (!pendingPasswordReset) return;
+    const target = pendingPasswordReset;
+    setPendingPasswordReset(null);
+    setResettingPassword(target.user_id);
+    const { data, error } = await supabase.functions.invoke("admin-set-password", {
+      body: { user_id: target.user_id },
+    });
+    setResettingPassword(null);
+    if (error || data?.error) {
+      toast.error(data?.error || error?.message || "Kunde inte återställa lösenordet");
+      return;
+    }
+    toast.success(`Lösenordet för ${target.nickname} är återställt till Grim123`);
+  };
 
   const getStatusLabel = (status: FriendshipStatus[string]) => {
     switch (status) {
@@ -211,6 +228,19 @@ const AdminUserList = ({ userId, onViewUserPlan }: AdminUserListProps) => {
                           className="p-1.5 rounded-md bg-secondary text-muted-foreground hover:text-primary transition-colors"
                         >
                           <Eye className="w-3.5 h-3.5" />
+                        </button>
+                        <button
+                          onClick={() => setPendingPasswordReset(u)}
+                          disabled={resettingPassword === u.user_id}
+                          title="Återställ lösenord till Grim123"
+                          aria-label={`Återställ lösenord för ${u.nickname}`}
+                          className="p-1.5 rounded-md bg-secondary text-muted-foreground hover:text-primary transition-colors disabled:opacity-50"
+                        >
+                          {resettingPassword === u.user_id ? (
+                            <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                          ) : (
+                            <KeyRound className="w-3.5 h-3.5" />
+                          )}
                         </button>
                         {savingAccess === u.user_id ? (
                           <span className="px-2 py-1 rounded-md bg-secondary">
@@ -285,6 +315,23 @@ const AdminUserList = ({ userId, onViewUserPlan }: AdminUserListProps) => {
           <AlertDialogFooter>
             <AlertDialogCancel>Avbryt</AlertDialogCancel>
             <AlertDialogAction onClick={applyAccessChange}>Bekräfta</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={!!pendingPasswordReset} onOpenChange={(o) => !o && setPendingPasswordReset(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <KeyRound className="w-4 h-4 text-primary" /> Återställ lösenord
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              Vill du återställa lösenordet för <strong>{pendingPasswordReset?.nickname}</strong>? Det tillfälliga lösenordet blir <strong>Grim123</strong> och medlemmen ombeds välja ett nytt lösenord vid nästa inloggning.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Avbryt</AlertDialogCancel>
+            <AlertDialogAction onClick={applyPasswordReset}>Återställ</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>

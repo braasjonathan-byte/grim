@@ -6,6 +6,8 @@ const corsHeaders = {
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
 
+const TEMP_PASSWORD = "Grim123";
+
 const json = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), {
     status,
@@ -31,20 +33,23 @@ Deno.serve(async (req) => {
     const { data: isAdmin } = await admin.rpc("has_role", { _user_id: caller.id, _role: "admin" });
     if (!isAdmin) return json({ error: "Endast admin" }, 403);
 
-    const { nickname, password } = await req.json();
-    if (typeof nickname !== "string" || typeof password !== "string" || password.length < 8) {
-      return json({ error: "Ogiltig indata (lösenord minst 8 tecken)" }, 400);
+    const body = await req.json().catch(() => ({}));
+    const userId = typeof body?.user_id === "string" ? body.user_id.trim() : "";
+    const nickname = typeof body?.nickname === "string" ? body.nickname.trim() : "";
+    if (!userId && !nickname) {
+      return json({ error: "Ogiltig indata" }, 400);
     }
 
-    const { data: profile } = await admin
-      .from("profiles")
-      .select("user_id, nickname")
-      .ilike("nickname", nickname.trim())
-      .maybeSingle();
+    const profileQuery = admin.from("profiles").select("user_id, nickname");
+    const { data: profile } = userId
+      ? await profileQuery.eq("user_id", userId).maybeSingle()
+      : await profileQuery.ilike("nickname", nickname).maybeSingle();
 
     if (!profile) return json({ error: "Användaren hittades inte" }, 404);
 
-    const { error: updErr } = await admin.auth.admin.updateUserById(profile.user_id, { password });
+    const { error: updErr } = await admin.auth.admin.updateUserById(profile.user_id, {
+      password: TEMP_PASSWORD,
+    });
     if (updErr) return json({ error: updErr.message }, 400);
 
     const { error: profErr } = await admin
