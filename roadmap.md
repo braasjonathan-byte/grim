@@ -1,5 +1,10 @@
 # Roadmap
 
+## Admin password reset 26 November 2026
+- [x] Replace rejected shared password with a cryptographically random temporary password; preserve auth protection and change-required behavior.
+- [x] 15 regression tests passed; reset function deployed; live authenticated validation/unknown-member checks passed. Signed-in mobile admin confirmation, cancellation, mocked success and password clearing verified; no real member credentials changed.
+- [ ] Verify a real password reset and subsequent required password change; awaits an explicitly designated disposable member account (existing members were not modified for testing).
+
 ## Google Maps borttaget 25 november 2026
 - [x] Ta bort de tre deployade funktionerna route-directions, generate-route och place-search från molnet och från repot; ingen frontend-anropade dem längre.
 - [x] Koppla bort Google Maps-anslutningen från projektet, vilket tog bort dess tre hemligheter och de två env-variablerna; kartvyn använder fortfarande OpenStreetMap via Leaflet.

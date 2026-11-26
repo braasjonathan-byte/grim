@@ -53,6 +53,7 @@ const AdminUserList = ({ userId, onViewUserPlan }: AdminUserListProps) => {
   const [pendingChange, setPendingChange] = useState<{ user: UserEntry; level: AccessLevelKey } | null>(null);
   const [resettingPassword, setResettingPassword] = useState<string | null>(null);
   const [pendingPasswordReset, setPendingPasswordReset] = useState<UserEntry | null>(null);
+  const [passwordResetResult, setPasswordResetResult] = useState<{ nickname: string; password: string } | null>(null);
   useEffect(() => {
     if (!open) return;
     fetchData();
@@ -151,19 +152,24 @@ const AdminUserList = ({ userId, onViewUserPlan }: AdminUserListProps) => {
   };
 
   const applyPasswordReset = async () => {
-    if (!pendingPasswordReset) return;
+    if (!pendingPasswordReset || resettingPassword) return;
     const target = pendingPasswordReset;
     setPendingPasswordReset(null);
     setResettingPassword(target.user_id);
-    const { data, error } = await supabase.functions.invoke("admin-set-password", {
-      body: { user_id: target.user_id },
-    });
-    setResettingPassword(null);
-    if (error || data?.error) {
-      toast.error(data?.error || error?.message || "Kunde inte återställa lösenordet");
-      return;
+    try {
+      const { data, error } = await supabase.functions.invoke("admin-set-password", {
+        body: { user_id: target.user_id },
+      });
+      if (error || data?.error || !data?.success || typeof data.temporary_password !== "string") {
+        toast.error(data?.error || "Kunde inte återställa lösenordet. Försök igen.");
+        return;
+      }
+      setPasswordResetResult({ nickname: target.nickname, password: data.temporary_password });
+    } catch {
+      toast.error("Kunde inte återställa lösenordet. Försök igen.");
+    } finally {
+      setResettingPassword(null);
     }
-    toast.success(`Lösenordet för ${target.nickname} är återställt till Grim123`);
   };
 
   const getStatusLabel = (status: FriendshipStatus[string]) => {
@@ -231,8 +237,8 @@ const AdminUserList = ({ userId, onViewUserPlan }: AdminUserListProps) => {
                         </button>
                         <button
                           onClick={() => setPendingPasswordReset(u)}
-                          disabled={resettingPassword === u.user_id}
-                          title="Återställ lösenord till Grim123"
+                          disabled={resettingPassword !== null}
+                          title="Återställ lösenord"
                           aria-label={`Återställ lösenord för ${u.nickname}`}
                           className="p-1.5 rounded-md bg-secondary text-muted-foreground hover:text-primary transition-colors disabled:opacity-50"
                         >
@@ -326,12 +332,33 @@ const AdminUserList = ({ userId, onViewUserPlan }: AdminUserListProps) => {
               <KeyRound className="w-4 h-4 text-primary" /> Återställ lösenord
             </AlertDialogTitle>
             <AlertDialogDescription>
-              Vill du återställa lösenordet för <strong>{pendingPasswordReset?.nickname}</strong>? Det tillfälliga lösenordet blir <strong>Grim123</strong> och medlemmen ombeds välja ett nytt lösenord vid nästa inloggning.
+              Vill du återställa lösenordet för <strong>{pendingPasswordReset?.nickname}</strong>? Ett unikt, säkert tillfälligt lösenord skapas och medlemmen måste välja ett nytt lösenord vid nästa inloggning.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Avbryt</AlertDialogCancel>
             <AlertDialogAction onClick={applyPasswordReset}>Återställ</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+      <AlertDialog open={!!passwordResetResult} onOpenChange={(open) => !open && setPasswordResetResult(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Lösenord återställt</AlertDialogTitle>
+            <AlertDialogDescription>
+              Tillfälligt lösenord för {passwordResetResult?.nickname}. Det visas endast här tills du stänger rutan.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <input
+            aria-label="Tillfälligt lösenord"
+            readOnly
+            autoComplete="off"
+            value={passwordResetResult?.password ?? ""}
+            className="w-full min-w-0 rounded-md border border-border bg-background px-3 py-2 text-sm font-mono text-foreground"
+            onFocus={(event) => event.target.select()}
+          />
+          <AlertDialogFooter>
+            <AlertDialogAction onClick={() => setPasswordResetResult(null)}>Stäng</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>

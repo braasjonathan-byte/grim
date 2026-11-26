@@ -1,4 +1,5 @@
 # Architecture rules
+- Admin password resets generate unique cryptographic passwords server-side and show them only in the requesting admin's transient dialog; keep auth password protections enabled and set the change-required flag before changing credentials.
 - Never resolve promises with bare Capacitor plugin proxies; wrap them in plain objects so thenable assimilation cannot invoke a native `then` method.
 - Health Connect permission deadlines track direct launcher dispatch per request as well as proxy visibility; both preserve saved callbacks during the bounded user-choice window.
 - All Health Connect permission entry points use the shared dialog deadline; data-sync deadlines start after permission choices so enclosing timers cannot reject an open permission screen early.
