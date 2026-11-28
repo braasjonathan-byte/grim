@@ -91,12 +91,14 @@ export function showCardioElevation(name: string): boolean {
   const cfg = getCustomCardioConfig(name);
   if (cfg && cfg.showElevation !== undefined) return cfg.showElevation;
   const n = name || "";
+  if (/^cykeltrainer$/i.test(n.trim())) return false;
   if (re.swim.test(n) || re.row.test(n) || re.jumprope.test(n) || re.stair.test(n) || re.airbike.test(n) || re.cross.test(n)) return false;
   return re.bike.test(n) || re.walk.test(n) || re.ski.test(n) || re.paddle.test(n) || /löp|jogg|spring|trail|terräng|maraton|milen/i.test(n);
 }
 
 /** Tillgängliga enheter per sport. Första posten är standardvalet. */
 export function getCardioModes(name: string): CardioMode[] {
+  if (name.trim().toLowerCase() === "cykeltrainer") return ["watt", "kmh"];
   const custom = getCustomCardioConfig(name);
   if (custom?.modes?.length) return custom.modes;
   const n = name || "";

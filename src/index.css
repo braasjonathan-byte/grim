@@ -650,3 +650,15 @@ html:not(.dark) .text-warning,
 html:not(.dark) .text-orange-500,
 html:not(.dark) .text-orange-400,
 html:not(.dark) .text-amber-500 { color: #b45309; }
+
+/* Trainer cockpit always clears app navigation and native system bars. */
+.trainer-dialog {
+  bottom: var(--grim-bottom-nav-offset, 5rem) !important;
+  top: auto !important;
+  transform: none !important;
+  max-height: calc(100dvh - var(--grim-bottom-nav-offset, 5rem) - 1.5rem);
+  z-index: 100;
+}
+@media (min-width: 640px) {
+  .trainer-dialog { left: 50% !important; transform: translateX(-50%) !important; }
+}

@@ -56,3 +56,5 @@
 - Workout completion persistence lives in `useWorkoutCompletionWriter`; keep optimistic merging, destructive-write protection and queue-first saves together so extracted rows cannot bypass data-loss guards.
 - Workout queue status subscribes inside `WorkoutSyncStatus`, not the workout page; queue events must not rerender the entire exercise list.
 - Pulse analysis (`PulseAnalysis`) reads only the cardio row's compact `series` (`src/lib/workoutSeries.ts`, ≤600 buckets) with fallbacks to legacy `hr` arrays and session HR; calculations stay pure in `src/lib/pulseAnalysis.ts`. Health Connect series come from heart-rate timestamps plus `GrimWorkoutSeries.kt` (distance/hr-after with existing permissions; speed/power/cadence only if already granted — adding those permissions requires a Play Health Connect declaration update). Existing imports are upgraded only via `fillMissingHealthSeries` in workoutHistory with the `updated_at` concurrent-edit guard; coarse distance records never produce splits.
+
+- Trainer native control and persistence rules live in `src/lib/trainer/AGENTS.md`.

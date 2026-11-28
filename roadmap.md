@@ -1,3 +1,11 @@
+## Cykeltrainer 28 november 2026
+- [x] FTMS-avläsning och bekräftad ERG-styrning med kapabilitetskontroll och säkert stopp.
+- [x] Fem passtyper, FTP, pulsreglering med säkerhetstak och tidsserier.
+- [x] Anslutningsruta, livevy, ny övning och direkt sparning genom befintligt passflöde.
+- [x] Native Android-insamling/styrning under låst skärm samt återställbart lokalt pass.
+- [x] 71 regel-/spar-/serietester, Java-kontroll mot Android API och 10 native FTMS/säkerhetskontroller godkända. Inloggad mobilkontroll med simulerad Bluetooth: start, stäng/återöppna, sparning och omladdning; testpasset borttaget.
+- [ ] Verifiera faktisk trainerstyrning och insamling med låst skärm på fysisk Android; kräver uppdaterad Android-app och FTMS-trainer. Ingen APK/AAB byggd och ingen publicering gjord.
+
 # Roadmap
 
 ## Admin password reset 26 November 2026

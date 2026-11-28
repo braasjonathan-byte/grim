@@ -189,7 +189,9 @@ export function buildWorkoutSeries(input: SeriesInput, maxPoints = SERIES_MAX_PO
   let hr = bucketAverage(input.hr, start, stepMs, n, 26, 239);
   if (hr && hr.filter((x) => x != null).length < MIN_HR_BUCKETS) hr = null;
   const inc = distanceIncrements(input, start, stepMs, n);
-  if (!hr && !inc) return null;
+  const pw = bucketAverage(input.power, start, stepMs, n, 0, 2500);
+  const cad = bucketAverage(input.cadence, start, stepMs, n, 0, 260);
+  if (!hr && !inc && !pw && !cad) return null;
 
   const series: WorkoutSeries = { v: 1, t0: start, step, hr: hr ?? new Array(n).fill(null) };
   if (inc) {
@@ -198,9 +200,7 @@ export function buildWorkoutSeries(input: SeriesInput, maxPoints = SERIES_MAX_PO
     for (let i = 0; i < n; i++) { acc += inc[i]; d[i] = Math.round(acc); }
     series.d = d;
   }
-  const pw = bucketAverage(input.power, start, stepMs, n, 0, 2500);
   if (pw && pw.some((x) => x != null && x > 0)) series.pw = pw;
-  const cad = bucketAverage(input.cadence, start, stepMs, n, 0, 260);
   if (cad && cad.some((x) => x != null && x > 0)) series.cad = cad;
   const rec = hr ? recoveryPoint(end, input.hr, input.hrAfter) : null;
   if (rec) series.rec = rec;
@@ -230,7 +230,7 @@ export function parseWorkoutSeries(raw: unknown): WorkoutSeries | null {
   if (cad) s.cad = cad;
   const rec = o.rec as Record<string, unknown> | undefined;
   if (rec && finite(rec.end) && finite(rec.at60)) s.rec = { end: rec.end, at60: rec.at60 };
-  if (!hr.some((x) => x != null) && !s.d) return null;
+  if (!hr.some((x) => x != null) && !s.d && !pw?.some(x => x != null) && !cad?.some(x => x != null)) return null;
   return s;
 }
 

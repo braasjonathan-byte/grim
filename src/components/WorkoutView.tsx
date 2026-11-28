@@ -843,8 +843,7 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack, acti
           setMode(prev => (prev === "loading" || prev === "choose") ? "choose" : prev);
         } else {
           const allSingle = planData.every((p) => p.week === 0);
-          const sparringPlans = planData.filter(p => p.sparring_reference);
-          setMode(prev => allSingle || (prev === "single" && sparringPlans.length > 0) ? "single" : "plan");
+          setMode(prev => allSingle || prev === "single" ? "single" : "plan");
           try {
             const intent = sparringOpenedRef.current ? null : JSON.parse(sessionStorage.getItem(`grim_sparring_open_${userId}`) || "null");
             const target = planData.find(p => p.id === intent?.id && p.sparring_reference);
@@ -3040,6 +3039,7 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack, acti
         if (targetPlanForCond) {
           setShowExercisePicker(null);
           setIsWarmupMode(false);
+          if (exerciseName.trim().toLowerCase() === "cykeltrainer") sessionStorage.setItem("grim_trainer_open", planId);
           void addExerciseToPlan(targetPlanForCond, exerciseName);
         }
         return;
@@ -4419,7 +4419,7 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack, acti
                               // Also update plan details text
                               const infoParts: string[] = [];
                               if (data.time) infoParts.push(`${data.time} min`);
-                              if (data.tempo) infoParts.push(`${data.tempo}/km`);
+                              if (data.tempo) infoParts.push(`${data.tempo}${data.trainerSession ? " W" : "/km"}`);
                               if (data.dist) infoParts.push(`${data.dist} km`);
                               if (data.elev) infoParts.push(`${data.elev} m stigning`);
                               if (data.pulse) infoParts.push(`${data.pulse} bpm`);
@@ -6278,7 +6278,7 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack, acti
                                           });
                                           const infoParts: string[] = [];
                                           if (data.time) infoParts.push(`${data.time} min`);
-                                          if (data.tempo) infoParts.push(`${data.tempo}/km`);
+                                          if (data.tempo) infoParts.push(`${data.tempo}${data.trainerSession ? " W" : "/km"}`);
                                           if (data.dist) infoParts.push(`${data.dist} km`);
                                           if (data.pulse) infoParts.push(`${data.pulse} bpm`);
                                           const entry = infoParts.length > 0 ? `${condLineName} — ${infoParts.join(", ")}` : condLineName;
@@ -6386,7 +6386,7 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack, acti
                                     });
                                     const infoParts: string[] = [];
                                     if (data.time) infoParts.push(`${data.time} min`);
-                                    if (data.tempo) infoParts.push(`${data.tempo}/km`);
+                                    if (data.tempo) infoParts.push(`${data.tempo}${data.trainerSession ? " W" : "/km"}`);
                                     if (data.dist) infoParts.push(`${data.dist} km`);
                                     if (data.pulse) infoParts.push(`${data.pulse} bpm`);
                                     const entry = infoParts.length > 0 ? `${sCondName} — ${infoParts.join(", ")}` : sCondName;

@@ -174,7 +174,7 @@ export default function PulseAnalysis({ name, cond, sessionHr, fallback, session
     return pointAtFraction(route, routeCum, f);
   }, [cursor, route, routeCum, series, n]);
 
-  if (!hasHrSeries && !avgHr && !maxObserved && route.length < 2) return null;
+  if (!hasHrSeries && !avgHr && !maxObserved && route.length < 2 && channels.length === 0) return null;
 
   const pick = (e: ReactPointerEvent<SVGSVGElement>) => {
     const rect = svgRef.current?.getBoundingClientRect();
@@ -208,7 +208,7 @@ export default function PulseAnalysis({ name, cond, sessionHr, fallback, session
         )}
       </div>
 
-      {hasHrSeries && (
+      {(hasHrSeries || channels.length > 0) && (
         <div className="space-y-1">
           <div className="flex items-center justify-between gap-2 min-h-[18px] text-[11px] tabular-nums" aria-live="polite">
             {cursor != null ? (

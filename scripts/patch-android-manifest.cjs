@@ -31,6 +31,7 @@ if (!/android:screenOrientation="portrait"/.test(xml)) {
 
 const PERMS = [
   "android.permission.FOREGROUND_SERVICE",
+  "android.permission.FOREGROUND_SERVICE_CONNECTED_DEVICE",
   "android.permission.POST_NOTIFICATIONS",
   "android.permission.BLUETOOTH_SCAN",
   "android.permission.BLUETOOTH_CONNECT",
@@ -51,6 +52,11 @@ const FEATURES = [
 ];
 
 let changed = false;
+if (!xml.includes('android:name="se.grim.app.GrimTrainerService"')) {
+  xml = xml.replace('</application>', '<service android:name="se.grim.app.GrimTrainerService" android:exported="false" android:foregroundServiceType="connectedDevice" />\n</application>');
+  changed = true;
+}
+
 
 if (!/xmlns:tools=/.test(xml)) {
   xml = xml.replace(/<manifest\b([^>]*)>/, `<manifest$1 xmlns:tools="http://schemas.android.com/tools">`);

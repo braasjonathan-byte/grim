@@ -145,7 +145,7 @@ const getConditioningDistanceKm = (loggedWeights: LoggedWeights): number => {
       continue;
     }
 
-    total += getDistanceFromTimeAndTempo(data.time, data.tempo);
+    if (data.distanceSource !== "trainer") total += getDistanceFromTimeAndTempo(data.time, data.tempo);
   }
 
   return total;
@@ -333,7 +333,7 @@ export const getWorkoutDistanceByCategory = ({
         km = intervalTotal;
       } else {
         const direct = toNumber(data.dist ?? data.distance);
-        km = direct > 0 ? direct : getDistanceFromTimeAndTempo(data.time, data.tempo);
+        km = direct > 0 ? direct : data.distanceSource === "trainer" ? 0 : getDistanceFromTimeAndTempo(data.time, data.tempo);
       }
       if (km <= 0) continue;
 

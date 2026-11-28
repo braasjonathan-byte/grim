@@ -75,7 +75,7 @@ export function isExternalImport(c: Pick<CompletionRow, "day" | "logged_weights"
 const TYPE_RULES: Array<[RegExp, string]> = [
   [/löpband|treadmill/i, "treadmill"],
   [/löp|jogg|spring|\brun/i, "running"],
-  [/spinning|indoor.?cykel|motionscykel|stationary/i, "biking_stationary"],
+  [/cykeltrainer|spinning|indoor.?cykel|motionscykel|stationary/i, "biking_stationary"],
   [/cykl|cykel|bike|cycling/i, "biking"],
   [/öppet vatten|open water/i, "swimming_open_water"],
   [/sim|swim/i, "swimming"],

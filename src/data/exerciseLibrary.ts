@@ -182,6 +182,7 @@ export const exerciseLibrary: ExerciseInfo[] = [
   { name: "Löpning – Intervaller", category: "kondition", muscleGroup: "Kondition" },
   { name: "Långpass", category: "kondition", muscleGroup: "Kondition" },
   { name: "Långpass – Intervaller", category: "kondition", muscleGroup: "Kondition" },
+  { name: "Cykeltrainer", category: "kondition", muscleGroup: "Kondition" },
   { name: "Cykling", category: "kondition", muscleGroup: "Kondition" },
   { name: "Cykling – Intervaller", category: "kondition", muscleGroup: "Kondition" },
   { name: "Spinning", category: "kondition", muscleGroup: "Kondition" },

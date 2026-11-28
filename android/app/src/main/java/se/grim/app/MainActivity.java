@@ -22,6 +22,7 @@ public class MainActivity extends BridgeActivity {
     protected void onCreate(Bundle savedInstanceState) {
         registerPlugin(GrimWidgetPlugin.class);
         registerPlugin(GrimWorkoutPlugin.class);
+        registerPlugin(GrimTrainerPlugin.class);
         captureWidgetTab(getIntent());
         super.onCreate(savedInstanceState);
 

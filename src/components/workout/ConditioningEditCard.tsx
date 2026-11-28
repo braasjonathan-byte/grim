@@ -1,3 +1,4 @@
+import TrainerEntry from "@/components/trainer/TrainerEntry";
 import PulseAnalysis from "@/components/PulseAnalysis";
 import { sportKind } from "@/lib/pulseAnalysis";
 import SavedSplits from "@/components/workout/SavedSplits";
@@ -17,7 +18,7 @@ export const condInputCls = "w-full min-w-0 bg-background text-foreground text-s
 export const condUnitCls = "text-[9px] text-muted-foreground uppercase tracking-wider mt-1 block text-center";
 
 
-export const ConditioningEditCard = ({ name, lineIndex, planId, planCondTime, planCondDist, planCondTempo, planCondPulse, explicitPlan, savedData, hasSavedData, exerciseLinesCount, isCompleted = false, onToggleCompleted, onMoveUp, onMoveDown, onShowInfo, onDelete, onSave, dragHandle }: {
+const LegacyConditioningEditCard = ({ name, lineIndex, planId, planCondTime, planCondDist, planCondTempo, planCondPulse, explicitPlan, savedData, hasSavedData, exerciseLinesCount, isCompleted = false, onToggleCompleted, onMoveUp, onMoveDown, onShowInfo, onDelete, onSave, dragHandle }: {
   name: string; lineIndex: number; planId: string;
   planCondTime: string; planCondDist: string; planCondTempo: string;
   planCondPulse?: string;
@@ -566,3 +567,11 @@ export const ConditioningHMSInput = ({ initialH, initialM, initialS, onSave }: {
   );
 };
 
+
+
+export const ConditioningEditCard = (props: React.ComponentProps<typeof LegacyConditioningEditCard>) => {
+  if (props.name.trim().toLowerCase() === "cykeltrainer") {
+    return <TrainerEntry planId={props.planId} lineIndex={props.lineIndex} savedData={props.savedData} onSave={props.onSave} onDelete={props.onDelete} />;
+  }
+  return <LegacyConditioningEditCard {...props} />;
+};

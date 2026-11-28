@@ -13,6 +13,13 @@ export interface NumberRule {
 }
 
 export const RULES = {
+  trainerWatts: { min: 25, max: 1500, integer: true, unit: "W" },
+  trainerPercent: { min: 10, max: 300, integer: true, unit: "%" },
+  trainerSeconds: { min: 5, max: 3600, integer: true, unit: "s" },
+  trainerRepeats: { min: 1, max: 30, integer: true },
+  trainerRampStep: { min: 5, max: 50, integer: true, unit: "W" },
+  trainerResistance: { min: 0, max: 100, unit: "%" },
+  trainerSlope: { min: 0, max: 20, unit: "%" },
   setKg: { min: 0, max: 500, unit: "kg", optional: true },
   setReps: { min: 0, max: 100, integer: true, optional: true },
   /** Sekunder (planka, cirkel) eller meter (farmers walk, sled) – lagras i reps-fältet. */

@@ -97,6 +97,7 @@ const entryDistanceKm = (data: Record<string, unknown>, doneFlags: string): numb
     }
     return sum;
   }
+  if (data.distanceSource === "trainer") return Math.max(0, toNum(data.dist));
   const direct = toNum(data.dist ?? data.distance);
   if (direct > 0) return direct;
   const mins = toNum(data.time);
